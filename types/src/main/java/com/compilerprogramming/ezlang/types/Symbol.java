@@ -35,8 +35,14 @@ public abstract class Symbol {
 
     public static class VarSymbol extends Symbol {
         // Values assigned by bytecode compiler
-        public int reg;
+        public Register reg;
         public VarSymbol(String name, Type type) {
+            super(name, type);
+        }
+    }
+
+    public static class ParameterSymbol extends VarSymbol {
+        public ParameterSymbol(String name, Type type) {
             super(name, type);
         }
     }
