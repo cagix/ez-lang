@@ -6,16 +6,31 @@ import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 
-public class FunctionBuilder {
+import java.util.ArrayList;
+import java.util.List;
 
-    BasicBlock entry;
-    BasicBlock exit;
-    int bid = 0;
-    BasicBlock currentBlock;
-    BasicBlock currentBreakTarget;
-    BasicBlock currentContinueTarget;
+public class BytecodeFunction {
 
-    public FunctionBuilder(Symbol.FunctionTypeSymbol functionSymbol) {
+    public BasicBlock entry;
+    public BasicBlock exit;
+    public int maxLocalReg;
+    public int maxStackSize;
+    private int bid = 0;
+    private BasicBlock currentBlock;
+    private BasicBlock currentBreakTarget;
+    private BasicBlock currentContinueTarget;
+
+    /**
+     * We essentially do a form of abstract interpretation as we generate
+     * the bytecode instructions. For this purpose we use a virtual operand stack.
+     *
+     * This is similar to the technique described in
+     * Dynamic Optimization through the use of Automatic Runtime Specialization
+     * by John Whaley
+     */
+    private List<Operand> virtualStack = new ArrayList<>();
+
+    public BytecodeFunction(Symbol.FunctionTypeSymbol functionSymbol) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         setVirtualRegisters(funcDecl.scope);
         this.bid = 0;
@@ -24,6 +39,18 @@ public class FunctionBuilder {
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
         compileStatement(funcDecl.block);
+        exitBlockIfNeeded();
+    }
+
+    public int frameSize() {
+        return maxLocalReg+maxStackSize;
+    }
+
+    private void exitBlockIfNeeded() {
+        if (currentBlock != null &&
+                currentBlock != exit) {
+            startBlock(exit);
+        }
     }
 
     private void setVirtualRegisters(Scope scope) {
@@ -36,6 +63,8 @@ public class FunctionBuilder {
             }
         }
         scope.maxReg = reg;
+        if (maxLocalReg < scope.maxReg)
+            maxLocalReg = scope.maxReg;
         for (Scope childScope: scope.children) {
             setVirtualRegisters(childScope);
         }
@@ -57,9 +86,13 @@ public class FunctionBuilder {
 
     private void compileReturn(AST.ReturnStmt returnStmt) {
         if (returnStmt.expr != null) {
-            boolean indexed = compileExpr(returnStmt.expr);
-            if (indexed)
-                code(new Instruction.LoadIndexed());
+            boolean isIndexed = compileExpr(returnStmt.expr);
+            if (isIndexed)
+                codeIndexedLoad();
+            if (virtualStack.size() == 1)
+                code(new Instruction.Return(pop()));
+            else if (virtualStack.size() > 1)
+                throw new CompilerException("Virtual stack has more than one item at return");
         }
         jumpTo(exit);
     }
@@ -107,12 +140,12 @@ public class FunctionBuilder {
             indexedLhs = compileExpr(assignStmt.lhs);
         boolean indexedRhs = compileExpr(assignStmt.rhs);
         if (indexedRhs)
-            code(new Instruction.LoadIndexed());
+            codeIndexedLoad();
         if (indexedLhs)
-            code(new Instruction.StoreIndexed());
+            codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Store(varSymbol.reg));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.reg, varSymbol.name)));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -121,8 +154,9 @@ public class FunctionBuilder {
     private void compileExprStmt(AST.ExprStmt exprStmt) {
         boolean indexed = compileExpr(exprStmt.expr);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        code(new Instruction.Pop());
+            codeIndexedLoad();
+        if (!vstackEmpty())
+            pop();
     }
 
     private void compileContinue(AST.ContinueStmt continueStmt) {
@@ -148,8 +182,9 @@ public class FunctionBuilder {
         startBlock(loopBlock);
         boolean indexed = compileExpr(whileStmt.condition);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        code(new Instruction.ConditionalBranch(currentBlock, bodyBlock, exitBlock));
+            codeIndexedLoad();
+        code(new Instruction.ConditionalBranch(currentBlock, pop(), bodyBlock, exitBlock));
+        assert vstackEmpty();
         startBlock(bodyBlock);
         compileStatement(whileStmt.stmt);
         if (!isBlockTerminated(currentBlock))
@@ -165,6 +200,7 @@ public class FunctionBuilder {
     }
 
     private void jumpTo(BasicBlock block) {
+        assert !isBlockTerminated(currentBlock);
         currentBlock.add(new Instruction.Jump(block));
         currentBlock.addSuccessor(block);
     }
@@ -183,8 +219,9 @@ public class FunctionBuilder {
         BasicBlock exitBlock = createBlock();
         boolean indexed = compileExpr(ifElseStmt.condition);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        code(new Instruction.ConditionalBranch(currentBlock, ifBlock, needElse ? elseBlock : exitBlock));
+            codeIndexedLoad();
+        code(new Instruction.ConditionalBranch(currentBlock, pop(), ifBlock, needElse ? elseBlock : exitBlock));
+        assert vstackEmpty();
         startBlock(ifBlock);
         compileStatement(ifElseStmt.ifStmt);
         if (!isBlockTerminated(currentBlock))
@@ -202,8 +239,8 @@ public class FunctionBuilder {
         if (letStmt.expr != null) {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
-                code(new Instruction.LoadIndexed());
-            code(new Instruction.Store(letStmt.symbol.reg));
+                codeIndexedLoad();
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.reg, letStmt.symbol.name)));
         }
     }
 
@@ -242,12 +279,35 @@ public class FunctionBuilder {
 
     private boolean compileCallExpr(AST.CallExpr callExpr) {
         compileExpr(callExpr.callee);
+        var callee = pop();
+        Type.TypeFunction calleeType = null;
+        if (callee instanceof Operand.LocalFunctionOperand functionOperand)
+            calleeType = functionOperand.functionType;
+        else throw new CompilerException("Cannot call a non function type");
+        var returnStackPos = virtualStack.size();
+        List<Operand.RegisterOperand> args = new ArrayList<>();
         for (AST.Expr expr: callExpr.args) {
             boolean indexed = compileExpr(expr);
             if (indexed)
-                code(new Instruction.LoadIndexed());
+                codeIndexedLoad();
+            var arg = top();
+            if (!(arg instanceof Operand.TempRegisterOperand) ) {
+                var origArg = pop();
+                arg = createTemp(origArg.type);
+                code(new Instruction.Move(origArg, arg));
+            }
+            args.add((Operand.RegisterOperand) arg);
         }
-        code(new Instruction.Call(callExpr.args.size()));
+        // Simulate the actions on the stack
+        for (int i = 0; i < args.size(); i++)
+            pop();
+        Operand.TempRegisterOperand ret = null;
+        if (callExpr.callee.type instanceof Type.TypeFunction tf &&
+                !(tf.returnType instanceof Type.TypeVoid)) {
+            ret = createTemp(tf.returnType);
+            assert ret.regnum-maxLocalReg == returnStackPos;
+        }
+        code(new Instruction.Call(returnStackPos, ret, calleeType, args.toArray(new Operand.RegisterOperand[args.size()])));
         return false;
     }
 
@@ -270,8 +330,8 @@ public class FunctionBuilder {
             throw new CompilerException("Field " + fieldExpr.fieldName + " not found");
         boolean indexed = compileExpr(fieldExpr.object);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        code(new Instruction.PushConst(fieldIndex));
+            codeIndexedLoad();
+        pushOperand(new Operand.LoadFieldOperand(pop(), fieldExpr.fieldName, fieldIndex));
         return true;
     }
 
@@ -279,7 +339,10 @@ public class FunctionBuilder {
         compileExpr(arrayIndexExpr.array);
         boolean indexed = compileExpr(arrayIndexExpr.expr);
         if (indexed)
-            code(new Instruction.LoadIndexed());
+            codeIndexedLoad();
+        Operand index = pop();
+        Operand array = pop();
+        pushOperand(new Operand.LoadIndexedOperand(array, index));
         return true;
     }
 
@@ -288,24 +351,41 @@ public class FunctionBuilder {
         int fieldIndex = structType.getFieldIndex(setFieldExpr.fieldName);
         if (fieldIndex == -1)
             throw new CompilerException("Field " + setFieldExpr.fieldName + " not found in struct " + structType.name);
-        code(new Instruction.PushConst(fieldIndex));
+        pushOperand(new Operand.LoadFieldOperand(top(), setFieldExpr.fieldName, fieldIndex));
         boolean indexed = compileExpr(setFieldExpr.value);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        code(new Instruction.StoreIndexed());
+            codeIndexedLoad();
+        codeIndexedStore();
         return false;
     }
 
+    private void codeNew(Type type) {
+        var temp = createTemp(type);
+        if (type instanceof Type.TypeArray typeArray) {
+            code(new Instruction.NewArray(typeArray, temp));
+        }
+        else if (type instanceof Type.TypeStruct typeStruct) {
+            code(new Instruction.NewStruct(typeStruct, temp));
+        }
+        else
+            throw new CompilerException("Unexpected type: " + type);
+    }
+
+    private void codeStoreAppend() {
+        var operand = pop();
+        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
+    }
+
     private boolean compileNewExpr(AST.NewExpr newExpr) {
-        code(new Instruction.New(newExpr.type));
+        codeNew(newExpr.type);
         if (newExpr.initExprList != null && !newExpr.initExprList.isEmpty()) {
             if (newExpr.type instanceof Type.TypeArray) {
                 for (AST.Expr expr : newExpr.initExprList) {
                     // Maybe have specific AST similar to how we have SetFieldExpr?
                     boolean indexed = compileExpr(expr);
                     if (indexed)
-                        code(new Instruction.LoadIndexed());
-                    code(new Instruction.StoreAppend());
+                        codeIndexedLoad();
+                    codeStoreAppend();
                 }
             }
             else if (newExpr.type instanceof Type.TypeStruct) {
@@ -319,57 +399,133 @@ public class FunctionBuilder {
 
     private boolean compileSymbolExpr(AST.NameExpr symbolExpr) {
         if (symbolExpr.type instanceof Type.TypeFunction functionType)
-            code(new Instruction.LoadFunction(functionType));
+            pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.LoadVar(varSymbol.reg));
+            pushLocal(varSymbol.reg, varSymbol.name);
         }
         return false;
     }
 
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
-        int opCode = 0;
+        String opCode = null;
         boolean indexed = compileExpr(binaryExpr.expr1);
         if (indexed)
-            code(new Instruction.LoadIndexed());
+            codeIndexedLoad();
         indexed = compileExpr(binaryExpr.expr2);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        switch (binaryExpr.op.str) {
-            case "+" -> opCode = Instruction.ADD_I;
-            case "-" -> opCode = Instruction.SUB_I;
-            case "*" -> opCode = Instruction.MUL_I;
-            case "/" -> opCode = Instruction.DIV_I;
-            case "%" -> opCode = Instruction.MOD_I;
-            case "==" -> opCode = Instruction.EQ;
-            case "!=" -> opCode = Instruction.NE;
-            case "<" -> opCode = Instruction.LT;
-            case ">" -> opCode = Instruction.GT;
-            case "<=" -> opCode = Instruction.LE;
-            case ">=" -> opCode = Instruction.GE;
-            default -> throw new CompilerException("Invalid binary op");
+            codeIndexedLoad();
+        opCode = binaryExpr.op.str;
+        Operand right = pop();
+        Operand left = pop();
+        if (left instanceof Operand.ConstantOperand leftconstant &&
+                right instanceof Operand.ConstantOperand rightconstant) {
+            long value = 0;
+            switch (opCode) {
+                case "+": value = leftconstant.value + rightconstant.value; break;
+                case "-": value = leftconstant.value - rightconstant.value; break;
+                case "*": value = leftconstant.value * rightconstant.value; break;
+                case "/": value = leftconstant.value / rightconstant.value; break;
+                case "%": value = leftconstant.value % rightconstant.value; break;
+                case "==": value = leftconstant.value == rightconstant.value ? 1 : 0; break;
+                case "!=": value = leftconstant.value != rightconstant.value ? 1 : 0; break;
+                case "<": value = leftconstant.value < rightconstant.value ? 1: 0; break;
+                case ">": value = leftconstant.value > rightconstant.value ? 1 : 0; break;
+                case "<=": value = leftconstant.value <= rightconstant.value ? 1 : 0; break;
+                case ">=": value = leftconstant.value <= rightconstant.value ? 1 : 0; break;
+                default: throw new CompilerException("Invalid binary op");
+            }
+            pushConstant(value, leftconstant.type);
         }
-        code(new Instruction.BinaryOp(opCode));
+        else {
+            var temp = createTemp(binaryExpr.type);
+            code(new Instruction.Binary(opCode, temp, left, right));
+        }
         return false;
     }
 
     private boolean compileUnaryExpr(AST.UnaryExpr unaryExpr) {
-        int opCode = 0;
+        String opCode;
         boolean indexed = compileExpr(unaryExpr.expr);
         if (indexed)
-            code(new Instruction.LoadIndexed());
-        switch (unaryExpr.op.str) {
-            case "-" -> opCode = Instruction.NEG_I;
-            case "!" -> opCode = Instruction.NOT;
-            default -> throw new CompilerException("Invalid binary op");
+            codeIndexedLoad();
+        opCode = unaryExpr.op.str;
+        Operand top = pop();
+        if (top instanceof Operand.ConstantOperand constant) {
+            switch (opCode) {
+                case "-": pushConstant(-constant.value, constant.type); break;
+                // Maybe below we should explicitly set Int
+                case "!": pushConstant(constant.value == 0?1:0, constant.type); break;
+                default: throw new CompilerException("Invalid unary op");
+            }
         }
-        code(new Instruction.UnaryOp(opCode));
+        else {
+            var temp = createTemp(unaryExpr.type);
+            code(new Instruction.Unary(opCode, temp, top));
+        }
         return false;
     }
 
     private boolean compileConstantExpr(AST.LiteralExpr constantExpr) {
-        code(new Instruction.PushConst(constantExpr.value.num.intValue()));
+        pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
         return false;
     }
 
+    private void pushConstant(long value, Type type) {
+        pushOperand(new Operand.ConstantOperand(value, type));
+    }
+
+    private Operand.TempRegisterOperand createTemp(Type type) {
+        var tempRegister = new Operand.TempRegisterOperand(virtualStack.size()+maxLocalReg, type);
+        pushOperand(tempRegister);
+        if (maxStackSize < virtualStack.size())
+            maxStackSize = virtualStack.size();
+        return tempRegister;
+    }
+
+    private void pushLocal(int regnum, String varName) {
+        pushOperand(new Operand.LocalRegisterOperand(regnum, varName));
+    }
+
+    private void pushOperand(Operand operand) {
+        virtualStack.add(operand);
+    }
+
+    private Operand pop() {
+        return virtualStack.removeLast();
+    }
+
+    private Operand top() {
+        return virtualStack.getLast();
+    }
+
+    private void codeIndexedLoad() {
+        Operand indexed = pop();
+        var temp = createTemp(indexed.type);
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+            code(new Instruction.ArrayLoad(loadIndexedOperand, temp));
+        }
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+            code(new Instruction.GetField(loadFieldOperand, temp));
+        }
+        else
+            code(new Instruction.Move(indexed, temp));
+    }
+
+    private void codeIndexedStore() {
+        Operand value = pop();
+        Operand indexed = pop();
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+            code(new Instruction.ArrayStore(value, loadIndexedOperand));
+        }
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+            code(new Instruction.SetField(value, loadFieldOperand));
+        }
+        else
+            code(new Instruction.Move(value, indexed));
+    }
+
+    private boolean vstackEmpty() {
+        return virtualStack.isEmpty();
+    }
 }

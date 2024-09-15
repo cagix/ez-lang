@@ -1,5 +1,7 @@
 package com.compilerprogramming.ezlang.types;
 
+import java.util.Objects;
+
 /**
  * A symbol is something that has a name and a type.
  */
@@ -21,10 +23,13 @@ public abstract class Symbol {
 
     public static class FunctionTypeSymbol extends Symbol {
         public final Object functionDecl;
-        public Object code;
         public FunctionTypeSymbol(String name, Type.TypeFunction type, Object functionDecl) {
             super(name, type);
             this.functionDecl = functionDecl;
+        }
+        public Object code() {
+            Type.TypeFunction function = (Type.TypeFunction) type;
+            return function.code;
         }
     }
 
