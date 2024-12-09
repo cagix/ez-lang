@@ -24,7 +24,7 @@ public class TestCompiler {
         byteCodeCompiler.compile(typeDict);
         for (Symbol s: typeDict.bindings.values()) {
             if (s instanceof Symbol.FunctionTypeSymbol f) {
-                var functionBuilder = (FunctionBuilder) f.code;
+                var functionBuilder = (BytecodeFunction) f.code();
                 System.out.println(BasicBlock.toStr(new StringBuilder(), functionBuilder.entry, new BitSet()));
             }
         }

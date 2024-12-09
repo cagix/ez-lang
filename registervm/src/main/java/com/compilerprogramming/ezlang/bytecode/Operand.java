@@ -4,10 +4,13 @@ import com.compilerprogramming.ezlang.types.Type;
 
 public class Operand {
 
+    Type type;
+
     public static class ConstantOperand extends Operand {
         public final long value;
-        public ConstantOperand(long value) {
+        public ConstantOperand(long value, Type type) {
             this.value = value;
+            this.type = type;
         }
         @Override
         public String toString() {
@@ -15,11 +18,17 @@ public class Operand {
         }
     }
 
-    public static class LocalRegisterOperand extends Operand {
+    public static abstract class RegisterOperand extends Operand {
         public final int regnum;
+        public RegisterOperand(int regnum) {
+            this.regnum = regnum;
+        }
+    }
+
+    public static class LocalRegisterOperand extends RegisterOperand {
         public final String varName;
         public LocalRegisterOperand(int regnum, String varName) {
-            this.regnum = regnum;
+            super(regnum);
             this.varName = varName;
         }
         @Override
@@ -44,8 +53,8 @@ public class Operand {
      * the caller will expect to see any return value. The VM must map
      * this to appropriate location.
      */
-    public static class ReturnRegisterOperand extends Operand {
-        public ReturnRegisterOperand() {}
+    public static class ReturnRegisterOperand extends RegisterOperand {
+        public ReturnRegisterOperand() { super(0); }
         @Override
         public String toString() { return "%ret"; }
     }
@@ -55,10 +64,10 @@ public class Operand {
      * virtual stack. Temps start at offset 0, but this is a relative
      * register number from start of temp area.
      */
-    public static class TempRegisterOperand extends Operand {
-        public final int regnum;
-        public TempRegisterOperand(int regnum) {
-            this.regnum = regnum;
+    public static class TempRegisterOperand extends RegisterOperand {
+        public TempRegisterOperand(int regnum, Type type) {
+            super(regnum);
+            this.type = type;
         }
         @Override
         public String toString() {
@@ -66,12 +75,16 @@ public class Operand {
         }
     }
 
-    public static class LoadIndexedOperand extends Operand {
+    public static class IndexedOperand extends Operand {}
+
+    public static class LoadIndexedOperand extends IndexedOperand {
         public final Operand arrayOperand;
         public final Operand indexOperand;
         public LoadIndexedOperand(Operand arrayOperand, Operand indexOperand) {
             this.arrayOperand = arrayOperand;
             this.indexOperand = indexOperand;
+            assert !(indexOperand instanceof IndexedOperand) &&
+                    !(arrayOperand instanceof IndexedOperand);
         }
         @Override
         public String toString() {
@@ -79,7 +92,7 @@ public class Operand {
         }
     }
 
-    public static class LoadFieldOperand extends Operand {
+    public static class LoadFieldOperand extends IndexedOperand {
         public final Operand structOperand;
         public final int fieldIndex;
         public final String fieldName;
@@ -87,6 +100,7 @@ public class Operand {
             this.structOperand = structOperand;
             this.fieldName = fieldName;
             this.fieldIndex = field;
+            assert !(structOperand instanceof IndexedOperand);
         }
 
         @Override

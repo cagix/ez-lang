@@ -21,12 +21,12 @@ public class TestCompiler {
         sema.analyze(program);
         var sema2 = new SemaAssignTypes(typeDict);
         sema2.analyze(program);
-        RegisterVMCompiler byteCodeCompiler = new RegisterVMCompiler();
+        BytecodeCompiler byteCodeCompiler = new BytecodeCompiler();
         byteCodeCompiler.compile(typeDict);
         StringBuilder sb = new StringBuilder();
         for (Symbol s: typeDict.bindings.values()) {
             if (s instanceof Symbol.FunctionTypeSymbol f) {
-                var functionBuilder = (FunctionBuilder) f.code;
+                var functionBuilder = (BytecodeFunction) f.code();
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet());
             }
         }
@@ -91,8 +91,8 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = -n
-                    %ret = %t0
+                    %t1 = -n
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -108,12 +108,13 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = n+1
-                    %ret = %t0
+                    %t1 = n+1
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
     }
+
     @Test
     public void testFunction6() {
         String src = """
@@ -129,6 +130,7 @@ public class TestCompiler {
                 L1:
                 """, result);
     }
+
     @Test
     public void testFunction7() {
         String src = """
@@ -144,6 +146,7 @@ public class TestCompiler {
                 L1:
                 """, result);
     }
+
     @Test
     public void testFunction8() {
         String src = """
@@ -159,6 +162,7 @@ public class TestCompiler {
                 L1:
                 """, result);
     }
+
     @Test
     public void testFunction9() {
         String src = """
@@ -185,7 +189,8 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = n[0]
+                    %t1 = n[0]
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -201,10 +206,10 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = n[0]
-                    %t1 = n[1]
-                    %t0 = %t0+%t1
-                    %ret = %t0
+                    %t1 = n[0]
+                    %t2 = n[1]
+                    %t1 = %t1+%t2
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -240,9 +245,9 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = New([Int,Int])
-                    %t0.append(n)
-                    %ret = %t0
+                    %t1 = New([Int,Int])
+                    %t1.append(n)
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -258,8 +263,8 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = x+y
-                    %ret = %t0
+                    %t2 = x+y
+                    %ret = %t2
                     goto  L1
                 L1:
                 """, result);
@@ -340,8 +345,8 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = x<y
-                    if %t0 goto L2 else goto L3
+                    %t2 = x<y
+                    if %t2 goto L2 else goto L3
                 L2:
                     %ret = x
                     goto  L1
@@ -413,11 +418,11 @@ public class TestCompiler {
                 L0:
                     goto  L2
                 L2:
-                    %t0 = n>0
-                    if %t0 goto L3 else goto L4
+                    %t1 = n>0
+                    if %t1 goto L3 else goto L4
                 L3:
-                    %t0 = n-1
-                    n = %t0
+                    %t1 = n-1
+                    n = %t1
                     goto  L2
                 L4:
                     goto  L1
@@ -437,8 +442,7 @@ public class TestCompiler {
                     goto  L1
                 L1:
                 L0:
-                    %t0 = foo
-                    call %t0
+                    call foo
                     goto  L1
                 L1:
                 """, result);
@@ -456,10 +460,9 @@ public class TestCompiler {
                     goto  L1
                 L1:
                 L0:
-                    %t0 = foo
-                    %t1 = 1
-                    %t2 = 2
-                    call %t0 params %t1, %t2
+                    %t0 = 1
+                    %t1 = 2
+                    call foo params %t0, %t1
                     goto  L1
                 L1:
                 """, result);
@@ -474,18 +477,17 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = x+y
-                    %ret = %t0
+                    %t2 = x+y
+                    %ret = %t2
                     goto  L1
                 L1:
                 L0:
-                    %t0 = foo
                     %t1 = 1
                     %t2 = 2
-                    call %t0 params %t1, %t2
-                    t = %t0
-                    %t0 = t+1
-                    %ret = %t0
+                    %t1 = call foo params %t1, %t2
+                    t = %t1
+                    %t1 = t+1
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -506,7 +508,8 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = p.age
+                    %t1 = p.age
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -527,8 +530,9 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = p.parent
-                    %ret = %t0.age
+                    %t1 = p.parent
+                    %t1 = %t1.age
+                    %ret = %t1
                     goto  L1
                 L1:
                 """, result);
@@ -549,13 +553,15 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = p[i]
-                    %t0 = %t0.parent
-                    %ret = %t0.age
+                    %t2 = p[i]
+                    %t2 = %t2.parent
+                    %t2 = %t2.age
+                    %ret = %t2
                     goto  L1
                 L1:
                 """, result);
     }
+
     @Test
     public void testFunction28() {
         String src = """
@@ -565,18 +571,17 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = x+y
-                    %ret = %t0
+                    %t2 = x+y
+                    %ret = %t2
                     goto  L1
                 L1:
                 L0:
-                    %t0 = foo
-                    %t1 = a
-                    %t2 = 2
-                    call %t0 params %t1, %t2
-                    t = %t0
-                    %t0 = t+1
-                    %ret = %t0
+                    %t2 = a
+                    %t3 = 2
+                    %t2 = call foo params %t2, %t3
+                    t = %t2
+                    %t2 = t+1
+                    %ret = %t2
                     goto  L1
                 L1:
                 """, result);
