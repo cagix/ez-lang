@@ -20,6 +20,16 @@ public class BytecodeFunction {
     private BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
+    private Type.TypeFunction functionType;
+    /**
+     * Each register is assigned a unique ID which is not
+     * the same as the slot number inside the frame, as that
+     * can be shared by registers because of disjoint life times.
+     * Start the ID at 1, so that we reserve 0 for the return register
+     */
+    public int nextReg = 1;
+    static final int RETURN_REG_ID = 0;
+    public final int numLocalRegs;
 
     /**
      * We essentially do a form of abstract interpretation as we generate
@@ -34,13 +44,26 @@ public class BytecodeFunction {
     public BytecodeFunction(Symbol.FunctionTypeSymbol functionSymbol) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         setVirtualRegisters(funcDecl.scope);
+        this.numLocalRegs = this.nextReg; // Before assigning temps
         this.bid = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
+        this.functionType = (Type.TypeFunction) functionSymbol.type;
+        generateArgInstructions(funcDecl.scope);
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
+    }
+
+    private void generateArgInstructions(Scope scope) {
+        if (scope.isFunctionParameterScope) {
+            for (Symbol symbol: scope.getLocalSymbols()) {
+                if (symbol instanceof Symbol.ParameterSymbol parameterSymbol) {
+                    code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(parameterSymbol.reg)));
+                }
+            }
+        }
     }
 
     public int frameSize() {
@@ -60,7 +83,7 @@ public class BytecodeFunction {
             reg = scope.parent.maxReg;
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
-                varSymbol.reg = new Register(reg++, 0, varSymbol.name, varSymbol.type);
+                varSymbol.reg = new Register(reg++, nextReg++, varSymbol.name, varSymbol.type);
             }
         }
         scope.maxReg = reg;
@@ -91,7 +114,7 @@ public class BytecodeFunction {
             if (isIndexed)
                 codeIndexedLoad();
             if (virtualStack.size() == 1)
-                code(new Instruction.Return(pop()));
+                code(new Instruction.Return(pop(), 0, RETURN_REG_ID, functionType.returnType));
             else if (virtualStack.size() > 1)
                 throw new CompilerException("Virtual stack has more than one item at return");
         }
@@ -146,7 +169,7 @@ public class BytecodeFunction {
             codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.reg.slot, varSymbol.name)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.reg)));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -241,7 +264,7 @@ public class BytecodeFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 codeIndexedLoad();
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.reg.slot, letStmt.symbol.name)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.reg)));
         }
     }
 
@@ -306,7 +329,7 @@ public class BytecodeFunction {
         if (callExpr.callee.type instanceof Type.TypeFunction tf &&
                 !(tf.returnType instanceof Type.TypeVoid)) {
             ret = createTemp(tf.returnType);
-            assert ret.regnum-maxLocalReg == returnStackPos;
+            //assert ret.regnum-maxLocalReg == returnStackPos;
         }
         code(new Instruction.Call(returnStackPos, ret, calleeType, args.toArray(new Operand.RegisterOperand[args.size()])));
         return false;
@@ -403,7 +426,7 @@ public class BytecodeFunction {
             pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            pushLocal(varSymbol.reg.slot, varSymbol.name);
+            pushLocal(varSymbol.reg);
         }
         return false;
     }
@@ -477,15 +500,18 @@ public class BytecodeFunction {
     }
 
     private Operand.TempRegisterOperand createTemp(Type type) {
-        var tempRegister = new Operand.TempRegisterOperand(virtualStack.size()+maxLocalReg, type);
+        var offset = virtualStack.size()+maxLocalReg;
+        var id = nextReg++;
+        var name = "%t" + id;
+        var tempRegister = new Operand.TempRegisterOperand(offset, id, name, type);
         pushOperand(tempRegister);
         if (maxStackSize < virtualStack.size())
             maxStackSize = virtualStack.size();
         return tempRegister;
     }
 
-    private void pushLocal(int regnum, String varName) {
-        pushOperand(new Operand.LocalRegisterOperand(regnum, varName));
+    private void pushLocal(Register reg) {
+        pushOperand(new Operand.LocalRegisterOperand(reg));
     }
 
     private void pushOperand(Operand operand) {

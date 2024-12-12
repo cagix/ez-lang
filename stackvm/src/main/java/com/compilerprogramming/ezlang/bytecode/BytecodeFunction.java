@@ -2,6 +2,7 @@ package com.compilerprogramming.ezlang.bytecode;
 
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
+import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
@@ -32,7 +33,7 @@ public class BytecodeFunction {
             reg = scope.parent.maxReg;
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
-                varSymbol.reg = reg++;
+                varSymbol.reg = new Register(reg, 0, varSymbol.name, varSymbol.type);
             }
         }
         scope.maxReg = reg;
@@ -112,7 +113,7 @@ public class BytecodeFunction {
             code(new Instruction.StoreIndexed());
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Store(varSymbol.reg));
+            code(new Instruction.Store(varSymbol.reg.slot));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -203,7 +204,7 @@ public class BytecodeFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 code(new Instruction.LoadIndexed());
-            code(new Instruction.Store(letStmt.symbol.reg));
+            code(new Instruction.Store(letStmt.symbol.reg.slot));
         }
     }
 
@@ -322,7 +323,7 @@ public class BytecodeFunction {
             code(new Instruction.LoadFunction(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.LoadVar(varSymbol.reg));
+            code(new Instruction.LoadVar(varSymbol.reg.slot));
         }
         return false;
     }

@@ -41,7 +41,7 @@ public class SemaDefineTypes implements ASTVisitor {
                 throw new CompilerException("Symbol " + funcDecl.name + " is already declared");
             }
             // Create function scope, that houses function parameters
-            currentScope = new Scope(currentScope);
+            currentScope = new Scope(currentScope, true);
             funcDecl.scope = currentScope;
             // Install a symbol for the function,
             // type is not fully formed at this stage
@@ -116,7 +116,7 @@ public class SemaDefineTypes implements ASTVisitor {
                 if (currentScope.localLookup(varDecl.name) != null)
                     throw new CompilerException("Parameter " + varDecl.name + " is already declared");
                 Type.TypeFunction type = (Type.TypeFunction) currentFuncDecl.symbol.type;
-                varDecl.symbol = currentScope.install(varDecl.name, new Symbol.VarSymbol(varDecl.name, varDecl.typeExpr.type));
+                varDecl.symbol = currentScope.install(varDecl.name, new Symbol.ParameterSymbol(varDecl.name, varDecl.typeExpr.type));
                 type.addArg(varDecl.symbol);
             }
             else if (varDecl.varType == AST.VarType.VARIABLE) {
