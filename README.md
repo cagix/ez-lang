@@ -26,13 +26,14 @@ The project is under development and subject to change. At this point in time, w
 * semantic - semantic analyzer
 * stackvm - a bytecode compiler that generates stack IR (bytecode interpreter not yet available)
 * registervm - a bytecode compiler that generates a linear register IR and a bytecode interpreter that can execute the IR
+* optvm - WIP this will use an optimization pipeline, making usa of SSA transformation
 
 ## How can you contribute?
 
-Obviously firstly any contributes that improve and fix bugs are welcome. I am not keen on language extensions at this stage, but eventually
+Obviously firstly any contributions that improve the implementation and/or fix bugs are welcome. I am not keen on language extensions at this stage, but eventually
 we will be extending the language to explore more advanced features.
 
-I am also interested in creating implementations of this project in C++, Go, Rust, swift, D, C, etc. If you are interested in working on such a 
+I am also interested in creating implementations of this project in C++, Go, Rust, Swift, D, C, etc. If you are interested in working on such a 
 port please contact me via [Discussions](https://github.com/orgs/CompilerProgramming/discussions).
 
 ## Community Discussions
