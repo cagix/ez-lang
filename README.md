@@ -30,10 +30,14 @@ The project is under development and subject to change. At this point in time, w
 
 ## How can you contribute?
 
-Obviously firstly any contributions that improve the implementation and/or fix bugs are welcome. I am not keen on language extensions at this stage, but eventually
-we will be extending the language to explore more advanced features.
+The project is educational, with a focus on exploring various compiler algorithms and data structures.
+Clarity and simplicity is preferred over a coding style that attempts to do micro optimizations.
 
-I am also interested in creating implementations of this project in C++, Go, Rust, Swift, D, C, etc. If you are interested in working on such a 
+Contributions that improve the quality of the implementation, add test cases / documentation or fix bugs, are very welcome. 
+I am not keen on language extensions at this stage, but eventually we will be extending the language to explore more 
+advanced features.
+
+I am also interested in porting this project to C++, Go, Rust, Swift, D, C, etc. If you are interested in working on such a 
 port please contact me via [Discussions](https://github.com/orgs/CompilerProgramming/discussions).
 
 ## Community Discussions
