@@ -1,9 +1,9 @@
 package com.compilerprogramming.ezlang.interpreter;
 
-import com.compilerprogramming.ezlang.bytecode.BasicBlock;
-import com.compilerprogramming.ezlang.bytecode.BytecodeFunction;
-import com.compilerprogramming.ezlang.bytecode.Instruction;
-import com.compilerprogramming.ezlang.bytecode.Operand;
+import com.compilerprogramming.ezlang.compiler.BasicBlock;
+import com.compilerprogramming.ezlang.compiler.CompiledFunction;
+import com.compilerprogramming.ezlang.compiler.Instruction;
+import com.compilerprogramming.ezlang.compiler.Operand;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.exceptions.InterpreterException;
 import com.compilerprogramming.ezlang.types.Symbol;
@@ -31,7 +31,7 @@ public class Interpreter {
     }
 
     public Value interpret(ExecutionStack execStack, Frame frame) {
-        BytecodeFunction currentFunction = frame.bytecodeFunction;
+        CompiledFunction currentFunction = frame.bytecodeFunction;
         BasicBlock currentBlock = currentFunction.entry;
         int ip = -1;
         int base = frame.base;
@@ -239,18 +239,18 @@ public class Interpreter {
     static class Frame {
         Frame caller;
         int base;
-        BytecodeFunction bytecodeFunction;
+        CompiledFunction bytecodeFunction;
 
         public Frame(Symbol.FunctionTypeSymbol functionSymbol) {
             this.caller = null;
             this.base = 0;
-            this.bytecodeFunction = (BytecodeFunction) functionSymbol.code();
+            this.bytecodeFunction = (CompiledFunction) functionSymbol.code();
         }
 
         Frame(Frame caller, int base, Type.TypeFunction functionType) {
             this.caller = caller;
             this.base = base;
-            this.bytecodeFunction = (BytecodeFunction) functionType.code;
+            this.bytecodeFunction = (CompiledFunction) functionType.code;
         }
     }
 }
