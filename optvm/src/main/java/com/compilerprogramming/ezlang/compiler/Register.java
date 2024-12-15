@@ -2,6 +2,8 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Type;
 
+import java.util.List;
+
 /**
  * Virtual register represents values that are operands of the
  * IR.
@@ -21,6 +23,8 @@ public class Register {
      * The type of a register
      */
     public final Type type;
+
+    public List<Instruction> uses;
 
     public Register(int id, String name, Type type) {
         this.id = id;

@@ -1,6 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class BasicBlock {
     public final int bid;
