@@ -35,7 +35,7 @@ public abstract class Symbol {
 
     public static class VarSymbol extends Symbol {
         // Values assigned by bytecode compiler
-        public Register reg;
+        public int regNumber;
         public VarSymbol(String name, Type type) {
             super(name, type);
         }

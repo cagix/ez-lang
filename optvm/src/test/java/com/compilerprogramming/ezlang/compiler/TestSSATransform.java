@@ -59,20 +59,21 @@ L1:
 After SSA
 =========
 L0:
-    arg d
-    a = 42
-    b = a
-    %t5 = a+b
-    c = %t5
-    %t6 = c+23
-    a_1 = %t6
-    %t7 = a_1+d
-    c_1 = %t7
+    arg d_0
+    a_0 = 42
+    b_0 = a_0
+    %t5_0 = a_0+b_0
+    c_0 = %t5_0
+    %t6_0 = c_0+23
+    a_1 = %t6_0
+    %t7_0 = a_1+d_0
+    c_1 = %t7_0
     goto  L1
 L1:
 """, result);
 
     }
+
     @Test
     public void test2() {
         String src = """
@@ -113,25 +114,26 @@ L3:
 After SSA
 =========
 L0:
-    arg d
-    a = 42
-    if d goto L2 else goto L3
+    arg d_0
+    a_0 = 42
+    if d_0 goto L2 else goto L3
 L2:
-    %t3 = a+1
-    a_2 = %t3
+    %t3_0 = a_0+1
+    a_2 = %t3_0
     goto  L4
 L4:
     a_3 = phi(a_2, a_1)
-    %ret = a_3
+    %ret_0 = a_3
     goto  L1
 L1:
 L3:
-    %t4 = a-1
-    a_1 = %t4
+    %t4_0 = a_0-1
+    a_1 = %t4_0
     goto  L4
 """, result);
 
     }
+
     @Test
     public void test3() {
         String src = """
@@ -170,22 +172,22 @@ L1:
 After SSA
 =========
 L0:
-    arg num
-    result = 1
+    arg num_0
+    result_0 = 1
     goto  L2
 L2:
-    result_1 = phi(result, result_2)
-    num_1 = phi(num, num_2)
-    %t3 = num_1>1
-    if %t3 goto L3 else goto L4
+    result_1 = phi(result_0, result_2)
+    num_1 = phi(num_0, num_2)
+    %t3_0 = num_1>1
+    if %t3_0 goto L3 else goto L4
 L3:
-    %t4 = result_1*num_1
-    result_2 = %t4
-    %t5 = num_1-1
-    num_2 = %t5
+    %t4_0 = result_1*num_1
+    result_2 = %t4_0
+    %t5_0 = num_1-1
+    num_2 = %t5_0
     goto  L2
 L4:
-    %ret = result_1
+    %ret_0 = result_1
     goto  L1
 L1:
 """, result);
@@ -244,10 +246,10 @@ L1:
 After SSA
 =========
 L0:
-    arg a
-    arg b
-    arg c
-    arg d
+    arg a_0
+    arg b_0
+    arg c_0
+    arg d_0
     goto  L1
 L1:
 func example14_66
@@ -322,66 +324,66 @@ L6:
 After SSA
 =========
 L0:
-    arg p
-    arg q
-    arg r
-    arg s
-    arg t
-    i = 1
-    j = 1
-    k = 1
-    l = 1
+    arg p_0
+    arg q_0
+    arg r_0
+    arg s_0
+    arg t_0
+    i_0 = 1
+    j_0 = 1
+    k_0 = 1
+    l_0 = 1
     goto  L2
 L2:
-    l_1 = phi(l, l_9)
-    k_1 = phi(k, k_4)
-    j_1 = phi(j, j_3)
-    i_1 = phi(i, i_2)
+    l_1 = phi(l_0, l_9)
+    k_1 = phi(k_0, k_4)
+    j_1 = phi(j_0, j_3)
+    i_1 = phi(i_0, i_2)
     if 1 goto L3 else goto L4
 L3:
-    if p goto L5 else goto L6
+    if p_0 goto L5 else goto L6
 L5:
     j_2 = i_1
-    if q goto L8 else goto L9
+    if q_0 goto L8 else goto L9
 L8:
     l_3 = 2
     goto  L10
 L10:
     l_4 = phi(l_3, l_2)
-    %t10 = k_1+1
-    k_3 = %t10
+    %t10_0 = k_1+1
+    k_3 = %t10_0
     goto  L7
 L7:
     l_5 = phi(l_4, l_1)
     k_4 = phi(k_3, k_2)
     j_3 = phi(j_2, j_1)
-    %t12 = i_1
-    %t13 = j_3
-    %t14 = k_4
-    %t15 = l_5
-    call print params %t12, %t13, %t14, %t15
+    %t12_0 = i_1
+    %t13_0 = j_3
+    %t14_0 = k_4
+    %t15_0 = l_5
+    call print params %t12_0, %t13_0, %t14_0, %t15_0
     goto  L11
 L11:
     l_6 = phi(l_5, l_8)
     if 1 goto L12 else goto L13
 L12:
-    if r goto L14 else goto L15
+    if r_0 goto L14 else goto L15
 L14:
-    %t16 = l_6+4
-    l_7 = %t16
+    %t16_0 = l_6+4
+    l_7 = %t16_0
     goto  L15
 L15:
     l_8 = phi(l_6, l_7)
-    %t17 = !s
-    if %t17 goto L16 else goto L17
+    %t17_0 = !s_0
+    if %t17_0 goto L16 else goto L17
 L16:
     goto  L13
 L13:
     l_9 = phi(l_6, l_8)
-    %t18 = i_1+6
-    i_2 = %t18
-    %t19 = !t
-    if %t19 goto L18 else goto L19
+    %t18_0 = i_1+6
+    i_2 = %t18_0
+    %t19_0 = !t_0
+    if %t19_0 goto L18 else goto L19
 L18:
     goto  L4
 L4:
@@ -399,9 +401,48 @@ L9:
     l_2 = 3
     goto  L10
 L6:
-    %t11 = k_1+2
-    k_2 = %t11
+    %t11_0 = k_1+2
+    k_2 = %t11_0
     goto  L7
+""", result);
+    }
+
+    @Test
+    public void test5() {
+        String src = """
+                func bar(arg: Int)->Int {
+                    if (arg)
+                        return 42;
+                    return 0;    
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func bar
+Before SSA
+==========
+L0:
+    arg arg
+    if arg goto L2 else goto L3
+L2:
+    %ret = 42
+    goto  L1
+L1:
+L3:
+    %ret = 0
+    goto  L1
+After SSA
+=========
+L0:
+    arg arg_0
+    if arg_0 goto L2 else goto L3
+L2:
+    %ret_1 = 42
+    goto  L1
+L1:
+L3:
+    %ret_0 = 0
+    goto  L1
 """, result);
     }
 }

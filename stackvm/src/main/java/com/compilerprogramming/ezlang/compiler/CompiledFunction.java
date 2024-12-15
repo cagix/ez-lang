@@ -2,7 +2,6 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
-import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
@@ -41,7 +40,7 @@ public class CompiledFunction {
             reg = scope.parent.maxReg;
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
-                varSymbol.reg = new Register(reg++, 0, varSymbol.name, varSymbol.type);
+                varSymbol.regNumber = reg++;
             }
         }
         scope.maxReg = reg;
@@ -121,7 +120,7 @@ public class CompiledFunction {
             codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Store(varSymbol.reg.slot));
+            code(new Instruction.Store(varSymbol.regNumber));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -212,7 +211,7 @@ public class CompiledFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 codeIndexedLoad();
-            code(new Instruction.Store(letStmt.symbol.reg.slot));
+            code(new Instruction.Store(letStmt.symbol.regNumber));
         }
     }
 
@@ -331,7 +330,7 @@ public class CompiledFunction {
             code(new Instruction.LoadFunction(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.LoadVar(varSymbol.reg.slot));
+            code(new Instruction.LoadVar(varSymbol.regNumber));
         }
         return false;
     }

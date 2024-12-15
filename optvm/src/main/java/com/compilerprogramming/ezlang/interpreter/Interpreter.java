@@ -98,7 +98,11 @@ public class Interpreter {
                 case Instruction.Call callInst -> {
                     // Copy args to new frame
                     int baseReg = base+currentFunction.frameSize();
-                    int reg = baseReg;
+                    int offset = 0;
+                    // In this version return reg
+                    if (!(callInst.callee.returnType instanceof Type.TypeVoid))
+                        offset = 1;
+                    int reg = baseReg + offset;
                     for (Operand.RegisterOperand arg: callInst.args) {
                         execStack.stack[base + reg] = execStack.stack[base + arg.slot()];
                         reg += 1;
