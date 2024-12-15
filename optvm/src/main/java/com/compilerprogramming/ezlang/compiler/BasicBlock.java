@@ -61,6 +61,7 @@ public class BasicBlock {
     }
     public void add(Instruction instruction) {
         instructions.add(instruction);
+        instruction.bb = this;
     }
     public void addSuccessor(BasicBlock successor) {
         successors.add(successor);
@@ -85,6 +86,7 @@ public class BasicBlock {
             inputs.add(var);
         Instruction.Phi phi = new Instruction.Phi(var, inputs);
         instructions.add(0, phi);
+        phi.bb = this;
     }
     public List<Instruction.Phi> phis() {
         List<Instruction.Phi> list = new ArrayList<>();

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 public abstract class Instruction {
+    public BasicBlock bb;
 
     public boolean isTerminal() {
         return false;
