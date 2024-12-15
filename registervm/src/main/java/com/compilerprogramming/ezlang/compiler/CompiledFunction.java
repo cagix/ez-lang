@@ -2,7 +2,6 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
-import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
@@ -60,7 +59,7 @@ public class CompiledFunction {
             reg = scope.parent.maxReg;
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
-                varSymbol.reg = new Register(reg++, 0, varSymbol.name, varSymbol.type);
+                varSymbol.regNumber = reg++;
             }
         }
         scope.maxReg = reg;
@@ -146,7 +145,7 @@ public class CompiledFunction {
             codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.reg.slot, varSymbol.name)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.regNumber, varSymbol.name)));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -241,7 +240,7 @@ public class CompiledFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 codeIndexedLoad();
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.reg.slot, letStmt.symbol.name)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.regNumber, letStmt.symbol.name)));
         }
     }
 
@@ -403,7 +402,7 @@ public class CompiledFunction {
             pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            pushLocal(varSymbol.reg.slot, varSymbol.name);
+            pushLocal(varSymbol.regNumber, varSymbol.name);
         }
         return false;
     }

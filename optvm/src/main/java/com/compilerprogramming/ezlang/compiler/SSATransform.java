@@ -1,17 +1,22 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Register;
-
 import java.util.*;
 
 /**
- * Transform a bytecode function to SSA form
+ * Transform a bytecode function to Semi-pruned SSA form.
+ * The algorithm is described in the paper
+ * 'Practical Improvements to the Construction and Destruction
+ * of Single Static Assigment Form' by Preston Briggs.
  */
 public class SSATransform {
 
     CompiledFunction function;
     DominatorTree domTree;
-    Register[] globals;
+    /**
+     * Non-local names are set of variables that are live
+     * on entry to _some_ BasicBlock in the program.
+     */
+    Register[] nonLocalNames;
     BBSet[] blockSets;
     List<BasicBlock> blocks;
     int[] counters;
@@ -32,9 +37,8 @@ public class SSATransform {
     }
 
     private void setupGlobals() {
-        // fixme this should really just look at locals I think
-        globals = new Register[function.nextReg];
-        blockSets = new BBSet[function.nextReg];
+        nonLocalNames = new Register[function.frameSize()];
+        blockSets = new BBSet[function.frameSize()];
     }
 
     /**
@@ -47,29 +51,29 @@ public class SSATransform {
             for (Instruction instruction: block.instructions) {
                 if (instruction.usesVars()) {
                     for (Register reg : instruction.uses()) {
-                        if (!varKill.contains(reg.id)) {
-                            globals[reg.id] = reg;
+                        if (!varKill.contains(reg.nonSSAId())) {
+                            nonLocalNames[reg.nonSSAId()] = reg;
                         }
                     }
                 }
                 if (instruction.definesVar()) {
                     Register reg = instruction.def();
-                    varKill.add(reg.id);
-                    if (blockSets[reg.id] == null) {
-                        blockSets[reg.id] = new BBSet();
+                    varKill.add(reg.nonSSAId());
+                    if (blockSets[reg.nonSSAId()] == null) {
+                        blockSets[reg.nonSSAId()] = new BBSet();
                     }
-                    blockSets[reg.id].add(block);
+                    blockSets[reg.nonSSAId()].add(block);
                 }
             }
         }
     }
 
     void insertPhis() {
-        for (int i = 0; i < globals.length; i++) {
-            Register x = globals[i];
+        for (int i = 0; i < nonLocalNames.length; i++) {
+            Register x = nonLocalNames[i];
             if (x != null) {
                 var visited = new BitSet();
-                var worklist = new WorkList(blockSets[x.id].blocks);
+                var worklist = new WorkList(blockSets[x.nonSSAId()].blocks);
                 var b = worklist.pop();
                 while (b != null) {
                     visited.set(b.bid);
@@ -94,12 +98,12 @@ public class SSATransform {
      * Creates and pushes new name
      */
     Register makeVersion(Register reg) {
-        int version = counters[reg.id];
-        if (version != reg.ssaVersion)
-            reg = reg.cloneWithVersion(version);
-        stacks[reg.id].push(reg);
-        counters[reg.id] = counters[reg.id] + 1;
-        return reg;
+        int id = reg.nonSSAId();
+        int version = counters[id];
+        var ssaReg = function.registerPool.ssaReg(reg, version);
+        stacks[id].push(ssaReg);
+        counters[id] = counters[id] + 1;
+        return ssaReg;
     }
 
     /**
@@ -126,7 +130,7 @@ public class SSATransform {
                 Register[] newUses = new Register[uses.size()];
                 for (int i = 0; i < newUses.length; i++) {
                     Register oldReg = uses.get(i);
-                    newUses[i] = stacks[oldReg.id].top();
+                    newUses[i] = stacks[oldReg.nonSSAId()].top();
                     instruction.replaceUses(newUses);
                 }
             }
@@ -141,7 +145,7 @@ public class SSATransform {
             int j = whichPred(s,block);
             for (Instruction.Phi phi: s.phis()) {
                 Register oldReg = phi.inputs.get(j).reg;
-                phi.replaceInput(j, stacks[oldReg.id].top());
+                phi.replaceInput(j, stacks[oldReg.nonSSAId()].top());
             }
         }
         // Recurse down the dominator tree
@@ -152,7 +156,7 @@ public class SSATransform {
         for (Instruction i: block.instructions) {
             if (i.definesVar()) {
                 var reg = i.def();
-                stacks[reg.id].pop();
+                stacks[reg.nonSSAId()].pop();
             }
         }
     }
@@ -168,9 +172,9 @@ public class SSATransform {
     }
 
     private void initVersionCounters() {
-        counters = new int[globals.length];
-        stacks = new VersionStack[globals.length];
-        for (int i = 0; i < globals.length; i++) {
+        counters = new int[nonLocalNames.length];
+        stacks = new VersionStack[nonLocalNames.length];
+        for (int i = 0; i < nonLocalNames.length; i++) {
             counters[i] = 0;
             stacks[i] = new VersionStack();
         }
@@ -182,9 +186,9 @@ public class SSATransform {
     }
 
     static class VersionStack {
-        List<Register> stack = new ArrayList<>();
-        void push(Register r) { stack.add(r); }
-        Register top() { return stack.getLast(); }
+        List<Register.SSARegister> stack = new ArrayList<>();
+        void push(Register.SSARegister r) { stack.add(r); }
+        Register.SSARegister top() { return stack.getLast(); }
         void pop() { stack.removeLast(); }
     }
 

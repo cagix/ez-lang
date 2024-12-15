@@ -2,7 +2,6 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
-import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
@@ -14,22 +13,14 @@ public class CompiledFunction {
 
     public BasicBlock entry;
     public BasicBlock exit;
-    public int maxLocalReg;
-    public int maxStackSize;
     private int bid = 0;
     private BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
     private Type.TypeFunction functionType;
-    /**
-     * Each register is assigned a unique ID which is not
-     * the same as the slot number inside the frame, as that
-     * can be shared by registers because of disjoint life times.
-     * Start the ID at 1, so that we reserve 0 for the return register
-     */
-    public int nextReg = 1;
-    static final int RETURN_REG_ID = 0;
-    public final int numLocalRegs;
+    public final RegisterPool registerPool;
+
+    private final int frameSlots;
 
     /**
      * We essentially do a form of abstract interpretation as we generate
@@ -43,31 +34,32 @@ public class CompiledFunction {
 
     public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
+        this.functionType = (Type.TypeFunction) functionSymbol.type;
+        this.registerPool = new RegisterPool("%ret", functionType == null?null:functionType.returnType);
         setVirtualRegisters(funcDecl.scope);
-        this.numLocalRegs = this.nextReg; // Before assigning temps
         this.bid = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
-        this.functionType = (Type.TypeFunction) functionSymbol.type;
         generateArgInstructions(funcDecl.scope);
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
+        this.frameSlots = registerPool.numRegisters();
     }
 
     private void generateArgInstructions(Scope scope) {
         if (scope.isFunctionParameterScope) {
             for (Symbol symbol: scope.getLocalSymbols()) {
                 if (symbol instanceof Symbol.ParameterSymbol parameterSymbol) {
-                    code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(parameterSymbol.reg)));
+                    code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(registerPool.getReg(parameterSymbol.regNumber))));
                 }
             }
         }
     }
 
     public int frameSize() {
-        return maxLocalReg+maxStackSize;
+        return frameSlots;
     }
 
     private void exitBlockIfNeeded() {
@@ -78,17 +70,11 @@ public class CompiledFunction {
     }
 
     private void setVirtualRegisters(Scope scope) {
-        int reg = 0;
-        if (scope.parent != null)
-            reg = scope.parent.maxReg;
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
-                varSymbol.reg = new Register(reg++, nextReg++, varSymbol.name, varSymbol.type);
+                varSymbol.regNumber = registerPool.newReg(varSymbol.name, varSymbol.type).nonSSAId();
             }
         }
-        scope.maxReg = reg;
-        if (maxLocalReg < scope.maxReg)
-            maxLocalReg = scope.maxReg;
         for (Scope childScope: scope.children) {
             setVirtualRegisters(childScope);
         }
@@ -114,7 +100,7 @@ public class CompiledFunction {
             if (isIndexed)
                 codeIndexedLoad();
             if (virtualStack.size() == 1)
-                code(new Instruction.Return(pop(), 0, RETURN_REG_ID, functionType.returnType));
+                code(new Instruction.Return(pop(), registerPool.returnRegister));
             else if (virtualStack.size() > 1)
                 throw new CompilerException("Virtual stack has more than one item at return");
         }
@@ -169,7 +155,7 @@ public class CompiledFunction {
             codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(varSymbol.reg)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(varSymbol.regNumber))));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -264,7 +250,7 @@ public class CompiledFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 codeIndexedLoad();
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(letStmt.symbol.reg)));
+            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(letStmt.symbol.regNumber))));
         }
     }
 
@@ -426,7 +412,7 @@ public class CompiledFunction {
             pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            pushLocal(varSymbol.reg);
+            pushLocal(registerPool.getReg(varSymbol.regNumber));
         }
         return false;
     }
@@ -500,13 +486,8 @@ public class CompiledFunction {
     }
 
     private Operand.TempRegisterOperand createTemp(Type type) {
-        var offset = virtualStack.size()+maxLocalReg;
-        var id = nextReg++;
-        var name = "%t" + id;
-        var tempRegister = new Operand.TempRegisterOperand(offset, id, name, type);
+        var tempRegister = new Operand.TempRegisterOperand(registerPool.newTempReg(type));
         pushOperand(tempRegister);
-        if (maxStackSize < virtualStack.size())
-            maxStackSize = virtualStack.size();
         return tempRegister;
     }
 

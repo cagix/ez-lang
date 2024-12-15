@@ -1,6 +1,5 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Type;
 
 import java.util.ArrayList;
@@ -349,8 +348,8 @@ public abstract class Instruction {
         }
     }
     public static class Return extends Move {
-        public Return(Operand from, int slot, int regNum, Type type) {
-            super(from, new Operand.ReturnRegisterOperand(slot, regNum, "%ret", type));
+        public Return(Operand from, Register reg) {
+            super(from, new Operand.ReturnRegisterOperand(reg));
         }
     }
     public static class Unary extends Instruction {

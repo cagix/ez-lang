@@ -1,6 +1,5 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Register;
 import com.compilerprogramming.ezlang.types.Type;
 
 public class Operand {
@@ -23,13 +22,12 @@ public class Operand {
 
     public static class RegisterOperand extends Operand {
         public Register reg;
-        public RegisterOperand(int slot, int regnum, String name, Type type, boolean isTemp) {
-            this.reg = new Register(slot, regnum, name, type);
-        }
         public RegisterOperand(Register reg) {
             this.reg = reg;
+            if (reg == null)
+                throw new NullPointerException();
         }
-        public int slot() { return reg.slot; }
+        public int slot() { return reg.nonSSAId(); }
 
         @Override
         public void replaceRegister(Register register) {
@@ -38,7 +36,7 @@ public class Operand {
 
         @Override
         public String toString() {
-            return reg.name;
+            return reg.name();
         }
     }
 
@@ -65,9 +63,7 @@ public class Operand {
      * this to appropriate location.
      */
     public static class ReturnRegisterOperand extends RegisterOperand {
-        public ReturnRegisterOperand(int slot, int regnum, String name, Type type) { super(slot, regnum, name, type, true); }
-        @Override
-        public String toString() { return "%ret"; }
+        public ReturnRegisterOperand(Register reg) { super(reg); }
     }
 
     /**
@@ -76,8 +72,8 @@ public class Operand {
      * register number from start of temp area.
      */
     public static class TempRegisterOperand extends RegisterOperand {
-        public TempRegisterOperand(int offset, int regnum, String name, Type type) {
-            super(offset, regnum, name, type, true);
+        public TempRegisterOperand(Register reg) {
+            super(reg);
         }
     }
 

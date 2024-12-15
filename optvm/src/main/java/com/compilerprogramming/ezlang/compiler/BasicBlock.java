@@ -1,7 +1,5 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Register;
-
 import java.util.*;
 
 public class BasicBlock {
@@ -75,7 +73,7 @@ public class BasicBlock {
     public void insertPhiFor(Register var) {
         for (Instruction i: instructions) {
             if (i instanceof Instruction.Phi phi) {
-                if (phi.def().id == var.id)
+                if (phi.def().nonSSAId() == var.nonSSAId())
                     // already added
                     return;
             }
