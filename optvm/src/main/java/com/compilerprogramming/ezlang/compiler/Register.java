@@ -10,7 +10,7 @@ public class Register {
     /**
      * Unique virtual ID
      */
-    private final int id;
+    public final int id;
     /**
      * The base name - for local variables and function params this should be the name
      * in the source program. For temps this is a made up name.
