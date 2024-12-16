@@ -18,11 +18,11 @@ public class TestSSATransform {
                 sb.append("func ").append(f.name).append("\n");
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
-                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet());
+                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
                 new SSATransform(functionBuilder);
                 sb.append("After SSA\n");
                 sb.append("=========\n");
-                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet());
+                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
             }
         }
         return sb.toString();

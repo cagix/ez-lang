@@ -31,15 +31,17 @@ public class Compiler {
         compile(typeDict);
         return typeDict;
     }
-    public String dumpIR(TypeDictionary typeDictionary) {
+    public static String dumpIR(TypeDictionary typeDictionary) {
+        return dumpIR(typeDictionary, false);
+    }
+    public static String dumpIR(TypeDictionary typeDictionary, boolean verbose) {
         StringBuilder sb = new StringBuilder();
         for (Symbol s: typeDictionary.bindings.values()) {
             if (s instanceof Symbol.FunctionTypeSymbol f) {
-                var functionBuilder = (CompiledFunction) f.code();
-                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet());
+                var function = (CompiledFunction) f.code();
+                function.toStr(sb, verbose);
             }
         }
         return sb.toString();
     }
-
 }

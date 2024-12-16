@@ -7,6 +7,7 @@ import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 public class CompiledFunction {
@@ -535,5 +536,13 @@ public class CompiledFunction {
 
     private boolean vstackEmpty() {
         return virtualStack.isEmpty();
+    }
+
+    public void toStr(StringBuilder sb, boolean verbose) {
+        if (verbose) {
+            sb.append(this.functionType.describe()).append("\n");
+            registerPool.toStr(sb);
+        }
+        BasicBlock.toStr(sb, entry, new BitSet(), verbose);
     }
 }

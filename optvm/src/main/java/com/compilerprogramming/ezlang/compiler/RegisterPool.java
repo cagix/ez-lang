@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.types.Type;
 import java.util.ArrayList;
 
 /**
- * The RegisterPool is ued when compiling functions
+ * The RegisterPool is used when compiling functions
  * to assign IDs to registers. Initially the registers get
  * sequential IDs. For SSA registers we assign new IDs but also
  * retain the old ID and attach a version number - the old ID is
@@ -47,5 +47,11 @@ public class RegisterPool {
     }
     public int numRegisters() {
         return registers.size();
+    }
+
+    public void toStr(StringBuilder sb) {
+        for (Register reg : registers) {
+            sb.append("Reg #").append(reg.id).append(" ").append(reg.name()).append("\n");
+        }
     }
 }

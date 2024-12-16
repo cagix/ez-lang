@@ -44,6 +44,25 @@ public class BasicBlock {
      */
     public LoopNest loop;
 
+    // Liveness computation
+    /**
+     * VarKill contains all the variables that are defined
+     * in the block.
+     */
+    BitSet varKill;
+    /**
+     * UEVar contains upward-exposed variables in the block,
+     * i.e. those variables that are used in the block prior to
+     * any redefinition in the block.
+     */
+    BitSet UEVar;
+    /**
+     * LiveOut is the union of variables that are live at the
+     * head of some block that is a successor of this block.
+     */
+    BitSet liveOut;
+    // -----------------------
+
     public BasicBlock(int bid, boolean loopHead) {
         this.bid = bid;
         this.loopHead = loopHead;
@@ -94,7 +113,7 @@ public class BasicBlock {
         }
         return list;
     }
-    public static StringBuilder toStr(StringBuilder sb, BasicBlock bb, BitSet visited)
+    public static StringBuilder toStr(StringBuilder sb, BasicBlock bb, BitSet visited, boolean dumpLiveness)
     {
         if (visited.get(bb.bid))
             return sb;
@@ -104,8 +123,13 @@ public class BasicBlock {
             sb.append("    ");
             n.toStr(sb).append("\n");
         }
+        if (dumpLiveness) {
+            if (bb.UEVar != null)   sb.append("    #UEVAR   = ").append(bb.UEVar.toString()).append("\n");
+            if (bb.varKill != null) sb.append("    #VARKILL = ").append(bb.varKill.toString()).append("\n");
+            if (bb.liveOut != null) sb.append("    #LIVEOUT = ").append(bb.liveOut.toString()).append("\n");
+        }
         for (BasicBlock succ: bb.successors) {
-            toStr(sb, succ, visited);
+            toStr(sb, succ, visited, dumpLiveness);
         }
         return sb;
     }
