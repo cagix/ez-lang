@@ -23,6 +23,10 @@ public class TestSSATransform {
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
+                new ExitSSA(functionBuilder);
+                sb.append("After exiting SSA\n");
+                sb.append("=================\n");
+                BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
             }
         }
         return sb.toString();
@@ -58,6 +62,20 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    arg d_0
+    a_0 = 42
+    b_0 = a_0
+    %t5_0 = a_0+b_0
+    c_0 = %t5_0
+    %t6_0 = c_0+23
+    a_1 = %t6_0
+    %t7_0 = a_1+d_0
+    c_1 = %t7_0
+    goto  L1
+L1:
+After exiting SSA
+=================
 L0:
     arg d_0
     a_0 = 42
@@ -130,6 +148,26 @@ L3:
     %t4_0 = a_0-1
     a_1 = %t4_0
     goto  L4
+After exiting SSA
+=================
+L0:
+    arg d_0
+    a_0 = 42
+    if d_0 goto L2 else goto L3
+L2:
+    %t3_0 = a_0+1
+    a_2 = %t3_0
+    a_3 = a_2
+    goto  L4
+L4:
+    %ret_0 = a_3
+    goto  L1
+L1:
+L3:
+    %t4_0 = a_0-1
+    a_1 = %t4_0
+    a_3 = a_1
+    goto  L4
 """, result);
 
     }
@@ -190,6 +228,29 @@ L4:
     %ret_0 = result_1
     goto  L1
 L1:
+After exiting SSA
+=================
+L0:
+    arg num_0
+    result_0 = 1
+    result_1 = result_0
+    num_1 = num_0
+    goto  L2
+L2:
+    %t3_0 = num_1>1
+    if %t3_0 goto L3 else goto L4
+L3:
+    %t4_0 = result_1*num_1
+    result_2 = %t4_0
+    %t5_0 = num_1-1
+    num_2 = %t5_0
+    result_1 = result_2
+    num_1 = num_2
+    goto  L2
+L4:
+    %ret_0 = result_1
+    goto  L1
+L1:
 """, result);
 
     }
@@ -245,6 +306,15 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    arg a_0
+    arg b_0
+    arg c_0
+    arg d_0
+    goto  L1
+L1:
+After exiting SSA
+=================
 L0:
     arg a_0
     arg b_0
@@ -404,6 +474,104 @@ L6:
     %t11_0 = k_1+2
     k_2 = %t11_0
     goto  L7
+After exiting SSA
+=================
+L0:
+    arg p_0
+    arg q_0
+    arg r_0
+    arg s_0
+    arg t_0
+    i_0 = 1
+    j_0 = 1
+    k_0 = 1
+    l_0 = 1
+    l_1 = l_0
+    k_1 = k_0
+    j_1 = j_0
+    i_1 = i_0
+    goto  L2
+L2:
+    l_10 = l_1
+    k_5 = k_1
+    j_4 = j_1
+    i_3 = i_1
+    if 1 goto L3 else goto L4
+L3:
+    if p_0 goto L5 else goto L6
+L5:
+    j_2 = i_1
+    if q_0 goto L8 else goto L9
+L8:
+    l_3 = 2
+    l_4 = l_3
+    goto  L10
+L10:
+    %t10_0 = k_1+1
+    k_3 = %t10_0
+    l_5 = l_4
+    k_4 = k_3
+    j_3 = j_2
+    goto  L7
+L7:
+    %t12_0 = i_1
+    %t13_0 = j_3
+    %t14_0 = k_4
+    %t15_0 = l_5
+    call print params %t12_0, %t13_0, %t14_0, %t15_0
+    l_6 = l_5
+    goto  L11
+L11:
+    l_9 = l_6
+    if 1 goto L12 else goto L13
+L12:
+    l_8 = l_6
+    if r_0 goto L14 else goto L15
+L14:
+    %t16_0 = l_6+4
+    l_7 = %t16_0
+    l_8 = l_7
+    goto  L15
+L15:
+    %t17_0 = !s_0
+    if %t17_0 goto L16 else goto L17
+L16:
+    l_9 = l_8
+    goto  L13
+L13:
+    %t18_0 = i_1+6
+    i_2 = %t18_0
+    %t19_0 = !t_0
+    if %t19_0 goto L18 else goto L19
+L18:
+    l_10 = l_9
+    k_5 = k_4
+    j_4 = j_3
+    i_3 = i_2
+    goto  L4
+L4:
+    goto  L1
+L1:
+L19:
+    l_1 = l_9
+    k_1 = k_4
+    j_1 = j_3
+    i_1 = i_2
+    goto  L2
+L17:
+    l_6 = l_8
+    goto  L11
+L9:
+    l_2 = 3
+    l_4 = l_2
+    goto  L10
+L6:
+    %t11_0 = k_1+2
+    k_2 = %t11_0
+    l_5 = l_1
+    k_4 = k_2
+    j_3 = j_1
+    goto  L7
 """, result);
     }
 
@@ -413,7 +581,7 @@ L6:
                 func bar(arg: Int)->Int {
                     if (arg)
                         return 42;
-                    return 0;    
+                    return 0;
                 }
                 """;
         String result = compileSrc(src);
@@ -433,6 +601,18 @@ L3:
     goto  L1
 After SSA
 =========
+L0:
+    arg arg_0
+    if arg_0 goto L2 else goto L3
+L2:
+    %ret_1 = 42
+    goto  L1
+L1:
+L3:
+    %ret_0 = 0
+    goto  L1
+After exiting SSA
+=================
 L0:
     arg arg_0
     if arg_0 goto L2 else goto L3

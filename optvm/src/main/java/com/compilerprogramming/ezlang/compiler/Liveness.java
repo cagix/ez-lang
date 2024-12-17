@@ -15,6 +15,7 @@ public class Liveness {
         RegisterPool regPool = function.registerPool;
         init(regPool, blocks);
         computeLiveness(blocks);
+        function.hasLiveness = true;
     }
 
     private void init(RegisterPool regPool, List<BasicBlock> blocks) {

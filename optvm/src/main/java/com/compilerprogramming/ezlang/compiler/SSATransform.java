@@ -30,6 +30,8 @@ public class SSATransform {
         findGlobalVars();
         insertPhis();
         renameVars();
+        bytecodeFunction.isSSA = true;
+        bytecodeFunction.hasLiveness = false;
     }
 
     private void computeDomTreeAndDominanceFrontiers() {
@@ -161,7 +163,7 @@ public class SSATransform {
         }
     }
 
-    private int whichPred(BasicBlock s, BasicBlock block) {
+    public static int whichPred(BasicBlock s, BasicBlock block) {
         int i = 0;
         for (BasicBlock p: s.predecessors) {
             if (p == block)
