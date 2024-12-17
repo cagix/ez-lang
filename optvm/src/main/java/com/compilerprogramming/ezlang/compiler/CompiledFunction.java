@@ -23,6 +23,9 @@ public class CompiledFunction {
 
     private final int frameSlots;
 
+    public boolean isSSA;
+    public boolean hasLiveness;
+
     /**
      * We essentially do a form of abstract interpretation as we generate
      * the bytecode instructions. For this purpose we use a virtual operand stack.
