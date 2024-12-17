@@ -150,10 +150,9 @@ public class ExitSSA {
         assert bb.instructions.size() > 0;
         int pos = 0;
         while (pos < bb.instructions.size()) {
-            Instruction i = bb.instructions.get(pos);
+            Instruction i = bb.instructions.get(pos++);
             if (i instanceof Instruction.Phi phi &&
                     phi.def().id == phiDef.id) {
-                pos += 1;
                 break;
             }
         }
