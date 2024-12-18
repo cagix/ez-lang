@@ -22,7 +22,7 @@ public class TestCompiler {
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = 1
+    ret 1
     goto  L1
 L1:
 """, result);
@@ -39,7 +39,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = -1
+    ret -1
     goto  L1
 L1:
 """, result);
@@ -56,7 +56,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = n
+    ret n
     goto  L1
 L1:
 """, result);
@@ -73,8 +73,8 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t2 = -n
-    %ret = %t2
+    %t1 = -n
+    ret %t1
     goto  L1
 L1:
 """, result);
@@ -91,8 +91,8 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t2 = n+1
-    %ret = %t2
+    %t1 = n+1
+    ret %t1
     goto  L1
 L1:
 """, result);
@@ -109,7 +109,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = 2
+    ret 2
     goto  L1
 L1:
 """, result);
@@ -126,7 +126,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = 1
+    ret 1
     goto  L1
 L1:
 """, result);
@@ -143,7 +143,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = 1
+    ret 1
     goto  L1
 L1:
 """, result);
@@ -160,7 +160,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %ret = 0
+    ret 0
     goto  L1
 L1:
 """, result);
@@ -177,8 +177,8 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t2 = n[0]
-    %ret = %t2
+    %t1 = n[0]
+    ret %t1
     goto  L1
 L1:
 """, result);
@@ -195,10 +195,10 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t2 = n[0]
-    %t3 = n[1]
-    %t4 = %t2+%t3
-    %ret = %t4
+    %t1 = n[0]
+    %t2 = n[1]
+    %t3 = %t1+%t2
+    ret %t3
     goto  L1
 L1:
 """, result);
@@ -214,11 +214,11 @@ L1:
         String result = compileSrc(src);
         Assert.assertEquals("""
 L0:
-    %t1 = New([Int,Int])
-    %t1.append(1)
-    %t1.append(2)
-    %t1.append(3)
-    %ret = %t1
+    %t0 = New([Int,Int])
+    %t0.append(1)
+    %t0.append(2)
+    %t0.append(3)
+    ret %t0
     goto  L1
 L1:
 """, result);
@@ -235,9 +235,9 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t2 = New([Int,Int])
-    %t2.append(n)
-    %ret = %t2
+    %t1 = New([Int,Int])
+    %t1.append(n)
+    ret %t1
     goto  L1
 L1:
 """, result);
@@ -255,8 +255,8 @@ L1:
 L0:
     arg x
     arg y
-    %t3 = x+y
-    %ret = %t3
+    %t2 = x+y
+    ret %t2
     goto  L1
 L1:
 """, result);
@@ -299,10 +299,10 @@ L1:
         String result = compileSrc(src);
         Assert.assertEquals("""
 L0:
-    %t1 = New(Person)
-    %t1.age = 10
-    %t1.children = 0
-    %ret = %t1
+    %t0 = New(Person)
+    %t0.age = 10
+    %t0.children = 0
+    ret %t0
     goto  L1
 L1:
 """, result);
@@ -341,14 +341,14 @@ L1:
 L0:
     arg x
     arg y
-    %t3 = x<y
-    if %t3 goto L2 else goto L3
+    %t2 = x<y
+    if %t2 goto L2 else goto L3
 L2:
-    %ret = x
+    ret x
     goto  L1
 L1:
 L3:
-    %ret = y
+    ret y
     goto  L1
 """, result);
     }
@@ -415,11 +415,11 @@ L0:
     arg n
     goto  L2
 L2:
-    %t2 = n>0
-    if %t2 goto L3 else goto L4
+    %t1 = n>0
+    if %t1 goto L3 else goto L4
 L3:
-    %t3 = n-1
-    n = %t3
+    %t2 = n-1
+    n = %t2
     goto  L2
 L4:
     goto  L1
@@ -459,9 +459,9 @@ L0:
     goto  L1
 L1:
 L0:
-    %t1 = 1
-    %t2 = 2
-    call foo params %t1, %t2
+    %t0 = 1
+    %t1 = 2
+    call foo params %t0, %t1
     goto  L1
 L1:
 """, result);
@@ -478,17 +478,17 @@ L1:
 L0:
     arg x
     arg y
-    %t3 = x+y
-    %ret = %t3
+    %t2 = x+y
+    ret %t2
     goto  L1
 L1:
 L0:
-    %t2 = 1
-    %t3 = 2
-    %t4 = call foo params %t2, %t3
-    t = %t4
-    %t5 = t+1
-    %ret = %t5
+    %t1 = 1
+    %t2 = 2
+    %t3 = call foo params %t1, %t2
+    t = %t3
+    %t4 = t+1
+    ret %t4
     goto  L1
 L1:
 """, result);
@@ -510,8 +510,8 @@ L1:
         Assert.assertEquals("""
 L0:
     arg p
-    %t2 = p.age
-    %ret = %t2
+    %t1 = p.age
+    ret %t1
     goto  L1
 L1:
 """, result);
@@ -533,9 +533,9 @@ L1:
         Assert.assertEquals("""
 L0:
     arg p
-    %t2 = p.parent
-    %t3 = %t2.age
-    %ret = %t3
+    %t1 = p.parent
+    %t2 = %t1.age
+    ret %t2
     goto  L1
 L1:
 """, result);
@@ -558,10 +558,10 @@ L1:
 L0:
     arg p
     arg i
-    %t3 = p[i]
-    %t4 = %t3.parent
-    %t5 = %t4.age
-    %ret = %t5
+    %t2 = p[i]
+    %t3 = %t2.parent
+    %t4 = %t3.age
+    ret %t4
     goto  L1
 L1:
 """, result);
@@ -578,18 +578,18 @@ L1:
 L0:
     arg x
     arg y
-    %t3 = x+y
-    %ret = %t3
+    %t2 = x+y
+    ret %t2
     goto  L1
 L1:
 L0:
     arg a
-    %t3 = a
-    %t4 = 2
-    %t5 = call foo params %t3, %t4
-    t = %t5
-    %t6 = t+1
-    %ret = %t6
+    %t2 = a
+    %t3 = 2
+    %t4 = call foo params %t2, %t3
+    t = %t4
+    %t5 = t+1
+    ret %t5
     goto  L1
 L1:
 """, result);

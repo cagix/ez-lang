@@ -44,16 +44,17 @@ public class Interpreter {
             ip++;
             instruction = currentBlock.instructions.get(ip);
             switch (instruction) {
-                case Instruction.Return returnInst -> {
-                    if (returnInst.from instanceof Operand.ConstantOperand constantOperand) {
+                case Instruction.Ret retInst -> {
+                    if (retInst.value instanceof Operand.ConstantOperand constantOperand) {
                         execStack.stack[base] = new Value.IntegerValue(constantOperand.value);
                     }
-                    else if (returnInst.from instanceof Operand.RegisterOperand registerOperand) {
+                    else if (retInst.value instanceof Operand.RegisterOperand registerOperand) {
                         execStack.stack[base] = execStack.stack[base+registerOperand.slot()];
                     }
                     else throw new IllegalStateException();
                     returnValue = execStack.stack[base];
                 }
+
                 case Instruction.Move moveInst -> {
                     if (moveInst.to instanceof Operand.RegisterOperand toReg) {
                         if (moveInst.from instanceof Operand.RegisterOperand fromReg) {
@@ -98,11 +99,7 @@ public class Interpreter {
                 case Instruction.Call callInst -> {
                     // Copy args to new frame
                     int baseReg = base+currentFunction.frameSize();
-                    int offset = 0;
-                    // In this version return reg
-                    if (!(callInst.callee.returnType instanceof Type.TypeVoid))
-                        offset = 1;
-                    int reg = baseReg + offset;
+                    int reg = baseReg;
                     for (Operand.RegisterOperand arg: callInst.args) {
                         execStack.stack[base + reg] = execStack.stack[base + arg.slot()];
                         reg += 1;

@@ -14,14 +14,7 @@ import java.util.ArrayList;
  */
 public class RegisterPool {
     private final ArrayList<Register> registers = new ArrayList<>();
-    public final Register returnRegister;
 
-    public RegisterPool(String returnVarName, Type type) {
-        if (type != null)
-            returnRegister = newReg(returnVarName, type);
-        else
-            returnRegister = null;
-    }
     public Register getReg(int regNumber) {
         return registers.get(regNumber);
     }

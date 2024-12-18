@@ -55,12 +55,12 @@ L0:
     arg d
     a = 42
     b = a
-    %t5 = a+b
-    c = %t5
-    %t6 = c+23
-    a = %t6
-    %t7 = a+d
-    c = %t7
+    %t4 = a+b
+    c = %t4
+    %t5 = c+23
+    a = %t5
+    %t6 = a+d
+    c = %t6
     goto  L1
 L1:
 After SSA
@@ -69,12 +69,12 @@ L0:
     arg d_0
     a_0 = 42
     b_0 = a_0
-    %t5_0 = a_0+b_0
-    c_0 = %t5_0
-    %t6_0 = c_0+23
-    a_1 = %t6_0
-    %t7_0 = a_1+d_0
-    c_1 = %t7_0
+    %t4_0 = a_0+b_0
+    c_0 = %t4_0
+    %t5_0 = c_0+23
+    a_1 = %t5_0
+    %t6_0 = a_1+d_0
+    c_1 = %t6_0
     goto  L1
 L1:
 After exiting SSA
@@ -83,12 +83,12 @@ L0:
     arg d_0
     a_0 = 42
     b_0 = a_0
-    %t5_0 = a_0+b_0
-    c_0 = %t5_0
-    %t6_0 = c_0+23
-    a_1 = %t6_0
-    %t7_0 = a_1+d_0
-    c_1 = %t7_0
+    %t4_0 = a_0+b_0
+    c_0 = %t4_0
+    %t5_0 = c_0+23
+    a_1 = %t5_0
+    %t6_0 = a_1+d_0
+    c_1 = %t6_0
     goto  L1
 L1:
 """, result);
@@ -121,16 +121,16 @@ L0:
     a = 42
     if d goto L2 else goto L3
 L2:
-    %t3 = a+1
-    a = %t3
+    %t2 = a+1
+    a = %t2
     goto  L4
 L4:
-    %ret = a
+    ret a
     goto  L1
 L1:
 L3:
-    %t4 = a-1
-    a = %t4
+    %t3 = a-1
+    a = %t3
     goto  L4
 After SSA
 =========
@@ -139,17 +139,17 @@ L0:
     a_0 = 42
     if d_0 goto L2 else goto L3
 L2:
-    %t3_0 = a_0+1
-    a_2 = %t3_0
+    %t2_0 = a_0+1
+    a_2 = %t2_0
     goto  L4
 L4:
     a_3 = phi(a_2, a_1)
-    %ret_0 = a_3
+    ret a_3
     goto  L1
 L1:
 L3:
-    %t4_0 = a_0-1
-    a_1 = %t4_0
+    %t3_0 = a_0-1
+    a_1 = %t3_0
     goto  L4
 After exiting SSA
 =================
@@ -158,17 +158,17 @@ L0:
     a_0 = 42
     if d_0 goto L2 else goto L3
 L2:
-    %t3_0 = a_0+1
-    a_2 = %t3_0
+    %t2_0 = a_0+1
+    a_2 = %t2_0
     a_3 = a_2
     goto  L4
 L4:
-    %ret_0 = a_3
+    ret a_3
     goto  L1
 L1:
 L3:
-    %t4_0 = a_0-1
-    a_1 = %t4_0
+    %t3_0 = a_0-1
+    a_1 = %t3_0
     a_3 = a_1
     goto  L4
 """, result);
@@ -198,16 +198,16 @@ L0:
     result = 1
     goto  L2
 L2:
-    %t3 = num>1
-    if %t3 goto L3 else goto L4
+    %t2 = num>1
+    if %t2 goto L3 else goto L4
 L3:
-    %t4 = result*num
-    result = %t4
-    %t5 = num-1
-    num = %t5
+    %t3 = result*num
+    result = %t3
+    %t4 = num-1
+    num = %t4
     goto  L2
 L4:
-    %ret = result
+    ret result
     goto  L1
 L1:
 After SSA
@@ -219,16 +219,16 @@ L0:
 L2:
     result_1 = phi(result_0, result_2)
     num_1 = phi(num_0, num_2)
-    %t3_0 = num_1>1
-    if %t3_0 goto L3 else goto L4
+    %t2_0 = num_1>1
+    if %t2_0 goto L3 else goto L4
 L3:
-    %t4_0 = result_1*num_1
-    result_2 = %t4_0
-    %t5_0 = num_1-1
-    num_2 = %t5_0
+    %t3_0 = result_1*num_1
+    result_2 = %t3_0
+    %t4_0 = num_1-1
+    num_2 = %t4_0
     goto  L2
 L4:
-    %ret_0 = result_1
+    ret result_1
     goto  L1
 L1:
 After exiting SSA
@@ -240,18 +240,18 @@ L0:
     num_1 = num_0
     goto  L2
 L2:
-    %t3_0 = num_1>1
-    if %t3_0 goto L3 else goto L4
+    %t2_0 = num_1>1
+    if %t2_0 goto L3 else goto L4
 L3:
-    %t4_0 = result_1*num_1
-    result_2 = %t4_0
-    %t5_0 = num_1-1
-    num_2 = %t5_0
+    %t3_0 = result_1*num_1
+    result_2 = %t3_0
+    %t4_0 = num_1-1
+    num_2 = %t4_0
     result_1 = result_2
     num_1 = num_2
     goto  L2
 L4:
-    %ret_0 = result_1
+    ret result_1
     goto  L1
 L1:
 """, result);
@@ -350,34 +350,34 @@ L8:
     l = 2
     goto  L10
 L10:
-    %t10 = k+1
-    k = %t10
+    %t9 = k+1
+    k = %t9
     goto  L7
 L7:
-    %t12 = i
-    %t13 = j
-    %t14 = k
-    %t15 = l
-    call print params %t12, %t13, %t14, %t15
+    %t11 = i
+    %t12 = j
+    %t13 = k
+    %t14 = l
+    call print params %t11, %t12, %t13, %t14
     goto  L11
 L11:
     if 1 goto L12 else goto L13
 L12:
     if r goto L14 else goto L15
 L14:
-    %t16 = l+4
-    l = %t16
+    %t15 = l+4
+    l = %t15
     goto  L15
 L15:
-    %t17 = !s
-    if %t17 goto L16 else goto L17
+    %t16 = !s
+    if %t16 goto L16 else goto L17
 L16:
     goto  L13
 L13:
-    %t18 = i+6
-    i = %t18
-    %t19 = !t
-    if %t19 goto L18 else goto L19
+    %t17 = i+6
+    i = %t17
+    %t18 = !t
+    if %t18 goto L18 else goto L19
 L18:
     goto  L4
 L4:
@@ -391,8 +391,8 @@ L9:
     l = 3
     goto  L10
 L6:
-    %t11 = k+2
-    k = %t11
+    %t10 = k+2
+    k = %t10
     goto  L7
 After SSA
 =========
@@ -423,18 +423,18 @@ L8:
     goto  L10
 L10:
     l_4 = phi(l_3, l_2)
-    %t10_0 = k_1+1
-    k_3 = %t10_0
+    %t9_0 = k_1+1
+    k_3 = %t9_0
     goto  L7
 L7:
     l_5 = phi(l_4, l_1)
     k_4 = phi(k_3, k_2)
     j_3 = phi(j_2, j_1)
-    %t12_0 = i_1
-    %t13_0 = j_3
-    %t14_0 = k_4
-    %t15_0 = l_5
-    call print params %t12_0, %t13_0, %t14_0, %t15_0
+    %t11_0 = i_1
+    %t12_0 = j_3
+    %t13_0 = k_4
+    %t14_0 = l_5
+    call print params %t11_0, %t12_0, %t13_0, %t14_0
     goto  L11
 L11:
     l_6 = phi(l_5, l_8)
@@ -442,21 +442,21 @@ L11:
 L12:
     if r_0 goto L14 else goto L15
 L14:
-    %t16_0 = l_6+4
-    l_7 = %t16_0
+    %t15_0 = l_6+4
+    l_7 = %t15_0
     goto  L15
 L15:
     l_8 = phi(l_6, l_7)
-    %t17_0 = !s_0
-    if %t17_0 goto L16 else goto L17
+    %t16_0 = !s_0
+    if %t16_0 goto L16 else goto L17
 L16:
     goto  L13
 L13:
     l_9 = phi(l_6, l_8)
-    %t18_0 = i_1+6
-    i_2 = %t18_0
-    %t19_0 = !t_0
-    if %t19_0 goto L18 else goto L19
+    %t17_0 = i_1+6
+    i_2 = %t17_0
+    %t18_0 = !t_0
+    if %t18_0 goto L18 else goto L19
 L18:
     goto  L4
 L4:
@@ -474,8 +474,8 @@ L9:
     l_2 = 3
     goto  L10
 L6:
-    %t11_0 = k_1+2
-    k_2 = %t11_0
+    %t10_0 = k_1+2
+    k_2 = %t10_0
     goto  L7
 After exiting SSA
 =================
@@ -510,18 +510,18 @@ L8:
     l_4 = l_3
     goto  L10
 L10:
-    %t10_0 = k_1+1
-    k_3 = %t10_0
+    %t9_0 = k_1+1
+    k_3 = %t9_0
     l_5 = l_4
     k_4 = k_3
     j_3 = j_2
     goto  L7
 L7:
-    %t12_0 = i_1
-    %t13_0 = j_3
-    %t14_0 = k_4
-    %t15_0 = l_5
-    call print params %t12_0, %t13_0, %t14_0, %t15_0
+    %t11_0 = i_1
+    %t12_0 = j_3
+    %t13_0 = k_4
+    %t14_0 = l_5
+    call print params %t11_0, %t12_0, %t13_0, %t14_0
     l_6 = l_5
     goto  L11
 L11:
@@ -531,21 +531,21 @@ L12:
     l_8 = l_6
     if r_0 goto L14 else goto L15
 L14:
-    %t16_0 = l_6+4
-    l_7 = %t16_0
+    %t15_0 = l_6+4
+    l_7 = %t15_0
     l_8 = l_7
     goto  L15
 L15:
-    %t17_0 = !s_0
-    if %t17_0 goto L16 else goto L17
+    %t16_0 = !s_0
+    if %t16_0 goto L16 else goto L17
 L16:
     l_9 = l_8
     goto  L13
 L13:
-    %t18_0 = i_1+6
-    i_2 = %t18_0
-    %t19_0 = !t_0
-    if %t19_0 goto L18 else goto L19
+    %t17_0 = i_1+6
+    i_2 = %t17_0
+    %t18_0 = !t_0
+    if %t18_0 goto L18 else goto L19
 L18:
     l_10 = l_9
     k_5 = k_4
@@ -569,8 +569,8 @@ L9:
     l_4 = l_2
     goto  L10
 L6:
-    %t11_0 = k_1+2
-    k_2 = %t11_0
+    %t10_0 = k_1+2
+    k_2 = %t10_0
     l_5 = l_1
     k_4 = k_2
     j_3 = j_1
@@ -596,11 +596,11 @@ L0:
     arg arg
     if arg goto L2 else goto L3
 L2:
-    %ret = 42
+    ret 42
     goto  L1
 L1:
 L3:
-    %ret = 0
+    ret 0
     goto  L1
 After SSA
 =========
@@ -608,11 +608,11 @@ L0:
     arg arg_0
     if arg_0 goto L2 else goto L3
 L2:
-    %ret_1 = 42
+    ret 42
     goto  L1
 L1:
 L3:
-    %ret_0 = 0
+    ret 0
     goto  L1
 After exiting SSA
 =================
@@ -620,11 +620,11 @@ L0:
     arg arg_0
     if arg_0 goto L2 else goto L3
 L2:
-    %ret_1 = 42
+    ret 42
     goto  L1
 L1:
 L3:
-    %ret_0 = 0
+    ret 0
     goto  L1
 """, result);
     }
@@ -658,7 +658,7 @@ L3:
         function.code(new Instruction.ConditionalBranch(B2,
                 new Operand.RegisterOperand(p), B2, function.exit));
         function.startBlock(function.exit);
-        function.code(new Instruction.Return(new Operand.RegisterOperand(x2), regPool.returnRegister));
+        function.code(new Instruction.Ret(new Operand.RegisterOperand(x2)));
         function.isSSA = true;
         return function;
     }
@@ -676,7 +676,7 @@ L2:
     x3 = x2+1
     if p goto L2 else goto L1
 L1:
-    %ret = x2
+    ret x2
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
         new ExitSSA(function);
@@ -687,12 +687,12 @@ L0:
     x2 = x1
     goto  L2
 L2:
-    x2_5 = x2
+    x2_4 = x2
     x3 = x2+1
     x2 = x3
     if p goto L2 else goto L1
 L1:
-    %ret = x2_5
+    ret x2_4
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
     }
