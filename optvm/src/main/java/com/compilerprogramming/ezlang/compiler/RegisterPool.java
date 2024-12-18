@@ -38,6 +38,13 @@ public class RegisterPool {
         registers.add(reg);
         return reg;
     }
+    public Register newTempReg(String baseName, Type type) {
+        var id = registers.size();
+        var name = baseName+"_"+id;
+        var reg = new Register(id, name, type);
+        registers.add(reg);
+        return reg;
+    }
 
     public Register.SSARegister ssaReg(Register original, int version) {
         var id = registers.size();
