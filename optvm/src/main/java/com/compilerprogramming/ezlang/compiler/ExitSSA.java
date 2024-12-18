@@ -125,7 +125,7 @@ public class ExitSSA {
                 addMoveAtBBEnd(block, map.get(src.id), dest);
                 map.put(src.id, dest);
                 /* If src is the name of a dest in copySet add item to worklist */
-                CopyItem item = isDest(copySet, src);
+                CopyItem item = isCycle(copySet, src);
                 if (item != null) {
                     workList.add(item);
                 }
@@ -174,11 +174,14 @@ public class ExitSSA {
         return temp;
     }
 
-    /* If src is the name of a dest in copySet return the item */
-    private CopyItem isDest(List<CopyItem> copySet, Register src) {
-        for (CopyItem copyItem: copySet) {
-            if (copyItem.dest.id == src.id)
+    /* If src is the name of a dest in copySet remove the item */
+    private CopyItem isCycle(List<CopyItem> copySet, Register src) {
+        for (int i = 0; i < copySet.size(); i++) {
+            CopyItem copyItem = copySet.get(i);
+            if (copyItem.dest.id == src.id) {
+                copySet.remove(i);
                 return copyItem;
+            }
         }
         return null;
     }
