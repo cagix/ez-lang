@@ -15,7 +15,7 @@ public class CompiledFunction {
     public BasicBlock entry;
     public BasicBlock exit;
     private int bid = 0;
-    private BasicBlock currentBlock;
+    public BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
     private Type.TypeFunction functionType;
@@ -52,6 +52,17 @@ public class CompiledFunction {
         this.frameSlots = registerPool.numRegisters();
     }
 
+    public CompiledFunction(Type.TypeFunction functionType) {
+        this.functionType = (Type.TypeFunction) functionType;
+        this.registerPool = new RegisterPool("%ret", functionType == null?null:functionType.returnType);
+        this.bid = 0;
+        this.entry = this.currentBlock = createBlock();
+        this.exit = createBlock();
+        this.currentBreakTarget = null;
+        this.currentContinueTarget = null;
+        this.frameSlots = registerPool.numRegisters();
+    }
+
     private void generateArgInstructions(Scope scope) {
         if (scope.isFunctionParameterScope) {
             for (Symbol symbol: scope.getLocalSymbols()) {
@@ -84,7 +95,7 @@ public class CompiledFunction {
         }
     }
 
-    private BasicBlock createBlock() {
+    public BasicBlock createBlock() {
         return new BasicBlock(bid++);
     }
 
@@ -111,7 +122,7 @@ public class CompiledFunction {
         jumpTo(exit);
     }
 
-    private void code(Instruction instruction) {
+    public void code(Instruction instruction) {
         currentBlock.add(instruction);
     }
 
@@ -213,13 +224,13 @@ public class CompiledFunction {
                 block.instructions.getLast().isTerminal());
     }
 
-    private void jumpTo(BasicBlock block) {
+    public void jumpTo(BasicBlock block) {
         assert !isBlockTerminated(currentBlock);
         currentBlock.add(new Instruction.Jump(block));
         currentBlock.addSuccessor(block);
     }
 
-    private void startBlock(BasicBlock block) {
+    public void startBlock(BasicBlock block) {
         if (!isBlockTerminated(currentBlock)) {
             jumpTo(block);
         }
@@ -541,11 +552,12 @@ public class CompiledFunction {
         return virtualStack.isEmpty();
     }
 
-    public void toStr(StringBuilder sb, boolean verbose) {
+    public StringBuilder toStr(StringBuilder sb, boolean verbose) {
         if (verbose) {
             sb.append(this.functionType.describe()).append("\n");
             registerPool.toStr(sb);
         }
         BasicBlock.toStr(sb, entry, new BitSet(), verbose);
+        return sb;
     }
 }
