@@ -39,7 +39,7 @@ public class CompiledFunction {
     public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         this.functionType = (Type.TypeFunction) functionSymbol.type;
-        this.registerPool = new RegisterPool("%ret", functionType == null?null:functionType.returnType);
+        this.registerPool = new RegisterPool();
         setVirtualRegisters(funcDecl.scope);
         this.bid = 0;
         this.entry = this.currentBlock = createBlock();
@@ -54,7 +54,7 @@ public class CompiledFunction {
 
     public CompiledFunction(Type.TypeFunction functionType) {
         this.functionType = (Type.TypeFunction) functionType;
-        this.registerPool = new RegisterPool("%ret", functionType == null?null:functionType.returnType);
+        this.registerPool = new RegisterPool();
         this.bid = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
@@ -115,7 +115,7 @@ public class CompiledFunction {
             if (isIndexed)
                 codeIndexedLoad();
             if (virtualStack.size() == 1)
-                code(new Instruction.Return(pop(), registerPool.returnRegister));
+                code(new Instruction.Ret(pop()));
             else if (virtualStack.size() > 1)
                 throw new CompilerException("Virtual stack has more than one item at return");
         }

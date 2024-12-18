@@ -347,9 +347,32 @@ public abstract class Instruction {
                     .append(sourceOperand);
         }
     }
-    public static class Return extends Move {
-        public Return(Operand from, Register reg) {
-            super(from, new Operand.ReturnRegisterOperand(reg));
+    public static class Ret extends Instruction {
+        public final Operand value;
+        public Ret(Operand value) {
+            this.value = value;
+        }
+        @Override
+        public boolean usesVars() {
+            return value != null && value instanceof Operand.RegisterOperand registerOperand;
+        }
+        @Override
+        public List<Register> uses() {
+            if (value != null && value instanceof Operand.RegisterOperand registerOperand)
+                return List.of(registerOperand.reg);
+            return Collections.emptyList();
+        }
+        @Override
+        public void replaceUses(Register[] newUses) {
+            if (newUses.length > 0)
+                value.replaceRegister(newUses[0]);
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            sb.append("ret");
+            if (value != null)
+                sb.append(" ").append(value);
+            return sb;
         }
     }
     public static class Unary extends Instruction {
