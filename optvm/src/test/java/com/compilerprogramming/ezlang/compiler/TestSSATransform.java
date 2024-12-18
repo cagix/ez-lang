@@ -760,8 +760,6 @@ L2:
     a2_6 = a2
     a2 = b2
     b2 = a2_6
-    b2_7 = b2
-    b2 = b2
     if p goto L2 else goto L1
 L1:
 """;
