@@ -17,9 +17,7 @@ public class ExitSSA {
     public ExitSSA(CompiledFunction function) {
         this.function = function;
         if (!function.isSSA) throw new IllegalStateException();
-        if (!function.hasLiveness) {
-            new Liveness().computeLiveness(function);
-        }
+        function.livenessAnalysis();
         tree = new DominatorTree(function.entry);
         initStack();
         insertCopies(function.entry);
@@ -115,6 +113,13 @@ public class ExitSSA {
                 final CopyItem copyItem = workList.remove(0);
                 final Register src = copyItem.src;
                 final Register dest = copyItem.dest;
+                /* Engineering a Compiler: We can avoid the lost copy
+                   problem by checking the liveness of the target name
+                   for each copy that we try to insert. When we discover
+                   a copy target that is live, we must preserve the live
+                   value in a temporary name and rewrite subsequent uses to
+                   refer to the temporary name.
+                 */
                 if (block.liveOut.get(dest.id)) {
                     /* Insert a copy from dest to a new temp t at phi node defining dest */
                     final Register t = addMoveToTempAfterPhi(block, dest);
@@ -125,11 +130,19 @@ public class ExitSSA {
                 addMoveAtBBEnd(block, map.get(src.id), dest);
                 map.put(src.id, dest);
                 /* If src is the name of a dest in copySet add item to worklist */
+                /* see comment on phi cycles below. */
                 CopyItem item = isCycle(copySet, src);
                 if (item != null) {
                     workList.add(item);
                 }
             }
+            /* Engineering a Compiler: To solve the swap problem
+               we can detect cases where phi functions reference the
+               targets of other phi functions in the same block. For each
+               cycle of references, it must insert a copy to a temporary
+               that breaks the cycle. Then we can schedule the copies to
+               respect the dependencies implied by the phi functions.
+             */
             if (!copySet.isEmpty()) {
                 CopyItem copyItem = copySet.remove(0);
                 /* Insert a copy from dst to new temp at the end of Block */

@@ -560,4 +560,9 @@ public class CompiledFunction {
         BasicBlock.toStr(sb, entry, new BitSet(), verbose);
         return sb;
     }
+
+    public void livenessAnalysis() {
+        new Liveness(this);
+        this.hasLiveness = true;
+    }
 }

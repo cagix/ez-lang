@@ -49,18 +49,18 @@ public class BasicBlock {
      * VarKill contains all the variables that are defined
      * in the block.
      */
-    BitSet varKill;
+    LiveSet varKill;
     /**
      * UEVar contains upward-exposed variables in the block,
      * i.e. those variables that are used in the block prior to
      * any redefinition in the block.
      */
-    BitSet UEVar;
+    LiveSet UEVar;
     /**
      * LiveOut is the union of variables that are live at the
      * head of some block that is a successor of this block.
      */
-    BitSet liveOut;
+    LiveSet liveOut;
     // -----------------------
 
     public BasicBlock(int bid, boolean loopHead) {
