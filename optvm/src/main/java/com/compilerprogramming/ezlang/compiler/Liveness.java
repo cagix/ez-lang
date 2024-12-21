@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class Liveness {
 
-    public void computeLiveness(CompiledFunction function) {
+    public Liveness(CompiledFunction function) {
         List<BasicBlock> blocks = BBHelper.findAllBlocks(function.entry);
         RegisterPool regPool = function.registerPool;
         init(regPool, blocks);
@@ -21,19 +21,17 @@ public class Liveness {
     private void init(RegisterPool regPool, List<BasicBlock> blocks) {
         int numRegisters = regPool.numRegisters();
         for (BasicBlock block : blocks) {
-            block.UEVar = new BitSet(numRegisters);
-            block.varKill = new BitSet(numRegisters);
-            block.liveOut = new BitSet(numRegisters);
+            block.UEVar = new LiveSet(numRegisters);
+            block.varKill = new LiveSet(numRegisters);
+            block.liveOut = new LiveSet(numRegisters);
             for (Instruction instruction : block.instructions) {
-                if (instruction.usesVars()) {
-                    for (Register use : instruction.uses()) {
-                        if (!block.varKill.get(use.id))
-                            block.UEVar.set(use.id);
-                    }
+                for (Register use : instruction.uses()) {
+                    if (!block.varKill.isMember(use))
+                        block.UEVar.add(use);
                 }
                 if (instruction.definesVar()) {
                     Register def = instruction.def();
-                    block.varKill.set(def.id);
+                    block.varKill.add(def);
                 }
             }
         }
@@ -51,15 +49,15 @@ public class Liveness {
     }
 
     private boolean recomputeLiveOut(BasicBlock block) {
-        BitSet oldLiveOut = (BitSet) block.liveOut.clone();
+        LiveSet oldLiveOut = block.liveOut.dup();
         for (BasicBlock m: block.successors) {
-            BitSet mLiveIn = (BitSet) m.liveOut.clone();
+            LiveSet mLiveIn = m.liveOut.dup();
             // LiveOut(m) intersect not VarKill(m)
-            mLiveIn.andNot(m.varKill);
+            mLiveIn.intersectNot(m.varKill);
             // UEVar(m) union (LiveOut(m) intersect not VarKill(m))
-            mLiveIn.or(m.UEVar);
+            mLiveIn.union(m.UEVar);
             // LiveOut(block) =union (UEVar(m) union (LiveOut(m) intersect not VarKill(m)))
-            block.liveOut.or(mLiveIn);
+            block.liveOut.union(mLiveIn);
         }
         return !oldLiveOut.equals(block.liveOut);
     }

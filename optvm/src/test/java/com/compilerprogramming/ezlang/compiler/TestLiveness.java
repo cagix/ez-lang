@@ -1,6 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Symbol;
+import com.compilerprogramming.ezlang.types.Type;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,8 +35,7 @@ public class TestLiveness {
         var typeDict = compileSrc(src);
         var funcSymbol = typeDict.lookup("foo");
         CompiledFunction func = (CompiledFunction) ((Symbol.FunctionTypeSymbol)funcSymbol).code();
-        var liveness = new Liveness();
-        liveness.computeLiveness(func);
+        func.livenessAnalysis();
         String output = Compiler.dumpIR(typeDict, true);
         Assert.assertEquals("""
 func print(n: Int)
@@ -128,8 +128,7 @@ L1:
         var typeDict = compileSrc(src);
         var funcSymbol = typeDict.lookup("foo");
         CompiledFunction func = (CompiledFunction) ((Symbol.FunctionTypeSymbol)funcSymbol).code();
-        var liveness = new Liveness();
-        liveness.computeLiveness(func);
+        func.livenessAnalysis();
         String output = Compiler.dumpIR(typeDict, true);
         Assert.assertEquals("""
 func foo(a: Int,b: Int)
@@ -191,5 +190,104 @@ L1:
     #LIVEOUT = {}
 """, output);
     }
+
+    /* page 448 Engineering a Compiler */
+    static CompiledFunction buildTest3() {
+        TypeDictionary typeDictionary = new TypeDictionary();
+        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        functionType.setReturnType(typeDictionary.INT);
+        CompiledFunction function = new CompiledFunction(functionType);
+        RegisterPool regPool = function.registerPool;
+        Register i = regPool.newReg("i", typeDictionary.INT);
+        Register s = regPool.newReg("s", typeDictionary.INT);
+        function.code(new Instruction.Move(
+                new Operand.ConstantOperand(1, typeDictionary.INT),
+                new Operand.RegisterOperand(i)));
+        BasicBlock b1 = function.createBlock();
+        BasicBlock b2 = function.createBlock();
+        BasicBlock b3 = function.createBlock();
+        BasicBlock b4 = function.createBlock();
+        function.jumpTo(b1);
+        function.startBlock(b1);
+        function.code(new Instruction.ConditionalBranch(
+                function.currentBlock,
+                new Operand.RegisterOperand(i),
+                b2, b3));
+        function.startBlock(b2);
+        function.code(new Instruction.Move(
+                new Operand.ConstantOperand(0, typeDictionary.INT),
+                new Operand.RegisterOperand(s)));
+        function.jumpTo(b3);
+        function.startBlock(b3);
+        function.code(new Instruction.Binary(
+                "+",
+                new Operand.RegisterOperand(s),
+                new Operand.RegisterOperand(s),
+                new Operand.RegisterOperand(i)));
+        function.code(new Instruction.Binary(
+                "+",
+                new Operand.RegisterOperand(i),
+                new Operand.RegisterOperand(i),
+                new Operand.ConstantOperand(1, typeDictionary.INT)));
+        function.code(new Instruction.ConditionalBranch(
+                function.currentBlock,
+                new Operand.RegisterOperand(i),
+                b1, b4));
+        function.startBlock(b4);
+        function.code(new Instruction.Ret(new Operand.RegisterOperand(s)));
+        function.startBlock(function.exit);
+        function.isSSA = false;
+
+        System.out.println(function.toStr(new StringBuilder(), true));
+
+        return function;
+    }
+
+    @Test
+    public void test3() {
+        CompiledFunction function = buildTest3();
+        function.livenessAnalysis();
+        String actual = function.toStr(new StringBuilder(), true).toString();
+        Assert.assertEquals("""
+func foo()->Int
+Reg #0 i
+Reg #1 s
+L0:
+    i = 1
+    goto  L2
+    #UEVAR   = {}
+    #VARKILL = {0}
+    #LIVEOUT = {0, 1}
+L2:
+    if i goto L3 else goto L4
+    #UEVAR   = {0}
+    #VARKILL = {}
+    #LIVEOUT = {0, 1}
+L3:
+    s = 0
+    goto  L4
+    #UEVAR   = {}
+    #VARKILL = {1}
+    #LIVEOUT = {0, 1}
+L4:
+    s = s+i
+    i = i+1
+    if i goto L2 else goto L5
+    #UEVAR   = {0, 1}
+    #VARKILL = {0, 1}
+    #LIVEOUT = {0, 1}
+L5:
+    ret s
+    goto  L1
+    #UEVAR   = {1}
+    #VARKILL = {}
+    #LIVEOUT = {}
+L1:
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEOUT = {}
+""", actual);
+    }
+
 
 }
