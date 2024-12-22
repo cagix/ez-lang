@@ -633,7 +633,7 @@ L3:
      * This test case is based on the example snippet from Briggs paper
      * illustrating the lost copy problem.
      */
-    private CompiledFunction buildLostCopyTest() {
+    static CompiledFunction buildLostCopyTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
@@ -701,16 +701,16 @@ L1:
      * This test case is based on the example snippet from Briggs paper
      * illustrating the swap problem.
      */
-    private CompiledFunction buildSwapTest() {
+    static CompiledFunction buildSwapTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
+        functionType.setReturnType(typeDictionary.VOID);
         CompiledFunction function = new CompiledFunction(functionType);
         RegisterPool regPool = function.registerPool;
         Register p = regPool.newReg("p", typeDictionary.INT);
         Register a1 = regPool.newReg("a1", typeDictionary.INT);
         Register a2 = regPool.newReg("a2", typeDictionary.INT);
-        Register a3 = regPool.newReg("a3", typeDictionary.INT);
         Register b1 = regPool.newReg("b1", typeDictionary.INT);
         Register b2 = regPool.newReg("b2", typeDictionary.INT);
         function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(p)));
@@ -757,9 +757,9 @@ L0:
     b2 = b1
     goto  L2
 L2:
-    a2_6 = a2
+    a2_5 = a2
     a2 = b2
-    b2 = a2_6
+    b2 = a2_5
     if p goto L2 else goto L1
 L1:
 """;

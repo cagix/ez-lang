@@ -1,12 +1,17 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import java.util.BitSet;
 import java.util.List;
 
 /**
  * Compute LiveOut for each Basic Block
  * Implementation is based on description in 'Engineering a Compiler' 2nd ed.
  * pages 446-447.
+ *
+ * It turns out that this dataflow implementation cannot correctly handle
+ * phis, because with phis, the inputs are live at the predecessor blocks.
+ * We have to look at alternative approaches when input is SSA form.
+ * Surprisingly even with this approach, the lost copy and swap problems
+ * appear to work correctly.
  */
 public class Liveness {
 

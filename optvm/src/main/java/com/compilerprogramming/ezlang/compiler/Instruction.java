@@ -8,96 +8,117 @@ import java.util.List;
 
 public abstract class Instruction {
 
-    public boolean isTerminal() {
-        return false;
+    static final int I_NOOP = 0;
+    static final int I_MOVE = 1;
+    static final int I_RET  = 2;
+    static final int I_UNARY = 3;
+    static final int I_BINARY = 4;
+    static final int I_BR = 5;
+    static final int I_CBR = 6;
+    static final int I_ARG = 7;
+    static final int I_CALL = 8;
+    static final int I_PHI = 9;
+    static final int I_NEW_ARRAY = 10;
+    static final int I_NEW_STRUCT = 11;
+    static final int I_ARRAY_STORE = 12;
+    static final int I_ARRAY_LOAD = 13;
+    static final int I_ARRAY_APPEND = 14;
+    static final int I_FIELD_GET = 15;
+    static final int I_FIELD_SET = 16;
+
+    public final int opcode;
+    public Operand.RegisterOperand def;
+    public Operand[] uses;
+
+    public Instruction(int opcode, Operand... uses) {
+        this.opcode = opcode;
+        this.def = null;
+        this.uses = uses;
     }
+    public Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
+        this.opcode = opcode;
+        this.def = def;
+        this.uses = uses;
+    }
+
+    public boolean isTerminal() { return false; }
     @Override
     public String toString() {
         return toStr(new StringBuilder()).toString();
     }
 
-    public boolean definesVar() { return false; }
-    public Register def() { return null; }
+    public boolean definesVar() { return def != null; }
+    public Register def() { return def != null ? def.reg: null; }
 
-    public boolean usesVars() { return false; }
-    public List<Register> uses() { return Collections.emptyList(); }
-    public void replaceDef(Register newReg) {}
-    public void replaceUses(Register[] newUses) {}
-
-    public static class Move extends Instruction {
-        public final Operand from;
-        public final Operand to;
-        public Move(Operand from, Operand to) {
-            this.from = from;
-            this.to = to;
+    public List<Register> uses() {
+        List<Register> useList = null;
+        for (int i = 0; i < uses.length; i++) {
+            Operand operand = uses[i];
+            if (operand != null && operand instanceof Operand.RegisterOperand registerOperand) {
+                if (useList == null) useList = new ArrayList<>();
+                useList.add(registerOperand.reg);
+            }
         }
-
-        @Override
-        public boolean definesVar() {
-            return true;
+        if (useList == null) useList = Collections.emptyList();
+        return useList;
+    }
+    public void replaceDef(Register newReg) {
+        if (def == null) throw new IllegalStateException();
+        def.replaceRegister(newReg);
+    }
+    public void replaceUses(Register[] newUses) {
+        int j = 0;
+        for (int i = 0; i < uses.length; i++) {
+            Operand use = uses[i];
+            if (use != null && use instanceof Operand.RegisterOperand registerOperand) {
+                registerOperand.replaceRegister(newUses[j++]);
+            }
         }
-
-        @Override
-        public Register def() {
-            if (to instanceof Operand.RegisterOperand registerOperand)
-                return registerOperand.reg;
-            throw new IllegalStateException();
+    }
+    public boolean replaceUse(Register source, Register target) {
+        boolean replaced = false;
+        for (int i = 0; i < uses.length; i++) {
+            Operand operand = uses[i];
+            if (operand != null && operand instanceof Operand.RegisterOperand registerOperand && registerOperand.reg.id == source.id) {
+                registerOperand.replaceRegister(target);
+                replaced = true;
+            }
         }
+        return replaced;
+    }
 
-        @Override
-        public void replaceDef(Register newReg) {
-            this.to.replaceRegister(newReg);
+    public static class NoOp extends Instruction {
+        public NoOp() {
+            super(I_NOOP);
         }
-
-        @Override
-        public boolean usesVars() {
-            return (from instanceof Operand.RegisterOperand);
-        }
-
-        @Override
-        public List<Register> uses() {
-            if (from instanceof Operand.RegisterOperand registerOperand)
-                return List.of(registerOperand.reg);
-            return super.uses();
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            from.replaceRegister(newUses[0]);
-        }
-
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(to).append(" = ").append(from);
+            return sb.append("noop");
+        }
+    }
+
+    public static class Move extends Instruction {
+        public Move(Operand from, Operand to) {
+            super(I_MOVE, (Operand.RegisterOperand) to, from);
+        }
+        public Operand from() { return uses[0]; }
+        public Operand.RegisterOperand to() { return def; }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            return sb.append(to()).append(" = ").append(from());
         }
     }
 
     public static class NewArray extends Instruction {
         public final Type.TypeArray type;
-        public final Operand.RegisterOperand destOperand;
         public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand) {
+            super(I_NEW_ARRAY, destOperand);
             this.type = type;
-            this.destOperand = destOperand;
         }
-
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-
-        @Override
-        public Register def() {
-            return destOperand.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            destOperand.replaceRegister(newReg);
-        }
-
+        public Operand.RegisterOperand destOperand() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(destOperand)
+            return sb.append(def)
                     .append(" = ")
                     .append("New(")
                     .append(type)
@@ -107,29 +128,14 @@ public abstract class Instruction {
 
     public static class NewStruct extends Instruction {
         public final Type.TypeStruct type;
-        public final Operand.RegisterOperand destOperand;
         public NewStruct(Type.TypeStruct type, Operand.RegisterOperand destOperand) {
+            super(I_NEW_STRUCT, destOperand);
             this.type = type;
-            this.destOperand = destOperand;
         }
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-
-        @Override
-        public Register def() {
-            return destOperand.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            destOperand.replaceRegister(newReg);
-        }
-
+        public Operand.RegisterOperand destOperand() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(destOperand)
+            return sb.append(def)
                     .append(" = ")
                     .append("New(")
                     .append(type)
@@ -138,489 +144,177 @@ public abstract class Instruction {
     }
 
     public static class ArrayLoad extends Instruction {
-        public final Operand arrayOperand;
-        public final Operand indexOperand;
-        public final Operand.RegisterOperand destOperand;
         public ArrayLoad(Operand.LoadIndexedOperand from, Operand.RegisterOperand to) {
-            arrayOperand = from.arrayOperand;
-            indexOperand = from.indexOperand;
-            destOperand = to;
+            super(I_ARRAY_LOAD, to, from.arrayOperand, from.indexOperand);
         }
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-        @Override
-        public Register def() {
-            return destOperand.reg;
-        }
-        @Override
-        public void replaceDef(Register newReg) {
-            destOperand.replaceRegister(newReg);
-        }
-
-        @Override
-        public boolean usesVars() {
-            return true;
-        }
-
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (arrayOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            if (indexOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            int i = 0;
-            if (arrayOperand instanceof Operand.RegisterOperand) {
-                arrayOperand.replaceRegister(newUses[i++]);
-            }
-            if (indexOperand instanceof Operand.RegisterOperand) {
-                indexOperand.replaceRegister(newUses[i]);
-            }
-        }
-
+        public Operand arrayOperand() { return uses[0]; }
+        public Operand indexOperand() { return uses[1]; }
+        public Operand.RegisterOperand destOperand() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(destOperand)
+            return sb.append(destOperand())
                     .append(" = ")
-                    .append(arrayOperand)
+                    .append(arrayOperand())
                     .append("[")
-                    .append(indexOperand)
+                    .append(indexOperand())
                     .append("]");
         }
     }
 
     public static class ArrayStore extends Instruction {
-        public final Operand arrayOperand;
-        public final Operand indexOperand;
-        public final Operand sourceOperand;
         public ArrayStore(Operand from, Operand.LoadIndexedOperand to) {
-            arrayOperand = to.arrayOperand;
-            indexOperand = to.indexOperand;
-            sourceOperand = from;
+            super(I_ARRAY_STORE, (Operand.RegisterOperand) null, to.arrayOperand, to.indexOperand, from);
         }
-        @Override
-        public boolean usesVars() {
-            return true;
-        }
-
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (arrayOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            if (indexOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            if (sourceOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            int i = 0;
-            if (arrayOperand instanceof Operand.RegisterOperand) {
-                arrayOperand.replaceRegister(newUses[i++]);
-            }
-            if (indexOperand instanceof Operand.RegisterOperand) {
-                indexOperand.replaceRegister(newUses[i++]);
-            }
-            if (sourceOperand instanceof Operand.RegisterOperand) {
-                sourceOperand.replaceRegister(newUses[i]);
-            }
-        }
-
+        public Operand arrayOperand() { return uses[0]; }
+        public Operand indexOperand() { return uses[1]; }
+        public Operand sourceOperand() { return uses[2]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             return sb
-                    .append(arrayOperand)
+                    .append(arrayOperand())
                     .append("[")
-                    .append(indexOperand)
+                    .append(indexOperand())
                     .append("] = ")
-                    .append(sourceOperand);
+                    .append(sourceOperand());
         }
     }
 
     public static class GetField extends Instruction {
-        public final Operand structOperand;
         public final String fieldName;
         public final int fieldIndex;
-        public final Operand.RegisterOperand destOperand;
-        public GetField(Operand.LoadFieldOperand from, Operand.RegisterOperand to)
-        {
-            this.structOperand = from.structOperand;
+        public GetField(Operand.LoadFieldOperand from, Operand.RegisterOperand to) {
+            super(I_FIELD_GET, to, from.structOperand);
             this.fieldName = from.fieldName;
             this.fieldIndex = from.fieldIndex;
-            this.destOperand = to;
         }
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-        @Override
-        public Register def() {
-            return destOperand.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            destOperand.replaceRegister(newReg);
-        }
-
-        @Override
-        public boolean usesVars() {
-            return true;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (structOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            if (newUses.length > 0)
-                structOperand.replaceRegister(newUses[0]);
-        }
-
+        public Operand structOperand() { return uses[0]; }
+        public Operand.RegisterOperand destOperand() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(destOperand)
+            return sb.append(def)
                     .append(" = ")
-                    .append(structOperand)
+                    .append(uses[0])
                     .append(".")
                     .append(fieldName);
         }
     }
 
     public static class SetField extends Instruction {
-        public final Operand structOperand;
         public final String fieldName;
         public final int fieldIndex;
-        public final Operand sourceOperand;
-        public SetField(Operand from,Operand.LoadFieldOperand to)
-        {
-            this.structOperand = to.structOperand;
+        public SetField(Operand from,Operand.LoadFieldOperand to) {
+            super(I_FIELD_SET, (Operand.RegisterOperand) null, to.structOperand, from);
             this.fieldName = to.fieldName;
             this.fieldIndex = to.fieldIndex;
-            this.sourceOperand = from;
         }
-        @Override
-        public boolean usesVars() {
-            return true;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (structOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            if (sourceOperand instanceof Operand.RegisterOperand registerOperand)
-                usesList.add(registerOperand.reg);
-            return usesList;
-        }
-        @Override
-        public void replaceUses(Register[] newUses) {
-            int i = 0;
-            if (structOperand instanceof Operand.RegisterOperand) {
-                structOperand.replaceRegister(newUses[i++]);
-            }
-            if (sourceOperand instanceof Operand.RegisterOperand) {
-                sourceOperand.replaceRegister(newUses[i]);
-            }
-        }
-
+        public Operand structOperand() { return uses[0]; }
+        public Operand sourceOperand() { return uses[1]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             return sb
-                    .append(structOperand)
+                    .append(structOperand())
                     .append(".")
                     .append(fieldName)
                     .append(" = ")
-                    .append(sourceOperand);
+                    .append(sourceOperand());
         }
     }
     public static class Ret extends Instruction {
-        public final Operand value;
         public Ret(Operand value) {
-            this.value = value;
+            super(I_RET, (Operand.RegisterOperand) null, value);
         }
-        @Override
-        public boolean usesVars() {
-            return value != null && value instanceof Operand.RegisterOperand registerOperand;
-        }
-        @Override
-        public List<Register> uses() {
-            if (value != null && value instanceof Operand.RegisterOperand registerOperand)
-                return List.of(registerOperand.reg);
-            return Collections.emptyList();
-        }
-        @Override
-        public void replaceUses(Register[] newUses) {
-            if (newUses.length > 0)
-                value.replaceRegister(newUses[0]);
-        }
+        public Operand value() { return uses[0]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             sb.append("ret");
-            if (value != null)
-                sb.append(" ").append(value);
+            if (uses[0] != null)
+                sb.append(" ").append(value());
             return sb;
         }
     }
     public static class Unary extends Instruction {
         public final String unop;
-        public final Operand.RegisterOperand result;
-        public final Operand operand;
         public Unary(String unop, Operand.RegisterOperand result, Operand operand) {
+            super(I_UNARY, result, operand);
             this.unop = unop;
-            this.result = result;
-            this.operand = operand;
         }
-
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-
-        @Override
-        public Register def() {
-            return result.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            result.replaceRegister(newReg);
-        }
-
-        @Override
-        public boolean usesVars() {
-            return operand instanceof Operand.RegisterOperand registerOperand;
-        }
-
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (operand instanceof Operand.RegisterOperand registerOperand) {
-                usesList.add(registerOperand.reg);
-            }
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            if (newUses.length > 0)
-                operand.replaceRegister(newUses[0]);
-        }
-
+        public Operand.RegisterOperand result() { return def; }
+        public Operand operand() { return uses[0]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(result).append(" = ").append(unop).append(operand);
+            return sb.append(result()).append(" = ").append(unop).append(operand());
         }
     }
 
     public static class Binary extends Instruction {
         public final String binOp;
-        public final Operand.RegisterOperand result;
-        public final Operand left;
-        public final Operand right;
         public Binary(String binop, Operand.RegisterOperand result, Operand left, Operand right) {
+            super(I_BINARY, result, left, right);
             this.binOp = binop;
-            this.result = result;
-            this.left = left;
-            this.right = right;
         }
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-
-        @Override
-        public Register def() {
-            return result.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            result.replaceRegister(newReg);
-        }
-
-        @Override
-        public boolean usesVars() {
-            return left instanceof Operand.RegisterOperand ||
-                    right instanceof Operand.RegisterOperand;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (left instanceof Operand.RegisterOperand registerOperand) {
-                usesList.add(registerOperand.reg);
-            }
-            if (right instanceof Operand.RegisterOperand registerOperand) {
-                usesList.add(registerOperand.reg);
-            }
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            int i = 0;
-            if (left instanceof Operand.RegisterOperand) {
-                left.replaceRegister(newUses[i++]);
-            }
-            if (right instanceof Operand.RegisterOperand) {
-                right.replaceRegister(newUses[i]);
-            }
-        }
-
+        public Operand.RegisterOperand result() { return def; }
+        public Operand left() { return uses[0]; }
+        public Operand right() { return uses[1]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(result).append(" = ").append(left).append(binOp).append(right);
+            return sb.append(def).append(" = ").append(uses[0]).append(binOp).append(uses[1]);
         }
     }
 
     public static class AStoreAppend extends Instruction {
-        public final Operand.RegisterOperand array;
-        public final Operand value;
         public AStoreAppend(Operand.RegisterOperand array, Operand value) {
-            this.array = array;
-            this.value = value;
+            super(I_ARRAY_APPEND, (Operand.RegisterOperand) null, array, value);
         }
-        @Override
-        public boolean usesVars() {
-            return true;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            usesList.add(array.reg);
-            if (value instanceof Operand.RegisterOperand registerOperand) {
-                usesList.add(registerOperand.reg);
-            }
-            return usesList;
-        }
-        @Override
-        public void replaceUses(Register[] newUses) {
-            array.replaceRegister(newUses[0]);
-            if (value instanceof Operand.RegisterOperand)
-                value.replaceRegister(newUses[1]);
-        }
-
+        public Operand.RegisterOperand array() { return (Operand.RegisterOperand) uses[0]; }
+        public Operand value() { return uses[1]; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(array).append(".append(").append(value).append(")");
+            return sb.append(uses[0]).append(".append(").append(uses[1]).append(")");
         }
     }
 
     public static class ConditionalBranch extends Instruction {
-        public final Operand condition;
         public final BasicBlock trueBlock;
         public final BasicBlock falseBlock;
         public ConditionalBranch(BasicBlock currentBlock, Operand condition, BasicBlock trueBlock, BasicBlock falseBlock) {
-            this.condition = condition;
+            super(I_CBR, (Operand.RegisterOperand) null, condition);
             this.trueBlock = trueBlock;
             this.falseBlock = falseBlock;
             currentBlock.addSuccessor(trueBlock);
             currentBlock.addSuccessor(falseBlock);
         }
-        @Override
-        public boolean usesVars() {
-            return condition instanceof Operand.RegisterOperand;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            if (condition instanceof Operand.RegisterOperand registerOperand) {
-                usesList.add(registerOperand.reg);
-            }
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            if (condition instanceof Operand.RegisterOperand) {
-                condition.replaceRegister(newUses[0]);
-            }
-        }
-
+        public Operand condition() { return uses[0]; }
         @Override
         public boolean isTerminal() {
             return true;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append("if ").append(condition).append(" goto L").append(trueBlock.bid).append(" else goto L").append(falseBlock.bid);
+            return sb.append("if ").append(condition()).append(" goto L").append(trueBlock.bid).append(" else goto L").append(falseBlock.bid);
         }
     }
 
     public static class Call extends Instruction {
         public final Type.TypeFunction callee;
-        public final Operand.RegisterOperand[] args;
-        public final Operand.RegisterOperand returnOperand;
         public final int newbase;
         public Call(int newbase, Operand.RegisterOperand returnOperand, Type.TypeFunction callee, Operand.RegisterOperand... args) {
-            this.returnOperand = returnOperand;
+            super(I_CALL, returnOperand, args);
             this.callee = callee;
-            this.args = args;
             this.newbase = newbase;
         }
-
-        @Override
-        public boolean definesVar() {
-            return returnOperand != null;
-        }
-
-        @Override
-        public Register def() {
-            return returnOperand != null ? returnOperand.reg : null;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            if (returnOperand != null)
-                returnOperand.replaceRegister(newReg);
-        }
-
-        @Override
-        public boolean usesVars() {
-            return args != null && args.length > 0;
-        }
-        @Override
-        public List<Register> uses() {
-            List<Register> usesList = new ArrayList<>();
-            for (Operand.RegisterOperand argOperand : args) {
-                usesList.add(argOperand.reg);
-            }
-            return usesList;
-        }
-
-        @Override
-        public void replaceUses(Register[] newUses) {
-            if (args == null)
-                return;
-            for (int i = 0; i < args.length; i++) {
-                args[i].replaceRegister(newUses[i]);
-            }
-        }
-
+        public Operand.RegisterOperand returnOperand() { return def; }
+        public Operand[] args() { return uses; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            if (returnOperand != null) {
-                sb.append(returnOperand).append(" = ");
+            if (def != null) {
+                sb.append(def).append(" = ");
             }
             sb.append("call ").append(callee);
-            if (args.length > 0)
+            if (uses.length > 0)
                 sb.append(" params ");
-            for (int i = 0; i < args.length; i++) {
+            for (int i = 0; i < uses.length; i++) {
                 if (i > 0) sb.append(", ");
-                sb.append(args[i]);
+                sb.append(uses[i]);
             }
             return sb;
         }
@@ -629,6 +323,7 @@ public abstract class Instruction {
     public static class Jump extends Instruction {
         public final BasicBlock jumpTo;
         public Jump(BasicBlock jumpTo) {
+            super(I_BR);
             this.jumpTo = jumpTo;
         }
         @Override
@@ -641,36 +336,27 @@ public abstract class Instruction {
         }
     }
 
+    /**
+     * Phi does not generate uses.
+     */
     public static class Phi extends Instruction {
-        public Operand.RegisterOperand dest;
-        public final List<Operand.RegisterOperand> inputs = new ArrayList<>();
+        public final Register[] inputs;
         public Phi(Register dest, List<Register> inputs) {
-            this.dest = new Operand.RegisterOperand(dest);
-            for (Register input : inputs) {
-                this.inputs.add(new Operand.RegisterOperand(input));
-            }
-        }
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-        @Override
-        public Register def() {
-            return dest.reg;
-        }
-        @Override
-        public void replaceDef(Register newReg) {
-            dest = new Operand.RegisterOperand(newReg);
+            super(I_PHI, new Operand.RegisterOperand(dest));
+            this.inputs = inputs.toArray(new Register[inputs.size()]);
         }
         public void replaceInput(int i, Register newReg) {
-            inputs.set(i, new Operand.RegisterOperand(newReg));
+            inputs[i] = newReg;
+        }
+        public Register input(int i) {
+            return inputs[i];
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            sb.append(dest).append(" = phi(");
-            for (int i = 0; i < inputs.size(); i++) {
+            sb.append(def).append(" = phi(");
+            for (int i = 0; i < inputs.length; i++) {
                 if (i > 0) sb.append(", ");
-                sb.append(inputs.get(i));
+                sb.append(inputs[i].name());
             }
             sb.append(")");
             return sb;
@@ -678,28 +364,13 @@ public abstract class Instruction {
     }
 
     public static class ArgInstruction extends Instruction {
-        Operand.RegisterOperand arg;
-
-        @Override
-        public boolean definesVar() {
-            return true;
-        }
-        @Override
-        public Register def() {
-            return arg.reg;
-        }
-
-        @Override
-        public void replaceDef(Register newReg) {
-            arg.replaceRegister(newReg);
-        }
-
         public ArgInstruction(Operand.RegisterOperand arg) {
-            this.arg = arg;
+            super(I_ARG, arg);
         }
+        public Operand.RegisterOperand arg() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append("arg ").append(arg);
+            return sb.append("arg ").append(arg());
         }
     }
 

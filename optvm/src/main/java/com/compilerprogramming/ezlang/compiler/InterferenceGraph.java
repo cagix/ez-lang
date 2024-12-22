@@ -24,9 +24,30 @@ public class InterferenceGraph {
         set2.add(from);
     }
 
-    public boolean containsEdge(Integer from, Integer to) {
+    public boolean interfere(Integer from, Integer to) {
         var set = edges.get(from);
         return set != null && set.contains(to);
+    }
+
+    /**
+     * The source is replaced by target in the graph.
+     * All nodes that interfered with source are made to interfere with target.
+     */
+    public void rename(Integer source, Integer target) {
+        // Move all interferences
+        var fromSet = edges.remove(source);
+        var toSet = edges.get(target);
+        toSet.addAll(fromSet);
+        // If any node interfered with from
+        // it should now interfere with to
+        for (var k: edges.keySet()) {
+            var set = edges.get(k);
+            if (set.contains(source)) {
+                set.remove(source);
+                if (k != target)
+                    set.add(target);
+            }
+        }
     }
 
     public Set<Integer> adjacents(Integer node) {

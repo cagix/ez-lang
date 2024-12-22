@@ -154,7 +154,7 @@ public class TestInterferenceGraph {
     }
 
     /* Test move does not interfere with uses */
-    private CompiledFunction buildTest4() {
+    public static CompiledFunction buildTest4() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.setReturnType(typeDictionary.VOID);
@@ -198,4 +198,72 @@ public class TestInterferenceGraph {
         Assert.assertTrue(edges.contains(new InterferenceGraph.Edge(0, 1)));
         Assert.assertTrue(edges.contains(new InterferenceGraph.Edge(0, 2)));
     }
+
+    @Test
+    public void test5() {
+        InterferenceGraph graph = new InterferenceGraph();
+        graph.addEdge(1, 2);
+        Assert.assertTrue(graph.interfere(1, 2));
+        Assert.assertTrue(graph.interfere(2, 1));
+        Assert.assertTrue(graph.adjacents(1).contains(2));
+        Assert.assertTrue(graph.adjacents(2).contains(1));
+    }
+
+    @Test
+    public void test6() {
+        InterferenceGraph graph = new InterferenceGraph();
+        graph.addEdge(1, 2);
+        graph.addEdge(1, 3);
+        Assert.assertTrue(graph.interfere(1, 2));
+        Assert.assertTrue(graph.interfere(2, 1));
+        Assert.assertTrue(graph.interfere(1, 3));
+        Assert.assertTrue(graph.interfere(3, 1));
+        Assert.assertFalse(graph.interfere(2, 3));
+        Assert.assertFalse(graph.interfere(3, 2));
+        Assert.assertTrue(graph.adjacents(1).contains(2));
+        Assert.assertTrue(graph.adjacents(1).contains(3));
+        Assert.assertTrue(graph.adjacents(2).contains(1));
+        Assert.assertTrue(graph.adjacents(3).contains(1));
+        System.out.println(graph.generateDotOutput());
+        graph.rename(2, 3);
+        System.out.println(graph.generateDotOutput());
+        Assert.assertFalse(graph.interfere(1, 2));
+        Assert.assertFalse(graph.interfere(2, 1));
+        Assert.assertTrue(graph.interfere(1, 3));
+        Assert.assertTrue(graph.interfere(3, 1));
+        Assert.assertFalse(graph.interfere(2, 3));
+        Assert.assertFalse(graph.interfere(3, 2));
+        Assert.assertFalse(graph.adjacents(1).contains(2));
+        Assert.assertTrue(graph.adjacents(1).contains(3));
+        Assert.assertTrue(graph.adjacents(3).contains(1));
+    }
+
+    @Test
+    public void test7() {
+        InterferenceGraph graph = new InterferenceGraph();
+        graph.addEdge(1, 2);
+        graph.addEdge(1, 3);
+        Assert.assertTrue(graph.interfere(1, 2));
+        Assert.assertTrue(graph.interfere(2, 1));
+        Assert.assertTrue(graph.interfere(1, 3));
+        Assert.assertTrue(graph.interfere(3, 1));
+        Assert.assertFalse(graph.interfere(2, 3));
+        Assert.assertFalse(graph.interfere(3, 2));
+        Assert.assertTrue(graph.adjacents(1).contains(2));
+        Assert.assertTrue(graph.adjacents(1).contains(3));
+        Assert.assertTrue(graph.adjacents(2).contains(1));
+        Assert.assertTrue(graph.adjacents(3).contains(1));
+        System.out.println(graph.generateDotOutput());
+        graph.rename(1, 2);
+        System.out.println(graph.generateDotOutput());
+        Assert.assertFalse(graph.interfere(1, 2));
+        Assert.assertFalse(graph.interfere(2, 1));
+        Assert.assertFalse(graph.interfere(1, 3));
+        Assert.assertFalse(graph.interfere(3, 1));
+        Assert.assertTrue(graph.interfere(2, 3));
+        Assert.assertTrue(graph.interfere(3, 2));
+        Assert.assertTrue(graph.adjacents(2).contains(3));
+        Assert.assertTrue(graph.adjacents(3).contains(2));
+    }
+
 }

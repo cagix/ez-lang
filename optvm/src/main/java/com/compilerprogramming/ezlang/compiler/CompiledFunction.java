@@ -565,4 +565,8 @@ public class CompiledFunction {
         new Liveness(this);
         this.hasLiveness = true;
     }
+
+    public List<BasicBlock> getBlocks() {
+        return BBHelper.findAllBlocks(entry);
+    }
 }

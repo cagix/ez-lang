@@ -18,6 +18,7 @@ public class ExitSSA {
         this.function = function;
         if (!function.isSSA) throw new IllegalStateException();
         function.livenessAnalysis();
+        System.out.println(function.toStr(new StringBuilder(), true));
         tree = new DominatorTree(function.entry);
         initStack();
         insertCopies(function.entry);
@@ -35,9 +36,7 @@ public class ExitSSA {
         List<Integer> pushed = new ArrayList<>();
         for (Instruction i: block.instructions) {
             // replace all uses u with stacks[i]
-            if (i.usesVars()) {
-                replaceUses(i);
-            }
+            replaceUses(i);
         }
         scheduleCopies(block, pushed);
         for (BasicBlock c: block.dominatedChildren) {
@@ -86,7 +85,7 @@ public class ExitSSA {
             int j = SSATransform.whichPred(s, block);
             for (Instruction.Phi phi: s.phis()) {
                 Register dst = phi.def();
-                Register src = phi.inputs.get(j).reg;   // jth operand of phi node
+                Register src = phi.input(j);   // jth operand of phi node
                 copySet.add(new CopyItem(src, dst));
                 map.put(src.id, src);
                 map.put(dst.id, dst);

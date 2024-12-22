@@ -289,5 +289,72 @@ L1:
 """, actual);
     }
 
+    // See not on SSA and liveness in Liveness.
+    @Test
+    public void testSwapProblem() {
+        CompiledFunction function = TestSSATransform.buildSwapTest();
+        function.livenessAnalysis();
+        String actual = function.toStr(new StringBuilder(), true).toString();
+        Assert.assertEquals("""
+func foo(p: Int)
+Reg #0 p
+Reg #1 a1
+Reg #2 a2
+Reg #3 b1
+Reg #4 b2
+L0:
+    arg p
+    a1 = 42
+    b1 = 24
+    goto  L2
+    #UEVAR   = {}
+    #VARKILL = {0, 1, 3}
+    #LIVEOUT = {0}
+L2:
+    a2 = phi(a1, b2)
+    b2 = phi(b1, a2)
+    if p goto L2 else goto L1
+    #UEVAR   = {0}
+    #VARKILL = {2, 4}
+    #LIVEOUT = {0}
+L1:
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEOUT = {}
+""", actual);
+    }
+
+        @Test
+    public void testLostCopyProblem() {
+        CompiledFunction function = TestSSATransform.buildLostCopyTest();
+        function.livenessAnalysis();
+        String actual = function.toStr(new StringBuilder(), true).toString();
+        Assert.assertEquals("""
+func foo(p: Int)->Int
+Reg #0 p
+Reg #1 x1
+Reg #2 x3
+Reg #3 x2
+L0:
+    arg p
+    x1 = 1
+    goto  L2
+    #UEVAR   = {}
+    #VARKILL = {0, 1}
+    #LIVEOUT = {0}
+L2:
+    x2 = phi(x1, x3)
+    x3 = x2+1
+    if p goto L2 else goto L1
+    #UEVAR   = {0}
+    #VARKILL = {2, 3}
+    #LIVEOUT = {0, 3}
+L1:
+    ret x2
+    #UEVAR   = {3}
+    #VARKILL = {}
+    #LIVEOUT = {}
+""", actual);
+    }
 
 }
