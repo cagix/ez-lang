@@ -27,6 +27,7 @@ The project is under development and subject to change. At this point in time, w
 * [stackvm](./stackvm/README.md) - a compiler that generates IR for a stack based virtual machine
 * [registervm](./registervm/README.md) - a compiler that generates a so called three-address IR and an interpreter that can execute the IR
 * [optvm](./optvm/README.md) - an optimizing compiler (WIP) that supports SSA.
+* seaofnodes - a compiler that will generate Sea of Nodes IR (planned)
 
 ## How can you contribute?
 
