@@ -84,7 +84,7 @@ public class ExitSSA {
         for (BasicBlock s: block.successors) {
             int j = SSATransform.whichPred(s, block);
             for (Instruction.Phi phi: s.phis()) {
-                Register dst = phi.def();
+                Register dst = phi.value();
                 Register src = phi.input(j);   // jth operand of phi node
                 copySet.add(new CopyItem(src, dst));
                 map.put(src.id, src);
@@ -166,7 +166,7 @@ public class ExitSSA {
         for (int pos = 0; pos < bb.instructions.size(); pos++) {
             Instruction i = bb.instructions.get(pos);
             if (i instanceof Instruction.Phi phi) {
-                if (phi.def().id == phiDef.id) {
+                if (phi.value().id == phiDef.id) {
                     insertionPos = pos+1;   // After phi
                     break;
                 }

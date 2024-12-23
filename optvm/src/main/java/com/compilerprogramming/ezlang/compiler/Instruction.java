@@ -337,12 +337,16 @@ public abstract class Instruction {
     }
 
     /**
-     * Phi does not generate uses.
+     * Phi does not generate uses or defs directly, instead
+     * they are treated as a special case.
+     * To avoid bugs we do not use the def or uses.
      */
     public static class Phi extends Instruction {
+        public Register value;
         public final Register[] inputs;
-        public Phi(Register dest, List<Register> inputs) {
-            super(I_PHI, new Operand.RegisterOperand(dest));
+        public Phi(Register value, List<Register> inputs) {
+            super(I_PHI);
+            this.value = value;
             this.inputs = inputs.toArray(new Register[inputs.size()]);
         }
         public void replaceInput(int i, Register newReg) {
@@ -352,8 +356,26 @@ public abstract class Instruction {
             return inputs[i];
         }
         @Override
+        public Register def() {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public void replaceDef(Register newReg) {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public boolean definesVar() {
+            return false;
+        }
+        public Register value() {
+            return value;
+        }
+        public void replaceValue(Register newReg) {
+            this.value = newReg;
+        }
+        @Override
         public StringBuilder toStr(StringBuilder sb) {
-            sb.append(def).append(" = phi(");
+            sb.append(value().name()).append(" = phi(");
             for (int i = 0; i < inputs.length; i++) {
                 if (i > 0) sb.append(", ");
                 sb.append(inputs[i].name());

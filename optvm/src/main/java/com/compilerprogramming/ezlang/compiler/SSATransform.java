@@ -115,8 +115,8 @@ public class SSATransform {
     void search(BasicBlock block) {
         // Replace v = phi(...) with v_i = phi(...)
         for (Instruction.Phi phi: block.phis()) {
-            Register ssaReg = makeVersion(phi.def());
-            phi.replaceDef(ssaReg);
+            Register ssaReg = makeVersion(phi.value());
+            phi.replaceValue(ssaReg);
         }
         // for each instruction v = x op y
         // first replace x,y

@@ -56,25 +56,37 @@ L0:
     i = 1
     s = 1
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {0, 1}
+    #LIVEIN  = {}
     #LIVEOUT = {0, 1}
 L2:
     if 1 goto L3 else goto L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L3:
     %t2 = i==5
     if %t2 goto L5 else goto L6
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0}
     #VARKILL = {2}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L5:
     s = 0
     goto  L6
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {1}
+    #LIVEIN  = {0}
     #LIVEOUT = {0, 1}
 L6:
     %t3 = s+1
@@ -83,29 +95,44 @@ L6:
     i = %t4
     %t5 = i<10
     if %t5 goto L7 else goto L8
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0, 1}
     #VARKILL = {0, 1, 3, 4, 5}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L7:
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L8:
     goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {1}
     #LIVEOUT = {1}
 L4:
     %t6 = s
     call print params %t6
     goto  L1
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {1}
     #VARKILL = {6}
+    #LIVEIN  = {1}
     #LIVEOUT = {}
 L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {}
     #LIVEOUT = {}
 """, output);
     }
@@ -143,20 +170,29 @@ L0:
     arg a
     arg b
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {0, 1}
+    #LIVEIN  = {}
     #LIVEOUT = {0, 1}
 L2:
     %t2 = b<10
     if %t2 goto L3 else goto L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {1}
     #VARKILL = {2}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L3:
     %t3 = b<a
     if %t3 goto L5 else goto L6
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0, 1}
     #VARKILL = {3}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L5:
     %t4 = a*7
@@ -164,29 +200,44 @@ L5:
     %t5 = a+1
     b = %t5
     goto  L7
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0}
     #VARKILL = {0, 1, 4, 5}
+    #LIVEIN  = {0}
     #LIVEOUT = {0, 1}
 L7:
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L6:
     %t6 = b-1
     a = %t6
     goto  L7
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {1}
     #VARKILL = {0, 6}
+    #LIVEIN  = {1}
     #LIVEOUT = {0, 1}
 L4:
     goto  L1
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {}
     #LIVEOUT = {}
 L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {}
     #LIVEOUT = {}
 """, output);
     }
@@ -255,36 +306,54 @@ Reg #1 s
 L0:
     i = 1
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {0}
+    #LIVEIN  = {1}
     #LIVEOUT = {0, 1}
 L2:
     if i goto L3 else goto L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0}
     #VARKILL = {}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L3:
     s = 0
     goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {1}
+    #LIVEIN  = {0}
     #LIVEOUT = {0, 1}
 L4:
     s = s+i
     i = i+1
     if i goto L2 else goto L5
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {0, 1}
     #VARKILL = {0, 1}
+    #LIVEIN  = {0, 1}
     #LIVEOUT = {0, 1}
 L5:
     ret s
     goto  L1
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {1}
     #VARKILL = {}
+    #LIVEIN  = {1}
     #LIVEOUT = {}
 L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {}
     #LIVEOUT = {}
 """, actual);
     }
@@ -307,19 +376,28 @@ L0:
     a1 = 42
     b1 = 24
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {1, 3}
     #UEVAR   = {}
     #VARKILL = {0, 1, 3}
-    #LIVEOUT = {0}
+    #LIVEIN  = {}
+    #LIVEOUT = {0, 1, 3}
 L2:
     a2 = phi(a1, b2)
     b2 = phi(b1, a2)
     if p goto L2 else goto L1
+    #PHIDEFS = {2, 4}
+    #PHIUSES = {}
     #UEVAR   = {0}
-    #VARKILL = {2, 4}
+    #VARKILL = {}
+    #LIVEIN  = {0, 2, 4}
     #LIVEOUT = {0}
 L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {}
     #VARKILL = {}
+    #LIVEIN  = {}
     #LIVEOUT = {}
 """, actual);
     }
@@ -339,20 +417,29 @@ L0:
     arg p
     x1 = 1
     goto  L2
+    #PHIDEFS = {}
+    #PHIUSES = {1}
     #UEVAR   = {}
     #VARKILL = {0, 1}
-    #LIVEOUT = {0}
+    #LIVEIN  = {}
+    #LIVEOUT = {0, 1}
 L2:
     x2 = phi(x1, x3)
     x3 = x2+1
     if p goto L2 else goto L1
-    #UEVAR   = {0}
-    #VARKILL = {2, 3}
-    #LIVEOUT = {0, 3}
+    #PHIDEFS = {3}
+    #PHIUSES = {2}
+    #UEVAR   = {0, 3}
+    #VARKILL = {2}
+    #LIVEIN  = {0, 3}
+    #LIVEOUT = {0, 2, 3}
 L1:
     ret x2
+    #PHIDEFS = {}
+    #PHIUSES = {}
     #UEVAR   = {3}
     #VARKILL = {}
+    #LIVEIN  = {3}
     #LIVEOUT = {}
 """, actual);
     }
