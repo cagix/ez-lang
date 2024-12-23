@@ -20,13 +20,13 @@ The language is intentionally very simple and is meant to have just enough funct
 
 The project is under development and subject to change. At this point in time, we have following initial implementations:
 
-* lexer - a simple tokenizer
-* parser - a recursive descent parser and AST
-* types - the type definitions
-* semantic - semantic analyzer
-* stackvm - a bytecode compiler that generates stack IR (bytecode interpreter not yet available)
-* registervm - a bytecode compiler that generates a linear register IR and a bytecode interpreter that can execute the IR
-* optvm - WIP this will use an optimization pipeline, making usa of SSA transformation
+* [lexer](./lexer/README.md) - a simple tokenizer
+* [parser](./parser/README.md) - a recursive descent parser and AST
+* [types](/types/README.md) - the type definitions
+* [semantic](./semantic/README.md) - semantic analyzer
+* [stackvm](./stackvm/README.md) - a compiler that generates IR for a stack based virtual machine
+* [registervm](./registervm/README.md) - a compiler that generates a so called three-address IR and an interpreter that can execute the IR
+* [optvm](./optvm/README.md) - an optimizing compiler (WIP) that supports SSA.
 
 ## How can you contribute?
 
