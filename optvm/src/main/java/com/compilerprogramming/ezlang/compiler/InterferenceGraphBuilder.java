@@ -17,15 +17,14 @@ public class InterferenceGraphBuilder {
             // end of the block.
             // Process each instruction in the block in reverse order
             for (var i: b.instructions.reversed()) {
-                if (i instanceof Instruction.Move ||
-                    i instanceof Instruction.Phi) {
+                if (i instanceof Instruction.Move) {
                     // Move(copy) instructions are handled specially to avoid
                     // adding an undesirable interference between the source and
                     // destination (section 2.2.2 in Briggs thesis)
                     // Engineering a Compiler: The copy operation does not
                     // create an interference cause both values can occupy the
                     // same register
-                    // Same argument applies to phi.
+                    // Same argument applies to phi. (Phi's do not generate uses)
                     liveNow.remove(i.uses());
                 }
                 if (i.definesVar()) {

@@ -61,6 +61,19 @@ public class BasicBlock {
      * head of some block that is a successor of this block.
      */
     LiveSet liveOut;
+
+    /**
+     * Inputs to successor block's phi function
+     */
+    LiveSet phiUses;
+    /**
+     * Phi definitions in this block
+     */
+    LiveSet phiDefs;
+    /**
+     * Live in set
+     */
+    LiveSet liveIn;
     // -----------------------
 
     public BasicBlock(int bid, boolean loopHead) {
@@ -92,7 +105,7 @@ public class BasicBlock {
     public void insertPhiFor(Register var) {
         for (Instruction i: instructions) {
             if (i instanceof Instruction.Phi phi) {
-                if (phi.def().nonSSAId() == var.nonSSAId())
+                if (phi.value().nonSSAId() == var.nonSSAId())
                     // already added
                     return;
             }
@@ -124,8 +137,11 @@ public class BasicBlock {
             n.toStr(sb).append("\n");
         }
         if (dumpLiveness) {
+            if (bb.phiDefs != null) sb.append("    #PHIDEFS = ").append(bb.phiDefs.toString()).append("\n");
+            if (bb.phiUses != null) sb.append("    #PHIUSES = ").append(bb.phiUses.toString()).append("\n");
             if (bb.UEVar != null)   sb.append("    #UEVAR   = ").append(bb.UEVar.toString()).append("\n");
             if (bb.varKill != null) sb.append("    #VARKILL = ").append(bb.varKill.toString()).append("\n");
+            if (bb.liveIn != null)  sb.append("    #LIVEIN  = ").append(bb.liveIn.toString()).append("\n");
             if (bb.liveOut != null) sb.append("    #LIVEOUT = ").append(bb.liveOut.toString()).append("\n");
         }
         for (BasicBlock succ: bb.successors) {

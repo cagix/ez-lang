@@ -51,11 +51,9 @@ public class SSATransform {
         for (BasicBlock block : blocks) {
             var varKill = new HashSet<Integer>();
             for (Instruction instruction: block.instructions) {
-                if (instruction.usesVars()) {
-                    for (Register reg : instruction.uses()) {
-                        if (!varKill.contains(reg.nonSSAId())) {
-                            nonLocalNames[reg.nonSSAId()] = reg;
-                        }
+                for (Register reg : instruction.uses()) {
+                    if (!varKill.contains(reg.nonSSAId())) {
+                        nonLocalNames[reg.nonSSAId()] = reg;
                     }
                 }
                 if (instruction.definesVar()) {
@@ -117,8 +115,8 @@ public class SSATransform {
     void search(BasicBlock block) {
         // Replace v = phi(...) with v_i = phi(...)
         for (Instruction.Phi phi: block.phis()) {
-            Register ssaReg = makeVersion(phi.def());
-            phi.replaceDef(ssaReg);
+            Register ssaReg = makeVersion(phi.value());
+            phi.replaceValue(ssaReg);
         }
         // for each instruction v = x op y
         // first replace x,y
@@ -127,14 +125,14 @@ public class SSATransform {
             if (instruction instanceof Instruction.Phi)
                 continue;
             // first replace x,y
-            if (instruction.usesVars()) {
-                var uses = instruction.uses();
+            var uses = instruction.uses();
+            if (!uses.isEmpty()) {
                 Register[] newUses = new Register[uses.size()];
                 for (int i = 0; i < newUses.length; i++) {
                     Register oldReg = uses.get(i);
                     newUses[i] = stacks[oldReg.nonSSAId()].top();
-                    instruction.replaceUses(newUses);
                 }
+                instruction.replaceUses(newUses);
             }
             // then replace v
             if (instruction.definesVar()) {
@@ -146,7 +144,7 @@ public class SSATransform {
         for (BasicBlock s: block.successors) {
             int j = whichPred(s,block);
             for (Instruction.Phi phi: s.phis()) {
-                Register oldReg = phi.inputs.get(j).reg;
+                Register oldReg = phi.input(j);
                 phi.replaceInput(j, stacks[oldReg.nonSSAId()].top());
             }
         }
