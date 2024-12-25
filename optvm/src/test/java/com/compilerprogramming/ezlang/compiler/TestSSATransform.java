@@ -22,7 +22,7 @@ public class TestSSATransform {
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
-                new SSATransform(functionBuilder);
+                new EnterSSA(functionBuilder);
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);

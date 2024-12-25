@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler;
 import java.util.*;
 
 public class InterferenceGraph {
-    Map<Integer, Set<Integer>> edges = new HashMap<>();
+    private Map<Integer, Set<Integer>> edges = new HashMap<>();
 
     private Set<Integer> addNode(Integer node) {
         var set = edges.get(node);
@@ -22,6 +22,32 @@ public class InterferenceGraph {
         var set2 = addNode(to);
         set1.add(to);
         set2.add(from);
+    }
+
+    /**
+     * Remove a node from the interference graph
+     * deleting it from all adjacency lists
+     */
+    public InterferenceGraph subtract(Integer node) {
+        edges.remove(node);
+        for (var key : edges.keySet()) {
+            var neighbours = edges.get(key);
+            neighbours.remove(key);
+        }
+        return this;
+    }
+
+    /**
+     * Duplicate an interference graph
+     */
+    public InterferenceGraph dup() {
+        var igraph = new InterferenceGraph();
+        igraph.edges = new HashMap<>();
+        for (var key : edges.keySet()) {
+            var neighbours = edges.get(key);
+            igraph.edges.put(key, new HashSet<>(neighbours));
+        }
+        return igraph;
     }
 
     public boolean interfere(Integer from, Integer to) {
@@ -50,8 +76,15 @@ public class InterferenceGraph {
         }
     }
 
-    public Set<Integer> adjacents(Integer node) {
-        return edges.get(node);
+    /**
+     * Get neighbours of the node
+     * Chaitin: neighbors()
+     */
+    public Set<Integer> neighbors(Integer node) {
+        var adjacents = edges.get(node);
+        if (adjacents == null)
+            adjacents = Collections.emptySet();
+        return adjacents;
     }
 
     public static final class Edge {

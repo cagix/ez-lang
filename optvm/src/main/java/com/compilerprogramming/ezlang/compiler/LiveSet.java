@@ -32,7 +32,7 @@ public class LiveSet extends BitSet {
             remove(r);
         }
     }
-    public boolean isMember(Register r) {
+    public boolean contains(Register r) {
         return get(r.id);
     }
     public LiveSet intersect(LiveSet other) {
@@ -43,7 +43,10 @@ public class LiveSet extends BitSet {
         or(other);
         return this;
     }
-    public LiveSet intersectNot(LiveSet other) {
+    /**
+     * Computes this - other.
+     */
+    public LiveSet subtract(LiveSet other) {
         andNot(other);
         return this;
     }

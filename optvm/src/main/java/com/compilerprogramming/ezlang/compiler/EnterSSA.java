@@ -8,7 +8,7 @@ import java.util.*;
  * 'Practical Improvements to the Construction and Destruction
  * of Single Static Assigment Form' by Preston Briggs.
  */
-public class SSATransform {
+public class EnterSSA {
 
     CompiledFunction function;
     DominatorTree domTree;
@@ -22,12 +22,12 @@ public class SSATransform {
     int[] counters;
     VersionStack[] stacks;
 
-    public SSATransform(CompiledFunction bytecodeFunction) {
+    public EnterSSA(CompiledFunction bytecodeFunction) {
         this.function = bytecodeFunction;
         setupGlobals();
         computeDomTreeAndDominanceFrontiers();
         this.blocks = domTree.blocks;
-        findGlobalVars();
+        findNonLocalNames();
         insertPhis();
         renameVars();
         bytecodeFunction.isSSA = true;
@@ -47,7 +47,7 @@ public class SSATransform {
      * Compute set of registers that are live across multiple blocks
      * i.e. are not exclusively used in a single block.
      */
-    private void findGlobalVars() {
+    private void findNonLocalNames() {
         for (BasicBlock block : blocks) {
             var varKill = new HashSet<Integer>();
             for (Instruction instruction: block.instructions) {
@@ -142,7 +142,7 @@ public class SSATransform {
         }
         // Update phis in successor blocks
         for (BasicBlock s: block.successors) {
-            int j = whichPred(s,block);
+            int j = block.whichPred(s);
             for (Instruction.Phi phi: s.phis()) {
                 Register oldReg = phi.input(j);
                 phi.replaceInput(j, stacks[oldReg.nonSSAId()].top());
@@ -159,16 +159,6 @@ public class SSATransform {
                 stacks[reg.nonSSAId()].pop();
             }
         }
-    }
-
-    public static int whichPred(BasicBlock s, BasicBlock block) {
-        int i = 0;
-        for (BasicBlock p: s.predecessors) {
-            if (p == block)
-                return i;
-            i++;
-        }
-        throw new IllegalStateException();
     }
 
     private void initVersionCounters() {
