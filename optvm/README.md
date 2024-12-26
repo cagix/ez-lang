@@ -18,11 +18,12 @@ a physical machine. Therefore, all our optimization passes will work on the inst
   we shrink down the number of virtual registers to the minimum.
 * [RegisterPool](src/main/java/com/compilerprogramming/ezlang/compiler/RegisterPool.java) - simple pool to allow us to find a register
   by its id, and to allocate new virtual registers.
-* [CompiledFunction](src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java) - encapsulates the IR for a single function.
 * [BasicBlock](src/main/java/com/compilerprogramming/ezlang/compiler/BasicBlock.java) - Defines our basic block - which contains instructions
   that execute sequentially. A basic block ends with a branch. There are two distinguished basic blocks in every function: entry and exit. 
 * [BBHelper](src/main/java/com/compilerprogramming/ezlang/compiler/BBHelper.java) - Some utilities that manipulate basic blocks.
-* [Operand](src/main/java/com/compilerprogramming/ezlang/compiler/Operand.java) - Operands in instructions.
+* [Operand](src/main/java/com/compilerprogramming/ezlang/compiler/Operand.java) - Operands in instructions. Both definitions and uses are treated
+  as operands. Instruction can have at most one definition; but an instruction can have multiple use operands. Operands can hold registers or
+  constants or pointers to basic blocks.
 * [Instruction](src/main/java/com/compilerprogramming/ezlang/compiler/Instruction.java) - Instructions in basic blocks.
 * [DominatorTree](src/main/java/com/compilerprogramming/ezlang/compiler/DominatorTree.java) - Calculates dominator tree and dominance frontiers.
 * [LiveSet](src/main/java/com/compilerprogramming/ezlang/compiler/LiveSet.java) - Bitset used to track liveness of registers.
@@ -33,7 +34,11 @@ a physical machine. Therefore, all our optimization passes will work on the inst
 * [LoopNest](src/main/java/com/compilerprogramming/ezlang/compiler/LoopNest.java) - Representation of loop nesting.
 * [InterferenceGraph](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraph.java) - Representation of an Interference Graph
   required by the register allocator.
-* [InterferenceGraphBuilder](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraph.java) - Constructs InteferenceGraph for a set
+* [InterferenceGraphBuilder](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraphBuilder.java) - Constructs InteferenceGraph for a set
   of basic bocks, using liveness information.
 * [ChaitinGraphColoringRegisterAllocator](src/main/java/com/compilerprogramming/ezlang/compiler/ChaitinGraphColoringRegisterAllocator.java) - basic
   Chaitin Graph Coloring Register Allocator - WIP.
+
+## Compiler
+
+* [CompiledFunction](src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java) - builds and encapsulates the IR for a single function.
