@@ -126,6 +126,15 @@ public class BasicBlock {
         }
         return list;
     }
+    public int whichPred(BasicBlock s) {
+        int i = 0;
+        for (BasicBlock p: s.predecessors) {
+            if (p == this)
+                return i;
+            i++;
+        }
+        throw new IllegalStateException();
+    }
     public static StringBuilder toStr(StringBuilder sb, BasicBlock bb, BitSet visited, boolean dumpLiveness)
     {
         if (visited.get(bb.bid))

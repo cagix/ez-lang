@@ -59,7 +59,7 @@ public class Liveness {
             }
             for (Instruction instruction : block.instructions) {
                 for (Register use : instruction.uses()) {
-                    if (!block.varKill.isMember(use))
+                    if (!block.varKill.contains(use))
                         block.UEVar.add(use);
                 }
                 if (instruction.definesVar() && !(instruction instanceof Instruction.Phi)) {
@@ -74,7 +74,7 @@ public class Liveness {
                         // if there is loop back and there are cycles
                         // such as e.g. the swap copy problem
                         if (pred == block &&
-                            block.phiDefs.isMember(use))
+                            block.phiDefs.contains(use))
                             continue;
                         pred.phiUses.add(use);
                     }
@@ -99,11 +99,11 @@ public class Liveness {
     // LiveOut(B) = U all S  (LiveIn(S) \ PhiDefs(S)) U PhiUses(B)
     private boolean recomputeLiveOut(BasicBlock block) {
         LiveSet oldLiveOut = block.liveOut.dup();
-        LiveSet t = block.liveOut.dup().intersectNot(block.varKill);
+        LiveSet t = block.liveOut.dup().subtract(block.varKill);
         block.liveIn.union(block.phiDefs).union(block.UEVar).union(t);
         block.liveOut.clear();
         for (BasicBlock s: block.successors) {
-            t = s.liveIn.dup().intersectNot(s.phiDefs);
+            t = s.liveIn.dup().subtract(s.phiDefs);
             block.liveOut.union(t);
         }
         block.liveOut.union(block.phiUses);
