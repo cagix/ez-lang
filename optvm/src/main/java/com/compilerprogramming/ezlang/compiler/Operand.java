@@ -21,7 +21,7 @@ public class Operand {
     }
 
     public static class RegisterOperand extends Operand {
-        public Register reg;
+        Register reg;
         public RegisterOperand(Register reg) {
             this.reg = reg;
             if (reg == null)

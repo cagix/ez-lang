@@ -21,11 +21,13 @@ public class Register {
      * The type of a register
      */
     public final Type type;
+    private int slot;
 
     public Register(int id, String name, Type type) {
         this.id = id;
         this.name = name;
         this.type = type;
+        this.slot = id;
     }
     @Override
     public boolean equals(Object o) {
@@ -44,7 +46,10 @@ public class Register {
         return name;
     }
     public int nonSSAId() {
-        return id;
+        return slot;
+    }
+    public void updateSlot(int slot) {
+        this.slot = slot;
     }
 
     /**

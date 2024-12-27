@@ -4,24 +4,76 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 /**
- * Implement the original graph coloring algorithm described by Chaitin.
+ * Implements the original graph coloring algorithm described by Chaitin.
+ * Since we are targeting an abstract machine where there are no limits on
+ * number of registers except how we set them, our goal here is to get to
+ * the minimum number of registers required to execute the function.
+ * <p>
+ * We do want to implement spilling even though we do not need it for the
+ * abstract machine, but it is not yet implemented. We would spill to a
+ * stack attached to the abstract machine.
  *
  * TODO spilling
  */
 public class ChaitinGraphColoringRegisterAllocator {
 
-    public ChaitinGraphColoringRegisterAllocator() {
-    }
-
     public Map<Integer, Integer> assignRegisters(CompiledFunction function, int numRegisters) {
         if (function.isSSA) throw new IllegalStateException("Register allocation should be done after exiting SSA");
-        var g = coalesce(function);
-        var registers = registersInIR(function);
-        var colors = IntStream.range(0, numRegisters).boxed().toList();
-        // TODO pre-assign regs to args
+        // Remove useless copy operations
+        InterferenceGraph g = coalesce(function);
+        // Get used registers
+        Set<Integer> registers = registersInIR(function);
+        // Create color set
+        List<Integer> colors = new ArrayList<>(IntStream.range(0, numRegisters).boxed().toList());
+        // Function args are pre-assigned colors
+        // and we remove them from the register set
+        Map<Integer, Integer> assignments = preAssignArgsToColors(function, registers, colors);
         // TODO spilling
-        var assignments = colorGraph(g, registers, new HashSet<>(colors));
+        // execute graph coloring on remaining registers
+        assignments = colorGraph(g, registers, new HashSet<>(colors), assignments);
+        // update all instructions
+        // We simply set the slot on each register - rather than actually trying to replace them
+        updateInstructions(function, assignments);
+        // Compute and set the new framesize
+        function.setFrameSize(computeFrameSize(assignments));
         return assignments;
+    }
+
+    /**
+     * Frame size = max number of registers needed to execute the function
+     */
+    private int computeFrameSize(Map<Integer, Integer> assignments) {
+        return assignments.values().stream().mapToInt(k->k).max().orElse(0);
+    }
+
+    /**
+     * Due to the way function args are received by the abstract machine, we need
+     * to assign them register slots starting from 0. After assigning colors/slots
+     * we remove these from the set so that the graph coloring algo does
+     */
+    private Map<Integer, Integer> preAssignArgsToColors(CompiledFunction function, Set<Integer> registers, List<Integer> colors) {
+        int count = 0;
+        Map<Integer, Integer> assignments = new HashMap<>();
+        for (Instruction instruction : function.entry.instructions) {
+            if (instruction instanceof Instruction.ArgInstruction argInstruction) {
+                Integer color = colors.get(count);
+                Register reg = argInstruction.arg().reg;
+                registers.remove(reg.nonSSAId());   // Remove register from set before changing slot
+                assignments.put(reg.nonSSAId(), color);
+                count++;
+            }
+            else break;
+        }
+        return assignments;
+    }
+
+    private void updateInstructions(CompiledFunction function, Map<Integer, Integer> assignments) {
+        var regPool = function.registerPool;
+        for (var entry : assignments.entrySet()) {
+            int reg = entry.getKey();
+            int slot = entry.getValue();
+            regPool.getReg(reg).updateSlot(slot);
+        }
     }
 
     /**
@@ -85,9 +137,7 @@ public class ChaitinGraphColoringRegisterAllocator {
     private Set<Integer> registersInIR(CompiledFunction function) {
         Set<Integer> registers = new HashSet<>();
         for (var block: function.getBlocks()) {
-            Iterator<Instruction> iter = block.instructions.iterator();
-            while (iter.hasNext()) {
-                Instruction instruction = iter.next();
+            for (Instruction instruction: block.instructions) {
                 if (instruction.definesVar())
                     registers.add(instruction.def().id);
                 for (Register use: instruction.uses())
@@ -112,7 +162,7 @@ public class ChaitinGraphColoringRegisterAllocator {
     private Set<Integer> getNeighborColors(InterferenceGraph g, Integer node, Map<Integer,Integer> assignedColors) {
         Set<Integer> colors = new HashSet<>();
         for (var neighbour: g.neighbors(node)) {
-            var c = assignedColors.get(neighbour);
+            Integer c = assignedColors.get(neighbour);
             if (c != null) {
                 colors.add(c);
             }
@@ -137,18 +187,18 @@ public class ChaitinGraphColoringRegisterAllocator {
     /**
      * Chaitin: color_graph
      */
-    private Map<Integer, Integer> colorGraph(InterferenceGraph g, Set<Integer> nodes, Set<Integer> colors) {
+    private Map<Integer, Integer> colorGraph(InterferenceGraph g, Set<Integer> nodes, Set<Integer> colors, Map<Integer, Integer> preAssignedColors) {
         if (nodes.size() == 0)
-            return new HashMap<>();
-        var numColors = colors.size();
-        var node = findNodeWithNeighborCountLessThan(g, nodes, numColors);
+            return preAssignedColors;
+        int numColors = colors.size();
+        Integer node = findNodeWithNeighborCountLessThan(g, nodes, numColors);
         if (node == null)
             return null;
-        var coloring = colorGraph(g.dup().subtract(node), subtract(nodes, node), colors);
+        Map<Integer, Integer> coloring = colorGraph(g.dup().subtract(node), subtract(nodes, node), colors, preAssignedColors);
         if (coloring == null)
             return null;
-        var neighbourColors = getNeighborColors(g, node, coloring);
-        var color = chooseSomeColorNotAssignedToNeighbors(colors, neighbourColors);
+        Set<Integer> neighbourColors = getNeighborColors(g, node, coloring);
+        Integer color = chooseSomeColorNotAssignedToNeighbors(colors, neighbourColors);
         coloring.put(node, color);
         return coloring;
     }

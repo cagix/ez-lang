@@ -1,5 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
+import com.compilerprogramming.ezlang.exceptions.CompilerException;
+
 import java.util.*;
 
 /**
@@ -178,7 +180,11 @@ public class EnterSSA {
     static class VersionStack {
         List<Register.SSARegister> stack = new ArrayList<>();
         void push(Register.SSARegister r) { stack.add(r); }
-        Register.SSARegister top() { return stack.getLast(); }
+        Register.SSARegister top() {
+            if (stack.isEmpty())
+                throw new CompilerException("Variable may not be initialized");
+            return stack.getLast();
+        }
         void pop() { stack.removeLast(); }
     }
 

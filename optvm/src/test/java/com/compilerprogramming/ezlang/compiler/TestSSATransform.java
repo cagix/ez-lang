@@ -4,6 +4,7 @@ import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -764,6 +765,53 @@ L2:
 L1:
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
+    }
+
+    @Test
+    public void testLiveness() {
+        String src = """
+                func bar(x: Int)->Int {
+                    var y = 0
+                    var z = 0
+                    while( x>1 ){
+                        y = x/2;
+                        if (y > 3) {
+                            x = x-y;
+                        }
+                        z = x-4;
+                        if (z > 0) {
+                            x = x/2;
+                        }
+                        z = z-1;
+                    }
+                    return x;
+                }
+
+                func foo() {
+                    return bar(10);
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    @Ignore
+    public void testInit() {
+        // see issue #16
+        String src = """
+                func foo(x: Int) {
+                    var z: Int
+                    while (x > 0) {
+                        z = 5
+                        if (x == 1)
+                            z = z+1
+                        x = x - 1
+                    }
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
     }
 
 }

@@ -23,6 +23,7 @@ public class ExitSSA {
         initStack();
         insertCopies(function.entry);
         removePhis();
+        function.isSSA = false;
     }
 
     private void removePhis() {
