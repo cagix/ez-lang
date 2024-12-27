@@ -8,19 +8,24 @@ import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
-import java.util.BitSet;
-
 public class Compiler {
 
-    private void compile(TypeDictionary typeDictionary) {
+    private void compile(TypeDictionary typeDictionary, boolean opt) {
         for (Symbol symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.FunctionTypeSymbol functionSymbol) {
                 Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
-                functionType.code = new CompiledFunction(functionSymbol);
+                var function = new CompiledFunction(functionSymbol);
+                functionType.code = function;
+                if (opt) {
+                    new Optimizer().optimize(function);
+                }
             }
         }
     }
     public TypeDictionary compileSrc(String src) {
+        return compileSrc(src, false);
+    }
+    public TypeDictionary compileSrc(String src, boolean opt) {
         Parser parser = new Parser();
         var program = parser.parse(new Lexer(src));
         var typeDict = new TypeDictionary();
@@ -28,7 +33,7 @@ public class Compiler {
         sema.analyze(program);
         var sema2 = new SemaAssignTypes(typeDict);
         sema2.analyze(program);
-        compile(typeDict);
+        compile(typeDict, opt);
         return typeDict;
     }
     public static String dumpIR(TypeDictionary typeDictionary) {

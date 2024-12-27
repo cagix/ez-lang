@@ -21,7 +21,7 @@ public class CompiledFunction {
     private Type.TypeFunction functionType;
     public final RegisterPool registerPool;
 
-    private final int frameSlots;
+    private int frameSlots;
 
     public boolean isSSA;
     public boolean hasLiveness;
@@ -75,6 +75,9 @@ public class CompiledFunction {
 
     public int frameSize() {
         return frameSlots;
+    }
+    public void setFrameSize(int size) {
+        frameSlots = size;
     }
 
     private void exitBlockIfNeeded() {
@@ -134,6 +137,7 @@ public class CompiledFunction {
             case AST.VarStmt letStmt -> {
                 compileLet(letStmt);
             }
+            case AST.VarDeclStmt varDeclStmt -> {}
             case AST.IfElseStmt ifElseStmt -> {
                 compileIf(ifElseStmt);
             }

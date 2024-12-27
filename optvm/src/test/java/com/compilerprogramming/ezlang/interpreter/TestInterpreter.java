@@ -7,8 +7,11 @@ import org.junit.Test;
 public class TestInterpreter {
 
     Value compileAndRun(String src, String mainFunction) {
+        return compileAndRun(src, mainFunction, false);
+    }
+    Value compileAndRun(String src, String mainFunction, boolean opt) {
         var compiler = new Compiler();
-        var typeDict = compiler.compileSrc(src);
+        var typeDict = compiler.compileSrc(src, opt);
         var compiled = compiler.dumpIR(typeDict);
         System.out.println(compiled);
         var interpreter = new Interpreter(typeDict);
@@ -121,4 +124,53 @@ public class TestInterpreter {
                 && integerValue.value == 42);
     }
 
+    @Test
+    public void testFunction8() {
+        String src = """
+                func factorial(num: Int)->Int {
+                    var result = 1
+                    while (num > 1)
+                    {
+                      result = result * num
+                      num = num - 1
+                    }
+                    return result
+                }
+                func foo()->Int {
+                    return factorial(5);
+                }
+                """;
+        var value = compileAndRun(src, "foo", true);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 120);
+    }
+
+    @Test
+    public void testFunction9() {
+        String src = """
+                func fib(n: Int)->Int {
+                    var i: Int;
+                    var temp: Int;
+                    var f1=1;
+                    var f2=1;
+                    i=n;
+                    while( i>1 ){
+                        temp = f1+f2;
+                        f1=f2;
+                        f2=temp;
+                        i=i-1;
+                    }
+                    return f2;
+                }
+
+                func foo() {
+                    return fib(10);
+                }
+                """;
+        var value = compileAndRun(src, "foo", true);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 89);
+    }
 }
