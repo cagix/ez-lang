@@ -27,7 +27,7 @@ public class Operand {
             if (reg == null)
                 throw new NullPointerException();
         }
-        public int slot() { return reg.nonSSAId(); }
+        public int frameSlot() { return reg.nonSSAId(); }
 
         @Override
         public void replaceRegister(Register register) {
@@ -55,15 +55,6 @@ public class Operand {
         public String toString() {
             return functionType.toString();
         }
-    }
-
-    /**
-     * Represents the return register, which is the location where
-     * the caller will expect to see any return value. The VM must map
-     * this to appropriate location.
-     */
-    public static class ReturnRegisterOperand extends RegisterOperand {
-        public ReturnRegisterOperand(Register reg) { super(reg); }
     }
 
     /**
@@ -110,17 +101,4 @@ public class Operand {
             return structOperand + "." + fieldName;
         }
     }
-
-    public static class NewTypeOperand extends Operand {
-        public final Type type;
-        public NewTypeOperand(Type type) {
-            this.type = type;
-        }
-
-        @Override
-        public String toString() {
-            return "New(" + type + ")";
-        }
-    }
-
 }
