@@ -38,7 +38,6 @@ public class RegisterPool {
         registers.add(reg);
         return reg;
     }
-
     public Register.SSARegister ssaReg(Register original, int version) {
         var id = registers.size();
         var reg = new Register.SSARegister(original, id, version);
@@ -48,7 +47,6 @@ public class RegisterPool {
     public int numRegisters() {
         return registers.size();
     }
-
     public void toStr(StringBuilder sb) {
         for (Register reg : registers) {
             sb.append("Reg #").append(reg.id).append(" ").append(reg.name()).append("\n");

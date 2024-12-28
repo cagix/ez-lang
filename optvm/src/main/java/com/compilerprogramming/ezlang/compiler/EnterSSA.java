@@ -17,10 +17,19 @@ public class EnterSSA {
     /**
      * Non-local names are set of variables that are live
      * on entry to _some_ BasicBlock in the program.
+     *
+     * Note that a variable in the Literature is represented
+     * by a Register in our implementation
      */
     Register[] nonLocalNames;
     BBSet[] blockSets;
+    /**
+     * Basic blocks in reverse post order
+     */
     List<BasicBlock> blocks;
+    /**
+     * Used to generate SSA version for each variable (register)
+     */
     int[] counters;
     VersionStack[] stacks;
 
@@ -28,7 +37,7 @@ public class EnterSSA {
         this.function = bytecodeFunction;
         setupGlobals();
         computeDomTreeAndDominanceFrontiers();
-        this.blocks = domTree.blocks;
+        this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
         insertPhis();
         renameVars();

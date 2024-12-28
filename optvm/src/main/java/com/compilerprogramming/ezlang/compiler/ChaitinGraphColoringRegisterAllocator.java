@@ -69,10 +69,14 @@ public class ChaitinGraphColoringRegisterAllocator {
 
     private void updateInstructions(CompiledFunction function, Map<Integer, Integer> assignments) {
         var regPool = function.registerPool;
+        // First reset the slots of every register to -1
+        for (int r = 0; r < regPool.numRegisters(); r++)
+            regPool.getReg(r).updateSlot(-1);
+        // Now set the slot to the color assigned by the graph coloring algo
         for (var entry : assignments.entrySet()) {
             int reg = entry.getKey();
-            int slot = entry.getValue();
-            regPool.getReg(reg).updateSlot(slot);
+            int color = entry.getValue();
+            regPool.getReg(reg).updateSlot(color);
         }
     }
 

@@ -47,13 +47,17 @@ public class BasicBlock {
     // Liveness computation
     /**
      * VarKill contains all the variables that are defined
-     * in the block.
+     * in the block. This is often called defs in literature, but
+     * we use the name in Engineering a Compiler.
      */
     LiveSet varKill;
     /**
      * UEVar contains upward-exposed variables in the block,
      * i.e. those variables that are used in the block prior to
      * any redefinition in the block.
+     *
+     * This is often called uses in Literature but we use the
+     * name in Engineering a Compiler.
      */
     LiveSet UEVar;
     /**
@@ -168,7 +172,7 @@ public class BasicBlock {
 
     @Override
     public int hashCode() {
-        return Objects.hash(bid);
+        return bid;
     }
 
     public String label() {
