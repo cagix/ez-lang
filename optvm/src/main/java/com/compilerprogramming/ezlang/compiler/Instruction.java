@@ -29,6 +29,7 @@ public abstract class Instruction {
     public final int opcode;
     public Operand.RegisterOperand def;
     public Operand[] uses;
+    public BasicBlock block;
 
     public Instruction(int opcode, Operand... uses) {
         this.opcode = opcode;

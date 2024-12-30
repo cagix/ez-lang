@@ -173,4 +173,19 @@ public class TestInterpreter {
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue
                 && integerValue.value == 89);
     }
+
+    @Test
+    public void testFunction10() {
+        String src = """
+                func foo()->Int {
+                    if (1)
+                        return 2;
+                    return 3;
+                }
+                """;
+        var value = compileAndRun(src, "foo", true);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 2);
+    }
 }
