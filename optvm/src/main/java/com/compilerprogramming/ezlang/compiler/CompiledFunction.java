@@ -127,6 +127,7 @@ public class CompiledFunction {
 
     public void code(Instruction instruction) {
         currentBlock.add(instruction);
+        instruction.block = currentBlock;
     }
 
     private void compileStatement(AST.Stmt statement) {
