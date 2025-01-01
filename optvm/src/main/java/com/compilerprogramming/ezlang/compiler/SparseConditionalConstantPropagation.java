@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler;
 
+import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.types.Type;
 
 import java.util.*;
@@ -10,8 +11,8 @@ import java.util.*;
  *
  * <ol>
  *     <li>Constant Propagation with Conditional Branches. Wegman and Zadeck.</li>
- *     <li>Modern Compiler Implementation in C</li>
- *     <li></li>
+ *     <li>Modern Compiler Implementation in C, Andrew Appel, section 19.3</li>
+ *     <li>Building an Optimizing Compiler, Bob Morgan, section 8.3</li>
  * </ol>
  *
  *
@@ -19,21 +20,34 @@ import java.util.*;
 public class SparseConditionalConstantPropagation {
 
     /**
-     * Contains a lattice for all possible definitions
+     * Contains a lattice for each SSA definition
      */
     ValueLattice valueLattice;
     /**
-     * Executable status for each flow edge
+     * Executable status for each flow edge, initially all edges are
+     * marked non-executable except the start block
      */
     Map<FlowEdge, Boolean> flowEdges;
+    /**
+     * Worklist of ssaedges (the term used by SCCP paper)
+     */
     WorkList<Instruction> instructionWorkList;
+    /**
+     * As edges between basic blocks become executable, we
+     * add them the impacted blocks to the worklist for processing.
+     */
     WorkList<BasicBlock> flowWorklist;
+    /**
+     * We don't evaluate a block more than once (except for Phi instructions
+     * in the block). So we have to track which blocks have already been
+     * evaluated.
+     */
     BitSet visited = new BitSet();
     /**
      * Def use chains for each register
      * Called SSAEdge in the original paper.
      */
-    Map<Integer, SSAEdges.SSADef> ssaEdges;
+    Map<Register, SSAEdges.SSADef> ssaEdges;
     CompiledFunction function;
 
     public SparseConditionalConstantPropagation constantPropagation(CompiledFunction function) {
@@ -61,8 +75,7 @@ public class SparseConditionalConstantPropagation {
             }
         }
         sb.append("Lattices:\n");
-        for (var id: valueLattice.valueLattice.keySet()) {
-            var register = function.registerPool.getReg(id);
+        for (var register: valueLattice.getRegisters()) {
             sb.append(register.name()).append("=").append(valueLattice.get(register)).append("\n");
         }
         return sb.toString();
@@ -86,14 +99,14 @@ public class SparseConditionalConstantPropagation {
             if (instruction instanceof Instruction.ConditionalBranch || instruction instanceof Instruction.Jump) {
                 for (BasicBlock s : block.successors) {
                     if (isEdgeExecutable(block, s)) {
-                        flowWorklist.push(block);   // Is this correct ?
+                        flowWorklist.push(block);   // Push both this block and successor to worklist?
                         flowWorklist.push(s);
                     }
                 }
             } else if (instruction.definesVar() || instruction instanceof Instruction.Phi) {
                 var def = instruction instanceof Instruction.Phi phi ? phi.value() : instruction.def();
                 // Push all uses (instructions) of the def into the worklist
-                SSAEdges.SSADef ssaDef = ssaEdges.get(def.id);
+                SSAEdges.SSADef ssaDef = ssaEdges.get(def);
                 if (ssaDef != null) {
                     for (Instruction use : ssaDef.useList) {
                         instructionWorkList.push(use);
@@ -209,6 +222,14 @@ public class SparseConditionalConstantPropagation {
         }
     }
 
+    /**
+     * This is based on the description of CP_Evaluate(I) in
+     * Building an Optimizing Compiler. It evaluates an instruction and
+     * if the instruction defines an SSA variable, then it updates the lattice
+     * value of that variable. If the lattice changes then this returns true,
+     * else false. For branches the change in executable status of an edge is
+     * used instead of the lattice value change.
+     */
     private boolean evalInstruction(Instruction instruction) {
         BasicBlock block = instruction.block;
         boolean changed = false;
@@ -252,8 +273,6 @@ public class SparseConditionalConstantPropagation {
                 } else throw new IllegalStateException();
             }
             case Instruction.Call callInst -> {
-                // Copy args to new frame
-                // Copy return value in expected location
                 if (!(callInst.callee.returnType instanceof Type.TypeVoid)) {
                     var cell = valueLattice.get(callInst.returnOperand().reg);
                     changed = cell.setKind(V_VARYING);
@@ -341,6 +360,7 @@ public class SparseConditionalConstantPropagation {
         LatticeElement newValue = new LatticeElement(V_UNDEFINED, 0);
         for (int j = 0; j < block.predecessors.size(); j++) {
             BasicBlock pred = block.predecessors.get(j);
+            // We ignore non-executable edges
             if (isEdgeExecutable(pred, block)) {
                 LatticeElement varValue = valueLattice.get(phiInst.input(j));
                 newValue.meet(varValue);
@@ -357,6 +377,7 @@ public class SparseConditionalConstantPropagation {
         var oldValue = flowEdges.get(edge);
         assert oldValue != null;
         if (!oldValue) {
+            // Mark edge as executable
             flowEdges.put(edge, true);
             return true;
         }
@@ -393,6 +414,8 @@ public class SparseConditionalConstantPropagation {
             }
             changed = cell.meet(result);
         } else if (left.kind == V_VARYING || right.kind == V_VARYING) {
+            // We could constrain the result here to the set [0-1]
+            // but we don't track ranges or sets of values
             changed = cell.setKind(V_VARYING);
         }
         return changed;
@@ -412,6 +435,7 @@ public class SparseConditionalConstantPropagation {
                     result = leftValue - rightValue;
                     break;
                 case "/":
+                    if (rightValue == 0) throw new CompilerException("Division by zero");
                     result = leftValue / rightValue;
                     break;
                 case "*":
@@ -425,24 +449,33 @@ public class SparseConditionalConstantPropagation {
             }
             changed = cell.meet(result);
         } else if (binOp.equals("*") && ((left.kind == V_CONSTANT && left.value == 0) || (right.kind == V_CONSTANT && right.value == 0))) {
-            var result = new LatticeElement(V_CONSTANT, 0);
-            changed = cell.meet(result);
+            // multiplication with 0 yields 0
+            changed = cell.meet(0);
         } else if (left.kind == V_VARYING || right.kind == V_VARYING) {
             changed = cell.setKind(V_VARYING);
         }
         return changed;
     }
 
+    /**
+     * Maintains a Lattice for each SSA variable - i.e register
+     * Initial value of lattice is TOP/Undefined
+     */
     static final class ValueLattice {
-        Map<Integer, LatticeElement> valueLattice = new HashMap<>();
+
+        private final Map<Register, LatticeElement> valueLattice = new HashMap<>();
 
         LatticeElement get(Register reg) {
-            var cell = valueLattice.get(reg.id);
+            var cell = valueLattice.get(reg);
             if (cell == null) {
+                // Initial value is UNDEFINED/TOP
                 cell = new LatticeElement(V_UNDEFINED, 0);
-                valueLattice.put(reg.id, cell);
+                valueLattice.put(reg, cell);
             }
             return cell;
+        }
+        Set<Register> getRegisters() {
+            return valueLattice.keySet();
         }
     }
 

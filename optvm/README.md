@@ -35,6 +35,8 @@ a physical machine. Therefore, all our optimization passes will work on the inst
   liveness data per basic block - mainly live-out. Note that the interference graph builder starts here and computes instruction level liveness as necessary.
 * [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using algorithm by Preston Briggs.
 * [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form, using algorithm by Preston Briggs.
+* [SparseConditionalConstantPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/SparseConditionalConstantPropagation.java) - Conditional Constant Propagation on SSA form (SCCP)
+* [SSAEdges](src/main/java/com/compilerprogramming/ezlang/compiler/SSAEdges.java) - SSAEdges are def-use chains used by SCCP algorithm 
 * [LoopFinder](src/main/java/com/compilerprogramming/ezlang/compiler/LoopFinder.java) - Discovers loops. (Not used yet)
 * [LoopNest](src/main/java/com/compilerprogramming/ezlang/compiler/LoopNest.java) - Representation of loop nesting. (Not used yet)
 * [InterferenceGraph](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraph.java) - Representation of an Interference Graph
