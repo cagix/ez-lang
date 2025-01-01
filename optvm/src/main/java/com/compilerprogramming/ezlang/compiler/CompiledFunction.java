@@ -14,7 +14,7 @@ public class CompiledFunction {
 
     public BasicBlock entry;
     public BasicBlock exit;
-    private int bid = 0;
+    private int BID = 0;
     public BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
@@ -41,7 +41,7 @@ public class CompiledFunction {
         this.functionType = (Type.TypeFunction) functionSymbol.type;
         this.registerPool = new RegisterPool();
         setVirtualRegisters(funcDecl.scope);
-        this.bid = 0;
+        this.BID = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
@@ -55,7 +55,7 @@ public class CompiledFunction {
     public CompiledFunction(Type.TypeFunction functionType) {
         this.functionType = (Type.TypeFunction) functionType;
         this.registerPool = new RegisterPool();
-        this.bid = 0;
+        this.BID = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
@@ -99,11 +99,11 @@ public class CompiledFunction {
     }
 
     public BasicBlock createBlock() {
-        return new BasicBlock(bid++);
+        return new BasicBlock(BID++);
     }
 
     private BasicBlock createLoopHead() {
-        return new BasicBlock(bid++, true);
+        return new BasicBlock(BID++, true);
     }
 
     private void compileBlock(AST.BlockStmt block) {
@@ -573,5 +573,20 @@ public class CompiledFunction {
 
     public List<BasicBlock> getBlocks() {
         return BBHelper.findAllBlocks(entry);
+    }
+
+    public StringBuilder toDot(StringBuilder sb, boolean verbose) {
+        sb.append("digraph CompiledFunction {\n");
+        List<BasicBlock> blocks = getBlocks();
+        for (BasicBlock block: blocks) {
+            sb.append("L").append(block.bid).append(" [shape=none, margin=0, label=<");
+            block.toDot(sb, verbose);
+            sb.append(">];\n");
+            for (BasicBlock s: block.successors) {
+                sb.append("L").append(block.bid).append(" -> ").append("L").append(s.bid).append("\n");
+            }
+        }
+        sb.append("}\n");
+        return sb;
     }
 }

@@ -164,6 +164,28 @@ public class BasicBlock {
         }
         return sb;
     }
+    private String escapeHtmlChars(String s) {
+        if (s.contains(">"))
+            s = s.replaceAll(">", " &gt; ");
+        if (s.contains(">="))
+            s = s.replaceAll(">=", " &ge; ");
+        if (s.contains("<"))
+            s = s.replaceAll("<", " &lt; ");
+        if (s.contains("<="))
+            s = s.replaceAll("<=", " &le; ");
+        return s;
+    }
+    public StringBuilder toDot(StringBuilder sb, boolean verbose) {
+        sb.append("<TABLE BORDER=\"1\" CELLBORDER=\"0\">\n");
+        sb.append("<TR><TD><B>L").append(bid).append("</B></TD></TR>\n");
+        for (Instruction i: instructions) {
+            sb.append("<TR><TD>");
+            sb.append(escapeHtmlChars(i.toStr(new StringBuilder()).toString()));
+            sb.append("</TD></TR>\n");
+        }
+        sb.append("</TABLE>");
+        return sb;
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
