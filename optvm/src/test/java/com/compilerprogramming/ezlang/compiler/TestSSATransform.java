@@ -814,4 +814,30 @@ L1:
         System.out.println(result);
     }
 
+    // http://users.csc.calpoly.edu/~akeen/courses/csc431/handouts/references/ssa_example.pdf
+    @Test
+    public void testSSAExample() {
+        // TODO
+        String src = """
+func foo(x: Int, y: Int)->Int {
+   var sum: Int
+   
+   if (x >= y)
+      return 0
+      
+   sum = 0;
+   while (x < y) {
+      if (x / 2 * 2 == x) {
+         sum = sum + 1
+      }
+      x = x + 1
+   }
+   return sum
+}
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+
+    }
+
 }
