@@ -65,22 +65,6 @@ public class SparseConditionalConstantPropagation {
         return this;
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Flow edges:\n");
-        for (var edge : flowEdges.keySet()) {
-            if (flowEdges.get(edge)) {
-                sb.append(edge).append("=Executable").append("\n");
-            }
-        }
-        sb.append("Lattices:\n");
-        for (var register: valueLattice.getRegisters()) {
-            sb.append(register.name()).append("=").append(valueLattice.get(register)).append("\n");
-        }
-        return sb.toString();
-    }
-
     private void visitBlock(BasicBlock b) {
         for (var phi : b.phis()) {
             visitInstruction(phi);
@@ -109,7 +93,10 @@ public class SparseConditionalConstantPropagation {
                 SSAEdges.SSADef ssaDef = ssaEdges.get(def);
                 if (ssaDef != null) {
                     for (Instruction use : ssaDef.useList) {
-                        instructionWorkList.push(use);
+                        if (visited.get(use.block.bid))
+                            // Don't visit the instruction if block hasn't been
+                            // visited
+                            instructionWorkList.push(use);
                     }
                 }
             }
@@ -455,6 +442,25 @@ public class SparseConditionalConstantPropagation {
             changed = cell.setKind(V_VARYING);
         }
         return changed;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Flow edges:\n");
+        for (var edge : flowEdges.keySet()) {
+            if (flowEdges.get(edge)) {
+                sb.append(edge).append("=Executable").append("\n");
+            }
+            else {
+                sb.append(edge).append("=NOT Executable").append("\n");
+            }
+        }
+        sb.append("Lattices:\n");
+        for (var register: valueLattice.getRegisters()) {
+            sb.append(register.name()).append("=").append(valueLattice.get(register)).append("\n");
+        }
+        return sb.toString();
     }
 
     /**
