@@ -98,6 +98,9 @@ public class BasicBlock {
         instructions.add(instruction);
         instruction.block = this;
     }
+    public void deleteInstruction(Instruction instruction) {
+        instructions.remove(instruction);
+    }
     public void addSuccessor(BasicBlock successor) {
         successors.add(successor);
         successor.predecessors.add(this);

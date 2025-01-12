@@ -87,7 +87,14 @@ public abstract class Instruction {
         }
         return replaced;
     }
-
+    public void replaceWithConstant(Register register, Operand.ConstantOperand constantOperand) {
+        for (int i = 0; i < uses.length; i++) {
+            Operand operand = uses[i];
+            if (operand != null && operand instanceof Operand.RegisterOperand registerOperand && registerOperand.reg.id == register.id) {
+                uses[i] = constantOperand;
+            }
+        }
+    }
     public static class NoOp extends Instruction {
         public NoOp() {
             super(I_NOOP);

@@ -119,6 +119,45 @@ public class SparseConditionalConstantPropagation {
         visited = new BitSet();
     }
 
+    private void apply() {
+        /*
+        The constant propagation algorithm does not change the flow graph - it computes
+        information about the flow graph. The compiler now uses this information to improve
+        the graph in the following ways:
+
+        * The instructions corresponding to temporaries that evaluate as constants are modified
+        to be load constant instructions.
+
+        • An edge that has not become executable is eliminated, and the conditional branching
+        instruction representing that edge is modified to be a simpler instruction.
+        The phi-nodes at the head of the edge are modified to have one less operand.
+
+        • Blocks that become unreachable are eliminated.
+
+         Bob Morgan. Building an Optimizing Compiler
+         */
+
+        replaceVarsWithConstants();
+    }
+
+    private void replaceVarsWithConstants() {
+        for (var register: valueLattice.getRegisters()) {
+            var latticeElement = valueLattice.get(register);
+            if (latticeElement.kind == V_CONSTANT) {
+                var constant = new Operand.ConstantOperand(latticeElement.value, register.type);
+                var defUseChain = this.ssaEdges.get(register);
+                // FIXME this only for live blocks
+                for (var usingInstruction: defUseChain.useList) {
+                    usingInstruction.replaceWithConstant(register, constant);
+                }
+                defUseChain.useList.clear();
+                var block = defUseChain.instruction.block;
+                block.deleteInstruction(defUseChain.instruction);
+                ssaEdges.remove(register);
+            }
+        }
+    }
+
     static final byte V_UNDEFINED = 1;  // TOP
     static final byte V_CONSTANT = 2;
     static final byte V_VARYING = 3;    // BOTTOM
