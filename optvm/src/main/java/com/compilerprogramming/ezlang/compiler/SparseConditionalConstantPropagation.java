@@ -349,7 +349,7 @@ public class SparseConditionalConstantPropagation {
             BasicBlock pred = block.predecessors.get(j);
             // We ignore non-executable edges
             if (isEdgeExecutable(pred, block)) {
-                LatticeElement varValue = valueLattice.get(phiInst.input(j));
+                LatticeElement varValue = valueLattice.get(phiInst.inputAsRegister(j));
                 newValue.meet(varValue);
             }
         }

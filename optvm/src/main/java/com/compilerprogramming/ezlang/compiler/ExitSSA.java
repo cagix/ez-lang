@@ -52,6 +52,11 @@ public class ExitSSA {
      * replace all uses u with stacks[i]
      */
     private void replaceUses(Instruction i) {
+        if (i instanceof Instruction.Phi)
+            // FIXME check this can never be valid
+            // tests 8/9 in TestInterpreter invoke on Phi but
+            // replacements are same as existing inputs
+            return;
         var oldUses = i.uses();
         Register[] newUses = new Register[oldUses.size()];
         for (int u = 0; u < oldUses.size(); u++) {
@@ -86,7 +91,7 @@ public class ExitSSA {
             int j = block.whichPred(s);
             for (Instruction.Phi phi: s.phis()) {
                 Register dst = phi.value();
-                Register src = phi.input(j);   // jth operand of phi node
+                Register src = phi.inputAsRegister(j);   // jth operand of phi node
                 copySet.add(new CopyItem(src, dst));
                 map.put(src.id, src);
                 map.put(dst.id, dst);

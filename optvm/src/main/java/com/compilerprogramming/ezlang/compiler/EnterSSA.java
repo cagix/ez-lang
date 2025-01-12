@@ -155,7 +155,7 @@ public class EnterSSA {
         for (BasicBlock s: block.successors) {
             int j = block.whichPred(s);
             for (Instruction.Phi phi: s.phis()) {
-                Register oldReg = phi.input(j);
+                Register oldReg = phi.inputAsRegister(j);
                 phi.replaceInput(j, stacks[oldReg.nonSSAId()].top());
             }
         }
