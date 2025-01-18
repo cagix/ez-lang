@@ -69,6 +69,8 @@ public class Liveness {
                 if (instruction instanceof Instruction.Phi phi) {
                     for (int i = 0; i < block.predecessors.size(); i++) {
                         BasicBlock pred = block.predecessors.get(i);
+                        if (!phi.isRegisterInput(i))
+                            continue;
                         Register use = phi.inputAsRegister(i);
                         // We can have a block referring it its own phis
                         // if there is loop back and there are cycles

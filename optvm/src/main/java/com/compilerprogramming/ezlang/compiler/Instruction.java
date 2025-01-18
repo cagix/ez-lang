@@ -368,6 +368,9 @@ public abstract class Instruction {
         public Register inputAsRegister(int i) {
             return ((Operand.RegisterOperand) uses[i]).reg;
         }
+        public boolean isRegisterInput(int i) {
+            return uses[i] instanceof Operand.RegisterOperand;
+        }
         public Register[] inputRegisters() {
             return super.uses().toArray(new Register[super.uses().size()]);
         }

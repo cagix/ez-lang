@@ -18,7 +18,11 @@ public class TestSCCP {
                 new EnterSSA(functionBuilder);
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
                 //functionBuilder.toDot(sb, false);
-                sb.append(new SparseConditionalConstantPropagation().constantPropagation(functionBuilder).toString());
+                var sccp = new SparseConditionalConstantPropagation().constantPropagation(functionBuilder);
+                sb.append(sccp.toString());
+                sccp.apply();
+                sb.append("After SCCP changes:\n");
+                functionBuilder.toStr(sb, false);
             }
         }
         return sb.toString();
@@ -64,6 +68,15 @@ i_0=1
 %t1_0=0
 i_1=3
 i_3=3
+After SCCP changes:
+L0:
+    goto  L3
+L3:
+    goto  L4
+L4:
+    ret 3
+    goto  L1
+L1:
 """;
         Assert.assertEquals(expected, actual);
     }
@@ -146,6 +159,26 @@ k_1=varying
 j_1=1
 %t3_0=varying
 %t4_0=1
+After SCCP changes:
+L0:
+    goto  L2
+L2:
+    k_1 = phi(0, k_4)
+    %t3_0 = k_1<100
+    if %t3_0 goto L3 else goto L4
+L3:
+    goto  L5
+L5:
+    %t5_0 = k_1+1
+    k_3 = %t5_0
+    goto  L7
+L7:
+    k_4 = phi(k_3)
+    goto  L2
+L4:
+    ret 1
+    goto  L1
+L1:
 """;
         Assert.assertEquals(expected, actual);
     }

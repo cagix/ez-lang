@@ -102,8 +102,14 @@ public class BasicBlock {
         instructions.remove(instruction);
     }
     public void addSuccessor(BasicBlock successor) {
+        assert successors.contains(successor) == false;
         successors.add(successor);
+        assert successor.predecessors.contains(this) == false;
         successor.predecessors.add(this);
+    }
+    public void removeSuccessor(BasicBlock successor) {
+        successors.remove(successor);
+        successor.predecessors.remove(this);
     }
 
     /**
