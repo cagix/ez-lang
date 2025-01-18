@@ -298,6 +298,7 @@ public class Parser {
     private AST.Expr parseMultiplication(Lexer lexer) {
         var x = parseUnary(lexer);
         while (isToken(currentToken, "*")
+                || isToken(currentToken, "%")
                 || isToken(currentToken, "/")) {
             var tok = currentToken;
             nextToken(lexer);
