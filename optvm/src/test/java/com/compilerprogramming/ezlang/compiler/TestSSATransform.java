@@ -840,4 +840,46 @@ func foo(x: Int, y: Int)->Int {
 
     }
 
+    @Test
+    public void testContinue() {
+        String src = """
+func foo(x: Int)->Int {
+   var sum = 0
+   var i = 0
+   while (i < x) {
+      if (i % 2 == 0)
+        continue
+      if (i / 3 == 1)
+        continue
+      sum = sum + 1
+      i = i + 1
+   }
+   return sum
+}
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+
+    }
+
+    @Ignore
+    @Test
+    public void testInfiniteLoop() {
+        String src = """
+func foo() {
+   var i = 0
+   while (1) {
+        if (1)
+            continue;
+        else 
+            continue;
+   }
+}
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+
+    }
+
+
 }

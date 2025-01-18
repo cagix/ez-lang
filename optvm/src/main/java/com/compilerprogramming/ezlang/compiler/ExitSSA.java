@@ -72,11 +72,13 @@ public class ExitSSA {
     static class CopyItem {
         final Register src;
         final Register dest;
+        final BasicBlock destBlock;
         boolean removed;
 
-        public CopyItem(Register src, Register dest) {
+        public CopyItem(Register src, Register dest, BasicBlock destBlock) {
             this.src = src;
             this.dest = dest;
+            this.destBlock = destBlock;
             this.removed = false;
         }
     }
@@ -92,7 +94,7 @@ public class ExitSSA {
             for (Instruction.Phi phi: s.phis()) {
                 Register dst = phi.value();
                 Register src = phi.inputAsRegister(j);   // jth operand of phi node
-                copySet.add(new CopyItem(src, dst));
+                copySet.add(new CopyItem(src, dst, s));
                 map.put(src.id, src);
                 map.put(dst.id, dst);
                 usedByAnother.set(src.id);
@@ -118,6 +120,7 @@ public class ExitSSA {
                 final CopyItem copyItem = workList.remove(0);
                 final Register src = copyItem.src;
                 final Register dest = copyItem.dest;
+                final BasicBlock destBlock = copyItem.destBlock;
                 /* Engineering a Compiler: We can avoid the lost copy
                    problem by checking the liveness of the target name
                    for each copy that we try to insert. When we discover
@@ -127,7 +130,7 @@ public class ExitSSA {
                  */
                 if (block.liveOut.get(dest.id)) {
                     /* Insert a copy from dest to a new temp t at phi node defining dest */
-                    final Register t = addMoveToTempAfterPhi(block, dest);
+                    final Register t = addMoveToTempAfterPhi(destBlock, dest);
                     stacks[dest.id].push(t);
                     pushed.add(dest.id);
                 }
