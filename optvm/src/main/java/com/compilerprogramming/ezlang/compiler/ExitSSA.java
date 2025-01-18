@@ -88,7 +88,7 @@ public class ExitSSA {
         Map<Integer, Register> map = new HashMap<>();
         BitSet usedByAnother = new BitSet(function.registerPool.numRegisters()*2);
         for (BasicBlock s: block.successors) {
-            int j = block.whichPred(s);
+            int j = s.whichPred(block);
             for (Instruction.Phi phi: s.phis()) {
                 Register dst = phi.value();
                 Register src = phi.inputAsRegister(j);   // jth operand of phi node

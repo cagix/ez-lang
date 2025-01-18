@@ -135,15 +135,25 @@ public class BasicBlock {
         }
         return list;
     }
-    public int whichPred(BasicBlock s) {
+    public int whichPred(BasicBlock pred) {
         int i = 0;
-        for (BasicBlock p: s.predecessors) {
-            if (p == this)
+        for (BasicBlock p: predecessors) {
+            if (p == pred)
                 return i;
             i++;
         }
         throw new IllegalStateException();
     }
+    public int whichSucc(BasicBlock succ) {
+        int i = 0;
+        for (BasicBlock s: successors) {
+            if (s == succ)
+                return i;
+            i++;
+        }
+        throw new IllegalStateException();
+    }
+
     public static StringBuilder toStr(StringBuilder sb, BasicBlock bb, BitSet visited, boolean dumpLiveness)
     {
         if (visited.get(bb.bid))
