@@ -401,6 +401,12 @@ public abstract class Instruction {
         public void replaceValue(Register newReg) {
             this.value = newReg;
         }
+        public void removeInput(int i) {
+            var newUses = new Operand[uses.length - 1];
+            System.arraycopy(uses, 0, newUses, 0, i);
+            System.arraycopy(uses, i + 1, newUses, i, uses.length - i - 1);
+            this.uses = newUses;
+        }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             sb.append(value().name()).append(" = phi(");
