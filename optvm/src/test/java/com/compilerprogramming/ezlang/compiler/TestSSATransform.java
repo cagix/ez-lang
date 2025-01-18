@@ -858,7 +858,121 @@ func foo(x: Int)->Int {
 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg x
+    sum = 0
+    i = 0
+    goto  L2
+L2:
+    %t3 = i<x
+    if %t3 goto L3 else goto L4
+L3:
+    %t4 = i%2
+    %t5 = %t4==0
+    if %t5 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    %t6 = i/3
+    %t7 = %t6==1
+    if %t7 goto L7 else goto L8
+L7:
+    goto  L2
+L8:
+    %t8 = sum+1
+    sum = %t8
+    %t9 = i+1
+    i = %t9
+    goto  L2
+L4:
+    ret sum
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg x_0
+    sum_0 = 0
+    i_0 = 0
+    goto  L2
+L2:
+    i_1 = phi(i_0, i_1, i_1, i_2)
+    sum_1 = phi(sum_0, sum_1, sum_1, sum_2)
+    %t3_0 = i_1<x_0
+    if %t3_0 goto L3 else goto L4
+L3:
+    %t4_0 = i_1%2
+    %t5_0 = %t4_0==0
+    if %t5_0 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    %t6_0 = i_1/3
+    %t7_0 = %t6_0==1
+    if %t7_0 goto L7 else goto L8
+L7:
+    goto  L2
+L8:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg x_0
+    sum_0 = 0
+    i_0 = 0
+    i_1 = i_0
+    sum_1 = sum_0
+    goto  L2
+L2:
+    i_1_29 = i_1
+    i_1_25 = i_1
+    sum_1_27 = sum_1
+    %t3_0 = i_1<x_0
+    if %t3_0 goto L3 else goto L4
+L3:
+    %t4_0 = i_1%2
+    %t5_0 = %t4_0==0
+    if %t5_0 goto L5 else goto L6
+L5:
+    i_1_28 = i_1
+    i_1 = i_1_28
+    goto  L2
+L6:
+    %t6_0 = i_1/3
+    %t7_0 = %t6_0==1
+    if %t7_0 goto L7 else goto L8
+L7:
+    i_1_24 = i_1
+    i_1 = i_1_24
+    sum_1_26 = sum_1
+    sum_1 = sum_1_26
+    goto  L2
+L8:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    i_1 = i_2
+    sum_1 = sum_2
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:                        
+""",
+                result);
 
     }
 
