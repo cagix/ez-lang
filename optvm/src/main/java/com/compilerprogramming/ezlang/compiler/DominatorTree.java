@@ -193,7 +193,9 @@ public class DominatorTree {
             if (b.predecessors.size() >= 2) {
                 for (BasicBlock p : b.predecessors) {
                     BasicBlock runner = p;
-                    while (runner != b.idom) {
+                    // re runner != null: Dominance frontier calc fails in infinite loop
+                    // scenario - need to check what the correct solution is
+                    while (runner != b.idom && runner != null) {
                         runner.dominationFrontier.add(b);
                         runner = runner.idom;
                     }

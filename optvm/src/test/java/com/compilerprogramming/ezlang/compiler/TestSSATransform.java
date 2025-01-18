@@ -862,7 +862,6 @@ func foo(x: Int)->Int {
 
     }
 
-    @Ignore
     @Test
     public void testInfiniteLoop() {
         String src = """
@@ -877,7 +876,58 @@ func foo() {
 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    i = 0
+    goto  L2
+L2:
+    if 1 goto L3 else goto L4
+L3:
+    if 1 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    goto  L2
+L4:
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    i_0 = 0
+    goto  L2
+L2:
+    if 1 goto L3 else goto L4
+L3:
+    if 1 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    goto  L2
+L4:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    i_0 = 0
+    goto  L2
+L2:
+    if 1 goto L3 else goto L4
+L3:
+    if 1 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    goto  L2
+L4:
+    goto  L1
+L1:                
+""",
+        result);
 
     }
 
