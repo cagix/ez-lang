@@ -63,6 +63,10 @@ public class InterferenceGraph {
         // Move all interferences
         var fromSet = edges.remove(source);
         var toSet = edges.get(target);
+        if (toSet == null) {
+            //throw new RuntimeException("Cannot find edge " + target + " from " + source);
+            return; // FIXME this is workaround to handle sceanrio where target is arg register but we need a better way
+        }
         toSet.addAll(fromSet);
         // If any node interfered with from
         // it should now interfere with to

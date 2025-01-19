@@ -153,9 +153,9 @@ public class EnterSSA {
         }
         // Update phis in successor blocks
         for (BasicBlock s: block.successors) {
-            int j = block.whichPred(s);
+            int j = s.whichPred(block);
             for (Instruction.Phi phi: s.phis()) {
-                Register oldReg = phi.input(j);
+                Register oldReg = phi.inputAsRegister(j);
                 phi.replaceInput(j, stacks[oldReg.nonSSAId()].top());
             }
         }

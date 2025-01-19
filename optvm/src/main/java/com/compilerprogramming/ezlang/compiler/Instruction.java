@@ -27,19 +27,21 @@ public abstract class Instruction {
     static final int I_FIELD_SET = 16;
 
     public final int opcode;
-    public Operand.RegisterOperand def;
-    public Operand[] uses;
+    protected Operand.RegisterOperand def;
+    protected Operand[] uses;
     public BasicBlock block;
 
     public Instruction(int opcode, Operand... uses) {
         this.opcode = opcode;
         this.def = null;
-        this.uses = uses;
+        this.uses = new Operand[uses.length];
+        System.arraycopy(uses, 0, this.uses, 0, uses.length);
     }
     public Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
         this.opcode = opcode;
         this.def = def;
-        this.uses = uses;
+        this.uses = new Operand[uses.length];
+        System.arraycopy(uses, 0, this.uses, 0, uses.length);
     }
 
     public boolean isTerminal() { return false; }
@@ -87,7 +89,14 @@ public abstract class Instruction {
         }
         return replaced;
     }
-
+    public void replaceWithConstant(Register register, Operand.ConstantOperand constantOperand) {
+        for (int i = 0; i < uses.length; i++) {
+            Operand operand = uses[i];
+            if (operand != null && operand instanceof Operand.RegisterOperand registerOperand && registerOperand.reg.id == register.id) {
+                uses[i] = constantOperand;
+            }
+        }
+    }
     public static class NoOp extends Instruction {
         public NoOp() {
             super(I_NOOP);
@@ -340,21 +349,35 @@ public abstract class Instruction {
     /**
      * Phi does not generate uses or defs directly, instead
      * they are treated as a special case.
-     * To avoid bugs we do not use the def or uses.
+     * To avoid bugs we disable the standard interfaces
      */
     public static class Phi extends Instruction {
-        public Register value;
-        public final Register[] inputs;
+        private Register value;
         public Phi(Register value, List<Register> inputs) {
             super(I_PHI);
             this.value = value;
-            this.inputs = inputs.toArray(new Register[inputs.size()]);
+            this.uses = new Operand[inputs.size()];
+            for (int i = 0; i < inputs.size(); i++) {
+                this.uses[i] = new Operand.RegisterOperand(inputs.get(i));
+            }
         }
         public void replaceInput(int i, Register newReg) {
-            inputs[i] = newReg;
+            uses[i].replaceRegister(newReg);
         }
-        public Register input(int i) {
-            return inputs[i];
+        /**
+         * This will fail in input was replaced by a constant
+         */
+        public Register inputAsRegister(int i) {
+            return ((Operand.RegisterOperand) uses[i]).reg;
+        }
+        public Operand input(int i) {
+            return uses[i];
+        }
+        public boolean isRegisterInput(int i) {
+            return uses[i] instanceof Operand.RegisterOperand;
+        }
+        public Register[] inputRegisters() {
+            return super.uses().toArray(new Register[super.uses().size()]);
         }
         @Override
         public Register def() {
@@ -368,18 +391,36 @@ public abstract class Instruction {
         public boolean definesVar() {
             return false;
         }
+        @Override
+        public List<Register> uses() {
+            return Collections.emptyList();
+        }
+        @Override
+        public void replaceUses(Register[] newUses) {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public boolean replaceUse(Register source, Register target) {
+            throw new UnsupportedOperationException();
+        }
         public Register value() {
             return value;
         }
         public void replaceValue(Register newReg) {
             this.value = newReg;
         }
+        public void removeInput(int i) {
+            var newUses = new Operand[uses.length - 1];
+            System.arraycopy(uses, 0, newUses, 0, i);
+            System.arraycopy(uses, i + 1, newUses, i, uses.length - i - 1);
+            this.uses = newUses;
+        }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             sb.append(value().name()).append(" = phi(");
-            for (int i = 0; i < inputs.length; i++) {
+            for (int i = 0; i < uses.length; i++) {
                 if (i > 0) sb.append(", ");
-                sb.append(inputs[i].name());
+                sb.append(uses[i].toString());
             }
             sb.append(")");
             return sb;

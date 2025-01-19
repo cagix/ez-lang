@@ -14,8 +14,6 @@ import java.util.*;
  *     <li>Modern Compiler Implementation in C, Andrew Appel, section 19.3</li>
  *     <li>Building an Optimizing Compiler, Bob Morgan, section 8.3</li>
  * </ol>
- *
- *
  */
 public class SparseConditionalConstantPropagation {
 
@@ -49,6 +47,9 @@ public class SparseConditionalConstantPropagation {
      */
     Map<Register, SSAEdges.SSADef> ssaEdges;
     CompiledFunction function;
+
+    /** Used to track reachable blocks when the SCCP changes are applied */
+    BitSet executableBlocks = new BitSet();
 
     public SparseConditionalConstantPropagation constantPropagation(CompiledFunction function) {
         init(function);
@@ -117,6 +118,99 @@ public class SparseConditionalConstantPropagation {
         flowWorklist = new WorkList<>();
         flowWorklist.push(function.entry);
         visited = new BitSet();
+    }
+
+    public SparseConditionalConstantPropagation apply() {
+        /*
+        The constant propagation algorithm does not change the flow graph - it computes
+        information about the flow graph. The compiler now uses this information to improve
+        the graph in the following ways:
+
+        * The instructions corresponding to temporaries that evaluate as constants are modified
+        to be load constant instructions.
+
+        • An edge that has not become executable is eliminated, and the conditional branching
+        instruction representing that edge is modified to be a simpler instruction.
+        The phi-nodes at the head of the edge are modified to have one less operand.
+
+        • Blocks that become unreachable are eliminated.
+
+         Bob Morgan. Building an Optimizing Compiler
+         */
+        markExecutableBlocks();
+        removeBranchesThatAreNotExecutable();
+        replaceVarsWithConstants();
+        // Unreachable blocks are eliminated as there are no paths to them
+        return this;
+    }
+
+    private void markExecutableBlocks() {
+        var blocks = function.getBlocks();
+        executableBlocks = new BitSet(blocks.size());
+        executableBlocks.set(function.entry.bid);
+        for (FlowEdge edge: flowEdges.keySet()) {
+            if (flowEdges.get(edge)) {
+                executableBlocks.set(edge.source.bid);
+                executableBlocks.set(edge.target.bid);
+            }
+        }
+    }
+
+    /**
+     * Where we know which branch will be executed on a CBR,
+     * we replace such a branch with a jump to the known
+     * basic block
+     */
+    private void removeBranchesThatAreNotExecutable() {
+        for (var flowEdge : flowEdges.keySet()) {
+            if (!flowEdges.get(flowEdge)) {
+                if (executableBlocks.get(flowEdge.source.bid) ||
+                    executableBlocks.get(flowEdge.target.bid))
+                    removeEdge(flowEdge.source, flowEdge.target);
+            }
+        }
+    }
+
+    private void removeEdge(BasicBlock source, BasicBlock target) {
+        int j = target.whichPred(source);
+        // Replace cbr with jump
+        int idx = source.instructions.size()-1;
+        Instruction instruction = source.instructions.get(idx);
+        if (instruction instanceof Instruction.ConditionalBranch cbr) {
+            BasicBlock remainingExecutableBlock = (cbr.falseBlock == target) ? cbr.trueBlock : cbr.falseBlock;
+            source.instructions.set(idx, new Instruction.Jump(remainingExecutableBlock));
+        }
+        // Remove phis in target corresponding to the input
+        for (var phi: target.phis()) {
+            phi.removeInput(j);
+        }
+        // update cfg
+        source.removeSuccessor(target);
+    }
+
+    /**
+     * Where a definition is known to be a constant,
+     * replace all uses with the constant and then delete
+     * the defining instruction.
+     */
+    private void replaceVarsWithConstants() {
+        for (var register: valueLattice.getRegisters()) {
+            var latticeElement = valueLattice.get(register);
+            if (latticeElement.kind == V_CONSTANT) {
+                var constant = new Operand.ConstantOperand(latticeElement.value, register.type);
+                var defUseChain = this.ssaEdges.get(register);
+                // replace uses with constant
+                for (var usingInstruction: defUseChain.useList) {
+                    if (executableBlocks.get(usingInstruction.block.bid))
+                        usingInstruction.replaceWithConstant(register, constant);
+                }
+                defUseChain.useList.clear();
+                var block = defUseChain.instruction.block;
+                // delete defining instruction
+                block.deleteInstruction(defUseChain.instruction);
+                ssaEdges.remove(register);
+            }
+        }
     }
 
     static final byte V_UNDEFINED = 1;  // TOP
@@ -349,7 +443,7 @@ public class SparseConditionalConstantPropagation {
             BasicBlock pred = block.predecessors.get(j);
             // We ignore non-executable edges
             if (isEdgeExecutable(pred, block)) {
-                LatticeElement varValue = valueLattice.get(phiInst.input(j));
+                LatticeElement varValue = valueLattice.get(phiInst.inputAsRegister(j));
                 newValue.meet(varValue);
             }
         }

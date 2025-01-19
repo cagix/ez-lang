@@ -4,7 +4,7 @@ public class Optimizer {
 
     public void optimize(CompiledFunction function) {
         new EnterSSA(function);
-        new SparseConditionalConstantPropagation().constantPropagation(function);
+        new SparseConditionalConstantPropagation().constantPropagation(function).apply();
         new ExitSSA(function);
         new ChaitinGraphColoringRegisterAllocator().assignRegisters(function, 64);
     }

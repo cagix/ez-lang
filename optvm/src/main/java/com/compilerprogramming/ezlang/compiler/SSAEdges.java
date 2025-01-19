@@ -58,7 +58,7 @@ public class SSAEdges {
         for (BasicBlock block : function.getBlocks()) {
             for (Instruction instruction : block.instructions) {
                 if (instruction instanceof Instruction.Phi phi) {
-                    recordUses(defUseChains, phi.inputs, block, instruction);
+                    recordUses(defUseChains, phi.inputRegisters(), block, instruction);
                 }
                 else {
                     List<Register> uses = instruction.uses();
