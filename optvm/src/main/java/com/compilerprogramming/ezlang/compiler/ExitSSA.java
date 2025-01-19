@@ -7,6 +7,9 @@ import java.util.*;
  * Implementation is based on description in
  * 'Practical Improvements to the Construction and Destruction
  * of Static Single Assignment Form' by Preston Briggs.
+ *
+ * The JikesRVM LeaveSSA implements a version of the
+ * same algorithm.
  */
 public class ExitSSA {
 
@@ -70,8 +73,11 @@ public class ExitSSA {
     }
 
     static class CopyItem {
+        /** Phi input can be a register or a constant so we record the operand */
         final Operand src;
+        /** The phi destination */
         final Register dest;
+        /** The basic block where the phi was present */
         final BasicBlock destBlock;
         boolean removed;
 
@@ -130,11 +136,19 @@ public class ExitSSA {
                    a copy target that is live, we must preserve the live
                    value in a temporary name and rewrite subsequent uses to
                    refer to the temporary name.
+
+                   This captures the cases when the result of a phi
+                   in a control successor is live on exit of the current block.
+                   This means that it is incorrect to simply insert a copy
+                   of the destination in the current block. So we rename
+                   the destination to a new temporary, and record the renaming
+                   so that the dominator blocks get the new name. Comment adapted
+                   from JikesRVM LeaveSSA
                  */
                 if (block.liveOut.get(dest.id)) {
                     /* Insert a copy from dest to a new temp t at phi node defining dest */
                     final Register t = addMoveToTempAfterPhi(destBlock, dest);
-                    stacks[dest.id].push(t);
+                    stacks[dest.id].push(t);    // record the temp name
                     pushed.add(dest.id);
                 }
                 /* Insert a copy operation from map[src] to dest at end of BB */
@@ -158,6 +172,13 @@ public class ExitSSA {
                cycle of references, it must insert a copy to a temporary
                that breaks the cycle. Then we can schedule the copies to
                respect the dependencies implied by the phi functions.
+
+               An empty work list with work remaining in the copy set
+               implies a cycle in the dependencies amongst copies. To break
+               the cycle copy the destination of an arbitrary member of the
+               copy set to a temporary. This destination has therefore been
+               saved and can be safely overwritten. So then add the copy to the
+               work list. Comment adapted from JikesRVM LeaveSSA.
              */
             if (!copySet.isEmpty()) {
                 CopyItem copyItem = copySet.remove(0);
@@ -220,6 +241,7 @@ public class ExitSSA {
         var inst = new Instruction.Move(new Operand.RegisterOperand(src), new Operand.RegisterOperand(dest));
         insertAtEnd(block, inst);
     }
+    /* Insert a copy from constant src to dst at end of BB */
     private void addMoveAtBBEnd(BasicBlock block, Operand.ConstantOperand src, Register dest) {
         var inst = new Instruction.Move(src, new Operand.RegisterOperand(dest));
         insertAtEnd(block, inst);

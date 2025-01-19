@@ -1045,5 +1045,280 @@ L1:
 
     }
 
+    @Test
+    public void testParallelAssign() {
+        String src = """
+                func foo(n: Int)->Int {
+                   var a = 1
+                   var b = 2
+                   
+                   while (n > 0) {
+                        var t = a
+                        a = b
+                        b = t
+                        n = n - 1
+                   }
+                   return a
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA1() {
+        String src = """
+                func foo()->Int {
+                    var a = 5
+                    var b = 10
+                    var c = a + b
+                    return c
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA2() {
+        String src = """
+                func foo()->Int {
+                    var a = 5
+                    a = a + 1;
+                    return a
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA3() {
+        String src = """
+                func foo()->Int {
+                    var a = 5
+                    if (a > 3) {
+                        a = 10
+                    } else {
+                        a = 20
+                    }
+                    return a
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA4() {
+        String src = """
+                func foo()->Int {
+                    var a = 0
+                    while (a < 5) {
+                        a = a + 1;
+                    }
+                    return a
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA5() {
+        String src = """
+                func foo()->Int {
+                    var a = 0
+                    var b = 10
+                    if (b > 5) {
+                        if (a < 5) {
+                            a = 5
+                        } else {
+                            a = 15
+                        }
+                    } else {
+                        a = 20
+                    }
+                    return a
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA6() {
+        String src = """
+                func foo()->Int {
+                    var arr = new [Int] {1, 2};
+                    arr[0] = 10
+                    var x = arr[0]
+                    return x
+                }
+                """;
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA7() {
+        String src = """
+        func add(x: Int, y : Int)->Int {
+            return x + y
+        }
+        func main()->Int {
+            var a = 5
+            var b = 10
+            var c = add(a, b)
+            return c
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA8() {
+        String src = """
+        func main()->Int {
+            var a = 0
+            var b = 1
+            while (a < 10) {
+                a = a + 2
+            }
+            while (b < 20) {
+                b = b + 3
+            }
+            return a + b
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA9() {
+        String src = """
+        func main()->Int {
+            var a = 0
+            var b = 0
+            var i = 0
+            var j = 0
+            while (i < 3) {
+                j = 0
+                while (j < 2) {
+                    a = a + 1
+                    i = j + 1
+                }
+                b = b + 1;
+                i = i + 1    
+            }
+            return a + b
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA10() {
+        String src = """
+        func main()->Int {
+            var sum = 0
+            var i = 0
+            var j = 0
+            while (i < 5) {
+                j = 0
+                while (j < 5) {
+                    if (j % 2 == 0) 
+                        sum = sum + j
+                    j = j + 1    
+                }
+                i = i + 1    
+            }
+            return sum
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA11() {
+        String src = """
+        func main()->Int {
+            var a = 0
+            var i = 0
+            var j = 0
+            while (i < 3) {
+                j = 0
+                while (j < 3) {
+                    if (i == j) 
+                        a = a + i + j
+                    else if (i > j)
+                        a = a - 1
+                    j = j + 1        
+                }
+                i = i + 1    
+            }
+            return a
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA12() {
+        String src = """
+        func main()->Int {
+            var count = 0
+            var i = 0
+            var j = 0
+            while (i < 5) {
+                j = 0
+                while (j < 5) {
+                    if (i + j > 5)
+                        break
+                    if (i == j) {
+                        j = j + 1
+                        continue
+                    }
+                    count = count + 1
+                    j = j + 1
+                }
+                i = i + 1
+            }
+            return count
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSSA13() {
+        String src = """
+        func main()->Int {
+            var outerSum = 0
+            var innerSum = 0
+            var i = 0
+            var j = 0
+            while (i < 4) {
+                j = 0
+                while (j < 4) {
+                    if ((i + j) % 2 == 0)
+                        innerSum = innerSum + j
+                    j = j + 1
+                }
+                outerSum = outerSum + innerSum
+                i = i + 1
+            }
+            return outerSum
+        }
+""";
+        String result = compileSrc(src);
+        System.out.println(result);
+    }
 
 }
