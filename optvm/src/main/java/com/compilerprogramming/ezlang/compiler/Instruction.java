@@ -34,12 +34,14 @@ public abstract class Instruction {
     public Instruction(int opcode, Operand... uses) {
         this.opcode = opcode;
         this.def = null;
-        this.uses = uses;
+        this.uses = new Operand[uses.length];
+        System.arraycopy(uses, 0, this.uses, 0, uses.length);
     }
     public Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
         this.opcode = opcode;
         this.def = def;
-        this.uses = uses;
+        this.uses = new Operand[uses.length];
+        System.arraycopy(uses, 0, this.uses, 0, uses.length);
     }
 
     public boolean isTerminal() { return false; }
@@ -367,6 +369,9 @@ public abstract class Instruction {
          */
         public Register inputAsRegister(int i) {
             return ((Operand.RegisterOperand) uses[i]).reg;
+        }
+        public Operand input(int i) {
+            return uses[i];
         }
         public boolean isRegisterInput(int i) {
             return uses[i] instanceof Operand.RegisterOperand;
