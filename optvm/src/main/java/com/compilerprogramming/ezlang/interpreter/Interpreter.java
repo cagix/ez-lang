@@ -101,8 +101,12 @@ public class Interpreter {
                     int baseReg = base+currentFunction.frameSize();
                     int reg = baseReg;
                     for (Operand arg: callInst.args()) {
-                        Operand.RegisterOperand param = (Operand.RegisterOperand) arg;
-                        execStack.stack[base + reg] = execStack.stack[base + param.frameSlot()];
+                        if (arg instanceof Operand.RegisterOperand param) {
+                            execStack.stack[base + reg] = execStack.stack[base + param.frameSlot()];
+                        }
+                        else if (arg instanceof Operand.ConstantOperand constantOperand) {
+                            execStack.stack[base + reg] = new Value.IntegerValue(constantOperand.value);
+                        }
                         reg += 1;
                     }
                     // Call function
