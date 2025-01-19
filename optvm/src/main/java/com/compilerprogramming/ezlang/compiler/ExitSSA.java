@@ -70,12 +70,12 @@ public class ExitSSA {
     }
 
     static class CopyItem {
-        final Register src;
+        final Operand src;
         final Register dest;
         final BasicBlock destBlock;
         boolean removed;
 
-        public CopyItem(Register src, Register dest, BasicBlock destBlock) {
+        public CopyItem(Operand src, Register dest, BasicBlock destBlock) {
             this.src = src;
             this.dest = dest;
             this.destBlock = destBlock;
@@ -93,11 +93,14 @@ public class ExitSSA {
             int j = s.whichPred(block);
             for (Instruction.Phi phi: s.phis()) {
                 Register dst = phi.value();
-                Register src = phi.inputAsRegister(j);   // jth operand of phi node
-                copySet.add(new CopyItem(src, dst, s));
-                map.put(src.id, src);
+                Operand srcOperand = phi.input(j); // jth operand of phi node
+                if (srcOperand instanceof Operand.RegisterOperand srcRegisterOperand) {
+                    Register src = srcRegisterOperand.reg;
+                    map.put(src.id, src);
+                    usedByAnother.set(src.id);
+                }
+                copySet.add(new CopyItem(srcOperand, dst, s));
                 map.put(dst.id, dst);
-                usedByAnother.set(src.id);
             }
         }
 
@@ -118,7 +121,7 @@ public class ExitSSA {
         while (!workList.isEmpty() || !copySet.isEmpty()) {
             while (!workList.isEmpty()) {
                 final CopyItem copyItem = workList.remove(0);
-                final Register src = copyItem.src;
+                final Operand src = copyItem.src;
                 final Register dest = copyItem.dest;
                 final BasicBlock destBlock = copyItem.destBlock;
                 /* Engineering a Compiler: We can avoid the lost copy
@@ -135,13 +138,18 @@ public class ExitSSA {
                     pushed.add(dest.id);
                 }
                 /* Insert a copy operation from map[src] to dest at end of BB */
-                addMoveAtBBEnd(block, map.get(src.id), dest);
-                map.put(src.id, dest);
-                /* If src is the name of a dest in copySet add item to worklist */
-                /* see comment on phi cycles below. */
-                CopyItem item = isCycle(copySet, src);
-                if (item != null) {
-                    workList.add(item);
+                if (src instanceof Operand.RegisterOperand srcRegisterOperand) {
+                    addMoveAtBBEnd(block, map.get(srcRegisterOperand.reg.id), dest);
+                    map.put(srcRegisterOperand.reg.id, dest);
+                    /* If src is the name of a dest in copySet add item to worklist */
+                    /* see comment on phi cycles below. */
+                    CopyItem item = isCycle(copySet, srcRegisterOperand.reg);
+                    if (item != null) {
+                        workList.add(item);
+                    }
+                }
+                else if (src instanceof Operand.ConstantOperand srcConstantOperand) {
+                    addMoveAtBBEnd(block, srcConstantOperand, dest);
                 }
             }
             /* Engineering a Compiler: To solve the swap problem
@@ -212,7 +220,10 @@ public class ExitSSA {
         var inst = new Instruction.Move(new Operand.RegisterOperand(src), new Operand.RegisterOperand(dest));
         insertAtEnd(block, inst);
     }
-
+    private void addMoveAtBBEnd(BasicBlock block, Operand.ConstantOperand src, Register dest) {
+        var inst = new Instruction.Move(src, new Operand.RegisterOperand(dest));
+        insertAtEnd(block, inst);
+    }
     /* Insert a copy dest to a new temp at phi node defining dest, return temp */
     private Register addMoveToTempAfterPhi(BasicBlock block, Register dest) {
         var temp = function.registerPool.newTempReg(dest.name(), dest.type);
