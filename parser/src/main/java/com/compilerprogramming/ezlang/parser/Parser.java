@@ -348,7 +348,6 @@ public class Parser {
             case PUNCT -> {
                 /* Nested expression */
                 matchPunctuation(lexer, "(");
-                nextToken(lexer);
                 var x = parseBool(lexer);
                 matchPunctuation(lexer, ")");
                 return x;
