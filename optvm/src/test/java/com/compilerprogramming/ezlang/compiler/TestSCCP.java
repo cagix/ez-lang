@@ -5,6 +5,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.BitSet;
+import java.util.EnumSet;
 
 public class TestSCCP {
 
@@ -12,15 +13,16 @@ public class TestSCCP {
         var compiler = new Compiler();
         var typeDict = compiler.compileSrc(src);
         StringBuilder sb = new StringBuilder();
+        var options = Options.NONE;
         for (Symbol s : typeDict.bindings.values()) {
             if (s instanceof Symbol.FunctionTypeSymbol f) {
                 var functionBuilder = (CompiledFunction) f.code();
-                new EnterSSA(functionBuilder);
+                new EnterSSA(functionBuilder, options);
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
                 //functionBuilder.toDot(sb, false);
                 var sccp = new SparseConditionalConstantPropagation().constantPropagation(functionBuilder);
                 sb.append(sccp.toString());
-                sccp.apply();
+                sccp.apply(options);
                 sb.append("After SCCP changes:\n");
                 functionBuilder.toStr(sb, false);
             }

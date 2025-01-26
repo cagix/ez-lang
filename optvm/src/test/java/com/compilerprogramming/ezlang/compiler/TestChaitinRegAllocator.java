@@ -15,7 +15,7 @@ public class TestChaitinRegAllocator {
         Assert.assertEquals(2, edges.size());
         Assert.assertTrue(edges.contains(new InterferenceGraph.Edge(0, 1)));
         Assert.assertTrue(edges.contains(new InterferenceGraph.Edge(0, 2)));
-        var regAssignments = new ChaitinGraphColoringRegisterAllocator().assignRegisters(function, 64);
+        var regAssignments = new ChaitinGraphColoringRegisterAllocator().assignRegisters(function, 64, Options.OPT);
         String result = function.toStr(new StringBuilder(), false).toString();
         Assert.assertEquals("""
 L0:

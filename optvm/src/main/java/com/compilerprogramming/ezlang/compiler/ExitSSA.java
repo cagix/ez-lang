@@ -17,16 +17,21 @@ public class ExitSSA {
     NameStack[] stacks;
     DominatorTree tree;
 
-    public ExitSSA(CompiledFunction function) {
+    public ExitSSA(CompiledFunction function, EnumSet<Options> options) {
         this.function = function;
         if (!function.isSSA) throw new IllegalStateException();
         function.livenessAnalysis();
-        System.out.println(function.toStr(new StringBuilder(), true));
+        if (options.contains(Options.DUMP_SSA_LIVENESS)) function.dumpIR(true, "SSA Liveness Analysis");
         tree = new DominatorTree(function.entry);
+        if (options.contains(Options.DUMP_SSA_DOMTREE)) {
+            System.out.println("Pre SSA Dominator Tree");
+            System.out.println(tree.generateDotOutput());
+        }
         initStack();
         insertCopies(function.entry);
         removePhis();
         function.isSSA = false;
+        if (options.contains(Options.DUMP_POST_SSA_IR)) function.dumpIR(false, "After exiting SSA");
     }
 
     private void removePhis() {

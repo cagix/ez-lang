@@ -120,7 +120,7 @@ public class SparseConditionalConstantPropagation {
         visited = new BitSet();
     }
 
-    public SparseConditionalConstantPropagation apply() {
+    public SparseConditionalConstantPropagation apply(EnumSet<Options> options) {
         /*
         The constant propagation algorithm does not change the flow graph - it computes
         information about the flow graph. The compiler now uses this information to improve
@@ -137,10 +137,15 @@ public class SparseConditionalConstantPropagation {
 
          Bob Morgan. Building an Optimizing Compiler
          */
+        if (options.contains(Options.DUMP_SCCP_PREAPPLY)) {
+            System.out.println("SCCP analysis\n");
+            System.out.println(toString());
+        }
         markExecutableBlocks();
         removeBranchesThatAreNotExecutable();
         replaceVarsWithConstants();
         // Unreachable blocks are eliminated as there are no paths to them
+        if (options.contains(Options.DUMP_SCCP_POSTAPPLY)) function.dumpIR(false, "Post SCCP\n");
         return this;
     }
 

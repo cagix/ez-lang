@@ -1,17 +1,20 @@
 package com.compilerprogramming.ezlang.interpreter;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
+import com.compilerprogramming.ezlang.compiler.Options;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.EnumSet;
 
 public class TestInterpreter {
 
     Value compileAndRun(String src, String mainFunction) {
-        return compileAndRun(src, mainFunction, false);
+        return compileAndRun(src, mainFunction, Options.NONE);
     }
-    Value compileAndRun(String src, String mainFunction, boolean opt) {
+    Value compileAndRun(String src, String mainFunction, EnumSet<Options> options) {
         var compiler = new Compiler();
-        var typeDict = compiler.compileSrc(src, opt);
+        var typeDict = compiler.compileSrc(src, options);
         var compiled = compiler.dumpIR(typeDict);
         System.out.println(compiled);
         var interpreter = new Interpreter(typeDict);
@@ -140,7 +143,7 @@ public class TestInterpreter {
                     return factorial(5);
                 }
                 """;
-        var value = compileAndRun(src, "foo", true);
+        var value = compileAndRun(src, "foo", Options.OPT);
         Assert.assertNotNull(value);
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue
                 && integerValue.value == 120);
@@ -168,7 +171,7 @@ public class TestInterpreter {
                     return fib(10);
                 }
                 """;
-        var value = compileAndRun(src, "foo", true);
+        var value = compileAndRun(src, "foo", Options.OPT);
         Assert.assertNotNull(value);
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue
                 && integerValue.value == 89);
@@ -183,9 +186,263 @@ public class TestInterpreter {
                     return 3;
                 }
                 """;
-        var value = compileAndRun(src, "foo", true);
+        var value = compileAndRun(src, "foo", Options.OPT);
         Assert.assertNotNull(value);
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue
                 && integerValue.value == 2);
     }
+
+    // 4.1.2 optimizer evaluation
+    // propagating through expressions
+    @Test
+    public void testFunction11() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 1
+                    var k = 2
+                    var m = 4
+                    var n = k * m
+                    j = n + j
+                    data[0] = j
+                }
+                func foo()->Int {
+                    var data = new [Int] {0}
+                    bar(data)
+                    return data[0]
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 9);
+    }
+
+    // 4.2.1 optimizer evaluation
+    // extended basic blocks
+    @Test
+    public void testFunction12() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 12345
+                    if (data[0])
+                        data[1] = 1 + j - 1234
+                    else
+                        data[2] = 123 + j + 10
+                }
+                func foo() {
+                    var data = new [Int] {0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 12478);
+    }
+
+    // 4.2.1 optimizer evaluation
+    // extended basic blocks
+    @Test
+    public void testFunction13() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 12345
+                    if (data[0])
+                        data[1] = 1 + j - 1234
+                    else
+                        data[2] = 123 - j + 10
+                }
+                func foo() {
+                    var data = new [Int] {0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == -12212);
+    }
+
+    // 4.2.2 dominators
+    @Test
+    public void testFunction14() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 5
+                    if (data[0])
+                        data[1] = 10
+                    else
+                        data[2] = 15
+                    data[3] = j + 21    
+                }
+                func foo() {
+                    var data = new [Int] {0,0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2]+data[3];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 5+21+15);
+    }
+
+    // 4.2.2 dominators
+    @Test
+    public void testFunction15() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 5
+                    if (data[0])
+                        data[1] = j * 10
+                    else
+                        data[2] = j * 15
+                    data[3] = j * 21    
+                }
+                func foo() {
+                    var data = new [Int] {0,0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2]+data[3];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 5*15+5*21);
+    }
+
+    // 4.2.3 DAGs
+    @Test
+    public void testFunction16() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j: Int
+                    if (data[0]) {
+                        j = 5
+                        data[1] = 10
+                    }
+                    else {
+                        data[2] = 15
+                        j = 5
+                    }
+                    data[3] = j + 21
+                }
+                func foo() {
+                    var data = new [Int] {1,0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2]+data[3]
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 1+10+5+21);
+    }
+
+    // 4.2.3 DAGs
+    // Doesn't give the outcome
+    @Test
+    public void testFunction17() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j: Int
+                    var k: Int
+                    if (data[0]) {
+                        j = 4
+                        k = 6
+                        data[1] = j
+                    }
+                    else {
+                        j = 7
+                        k = 3
+                        data[2] = k
+                    }
+                    data[3] = (j+k) * 21
+                }
+                func foo() {
+                    var data = new [Int] {1,0,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2]+data[3]
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 1+4+210);
+    }
+
+    // 4.2.4 Loops
+    @Test
+    public void testFunction18() {
+        String src = """
+                func bar(data: [Int]) {
+                    var i: Int
+                    var stop = data[0]
+                    var j = 21
+                    i = 1
+                    while ( i < stop ) {
+                        j = (j - 20) * 21;
+                        i = i + 1
+                    }
+                    data[1] = j
+                    data[2] = i
+                }
+                func foo() {
+                    var data = new [Int] {2,0,0}
+                    bar(data)
+                    return data[0]+data[1]+data[2];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 2+21+2);
+    }
+
+    // 4.3 Conditional constants
+    @Test
+    public void testFunction19() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = 1
+                    if (j) j = 10
+                    else j = data[0]
+                    data[0] = j * 21 + data[1]
+                }
+                func foo() {
+                    var data = new [Int] {2,3}
+                    bar(data)
+                    return data[0]+data[1];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 213+3);
+    }
+
+    // 4.4 Conditional based assertions
+    @Test
+    public void testFunction20() {
+        String src = """
+                func bar(data: [Int]) {
+                    var j = data[0]
+                    if (j == 5)
+                        j = j * 21 + 25 / j
+                    data[1] = j
+                }
+                func foo() {
+                    var data = new [Int] {5,3}
+                    bar(data)
+                    return data[0]+data[1];
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue
+                && integerValue.value == 5+(5*21+25/5));
+    }
+
 }

@@ -33,16 +33,21 @@ public class EnterSSA {
     int[] counters;
     VersionStack[] stacks;
 
-    public EnterSSA(CompiledFunction bytecodeFunction) {
+    public EnterSSA(CompiledFunction bytecodeFunction, EnumSet<Options> options) {
         this.function = bytecodeFunction;
         setupGlobals();
         computeDomTreeAndDominanceFrontiers();
+        if (options.contains(Options.DUMP_PRE_SSA_DOMTREE)) {
+            System.out.println("Pre SSA Dominator Tree");
+            System.out.println(domTree.generateDotOutput());
+        }
         this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
         insertPhis();
         renameVars();
         bytecodeFunction.isSSA = true;
         bytecodeFunction.hasLiveness = false;
+        if (options.contains(Options.DUMP_SSA_IR)) bytecodeFunction.dumpIR(false, "Post SSA IR");
     }
 
     private void computeDomTreeAndDominanceFrontiers() {
