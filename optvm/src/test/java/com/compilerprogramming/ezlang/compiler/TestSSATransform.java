@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.EnumSet;
 
 public class TestSSATransform {
 
@@ -23,11 +24,11 @@ public class TestSSATransform {
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
-                new EnterSSA(functionBuilder);
+                new EnterSSA(functionBuilder, Options.NONE);
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
-                new ExitSSA(functionBuilder);
+                new ExitSSA(functionBuilder, Options.NONE);
                 sb.append("After exiting SSA\n");
                 sb.append("=================\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
@@ -680,7 +681,7 @@ L1:
     ret x2
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
-        new ExitSSA(function);
+        new ExitSSA(function, EnumSet.noneOf(Options.class));
         expected = """
 L0:
     arg p
@@ -748,7 +749,7 @@ L2:
 L1:
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
-        new ExitSSA(function);
+        new ExitSSA(function, EnumSet.noneOf(Options.class));
         expected = """
 L0:
     arg p

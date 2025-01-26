@@ -17,10 +17,10 @@ import java.util.stream.IntStream;
  */
 public class ChaitinGraphColoringRegisterAllocator {
 
-    public Map<Integer, Integer> assignRegisters(CompiledFunction function, int numRegisters) {
+    public Map<Integer, Integer> assignRegisters(CompiledFunction function, int numRegisters, EnumSet<Options> options) {
         if (function.isSSA) throw new IllegalStateException("Register allocation should be done after exiting SSA");
         // Remove useless copy operations
-        InterferenceGraph g = coalesce(function);
+        InterferenceGraph g = coalesce(function, options);
         // Get used registers
         Set<Integer> registers = registersInIR(function);
         // Create color set
@@ -36,6 +36,8 @@ public class ChaitinGraphColoringRegisterAllocator {
         updateInstructions(function, assignments);
         // Compute and set the new framesize
         function.setFrameSize(computeFrameSize(assignments));
+        if (options.contains(Options.DUMP_POST_CHAITIN_IR))
+            function.dumpIR(false, "Post Chaitin Register Allocation");
         return assignments;
     }
 
@@ -83,12 +85,16 @@ public class ChaitinGraphColoringRegisterAllocator {
     /**
      * Chaitin: coalesce_nodes - coalesce away copy operations
      */
-    public InterferenceGraph coalesce(CompiledFunction function) {
+    public InterferenceGraph coalesce(CompiledFunction function, EnumSet<Options> options) {
         boolean changed = true;
         InterferenceGraph igraph = null;
         while (changed) {
             igraph = new InterferenceGraphBuilder().build(function);
             changed = coalesceCopyOperations(function, igraph);
+        }
+        if (options.contains(Options.DUMP_CHAITIN_COALESCE)) {
+            System.out.println("Post Chaitin Coalesce Registers");
+            System.out.println(function.toStr(new StringBuilder(), false));
         }
         return igraph;
     }

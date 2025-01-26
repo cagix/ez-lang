@@ -8,24 +8,26 @@ import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
+import java.util.EnumSet;
+
 public class Compiler {
 
-    private void compile(TypeDictionary typeDictionary, boolean opt) {
+    private void compile(TypeDictionary typeDictionary, EnumSet<Options> options) {
         for (Symbol symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.FunctionTypeSymbol functionSymbol) {
                 Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
                 var function = new CompiledFunction(functionSymbol);
+                if (options.contains(Options.DUMP_INITIAL_IR))
+                    function.dumpIR(false, "Initial IR");
                 functionType.code = function;
-                if (opt) {
-                    new Optimizer().optimize(function);
-                }
+                new Optimizer().optimize(function, options);
             }
         }
     }
     public TypeDictionary compileSrc(String src) {
-        return compileSrc(src, false);
+        return compileSrc(src, EnumSet.noneOf(Options.class));
     }
-    public TypeDictionary compileSrc(String src, boolean opt) {
+    public TypeDictionary compileSrc(String src, EnumSet<Options> options) {
         Parser parser = new Parser();
         var program = parser.parse(new Lexer(src));
         var typeDict = new TypeDictionary();
@@ -33,7 +35,7 @@ public class Compiler {
         sema.analyze(program);
         var sema2 = new SemaAssignTypes(typeDict);
         sema2.analyze(program);
-        compile(typeDict, opt);
+        compile(typeDict, options);
         return typeDict;
     }
     public static String dumpIR(TypeDictionary typeDictionary) {

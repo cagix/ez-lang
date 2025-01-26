@@ -566,6 +566,11 @@ public class CompiledFunction {
         return sb;
     }
 
+    public void dumpIR(boolean verbose, String title) {
+        System.out.println(title);
+        System.out.println(toStr(new StringBuilder(), verbose));
+    }
+
     public void livenessAnalysis() {
         new Liveness(this);
         this.hasLiveness = true;
