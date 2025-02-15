@@ -21,7 +21,7 @@ public class ChaitinGraphColoringRegisterAllocator {
         if (function.isSSA) throw new IllegalStateException("Register allocation should be done after exiting SSA");
         // Remove useless copy operations
         InterferenceGraph g = coalesce(function, options);
-        // Get used registers
+        // Get used registers, indexed by reg.id
         Set<Integer> registers = registersInIR(function);
         // Create color set
         List<Integer> colors = new ArrayList<>(IntStream.range(0, numRegisters).boxed().toList());
@@ -59,9 +59,9 @@ public class ChaitinGraphColoringRegisterAllocator {
         for (Instruction instruction : function.entry.instructions) {
             if (instruction instanceof Instruction.ArgInstruction argInstruction) {
                 Integer color = colors.get(count);
-                Register reg = argInstruction.arg().reg;
-                registers.remove(reg.nonSSAId());   // Remove register from set before changing slot
-                assignments.put(reg.nonSSAId(), color);
+                int reg = argInstruction.arg().reg.id;
+                registers.remove(reg);   // Remove register from set before changing slot
+                assignments.put(reg, color);
                 count++;
             }
             else break;
@@ -142,6 +142,7 @@ public class ChaitinGraphColoringRegisterAllocator {
 
     /**
      * Get the list of registers in use in the Intermediate Code
+     * Indexed by reg.id
      * Chaitin: registers_in_il()
      */
     private Set<Integer> registersInIR(CompiledFunction function) {
