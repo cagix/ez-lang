@@ -200,7 +200,7 @@ public class ExitSSA {
         // Last instruction is a branch - so new instruction will
         // go before that
         int pos = bb.instructions.size()-1;
-        bb.instructions.add(pos, i);
+        bb.add(pos, i);
     }
 
     private void insertAfterPhi(BasicBlock bb, Register phiDef, Instruction newInst) {
@@ -218,7 +218,7 @@ public class ExitSSA {
         if (insertionPos < 0) {
             throw new IllegalStateException();
         }
-        bb.instructions.add(insertionPos, newInst);
+        bb.add(insertionPos, newInst);
     }
 
     /* Insert a copy from dest to new temp at end of BB, and return temp */
