@@ -31,13 +31,13 @@ public abstract class Instruction {
     protected Operand[] uses;
     public BasicBlock block;
 
-    public Instruction(int opcode, Operand... uses) {
+    protected Instruction(int opcode, Operand... uses) {
         this.opcode = opcode;
         this.def = null;
         this.uses = new Operand[uses.length];
         System.arraycopy(uses, 0, this.uses, 0, uses.length);
     }
-    public Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
+    protected Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
         this.opcode = opcode;
         this.def = def;
         this.uses = new Operand[uses.length];
@@ -373,6 +373,7 @@ public abstract class Instruction {
         public Operand input(int i) {
             return uses[i];
         }
+        public int numInputs() { return uses.length; }
         public boolean isRegisterInput(int i) {
             return uses[i] instanceof Operand.RegisterOperand;
         }

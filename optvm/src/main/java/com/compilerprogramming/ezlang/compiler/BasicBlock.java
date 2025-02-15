@@ -98,6 +98,14 @@ public class BasicBlock {
         instructions.add(instruction);
         instruction.block = this;
     }
+    public void add(int pos, Instruction instruction) {
+        instructions.add(pos, instruction);
+        instruction.block = this;
+    }
+    public void update(int pos, Instruction instruction) {
+       instructions.set(pos, instruction);
+       instruction.block = this;
+    }
     public void deleteInstruction(Instruction instruction) {
         instructions.remove(instruction);
     }
@@ -129,8 +137,7 @@ public class BasicBlock {
         for (int i = 0; i < predecessors.size(); i++)
             inputs.add(var);
         Instruction.Phi phi = new Instruction.Phi(var, inputs);
-        instructions.add(0, phi);
-        phi.block = this;
+        add(0, phi);
     }
     public List<Instruction.Phi> phis() {
         List<Instruction.Phi> list = new ArrayList<>();

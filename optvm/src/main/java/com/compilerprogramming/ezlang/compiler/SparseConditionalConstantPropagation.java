@@ -183,7 +183,7 @@ public class SparseConditionalConstantPropagation {
         Instruction instruction = source.instructions.get(idx);
         if (instruction instanceof Instruction.ConditionalBranch cbr) {
             BasicBlock remainingExecutableBlock = (cbr.falseBlock == target) ? cbr.trueBlock : cbr.falseBlock;
-            source.instructions.set(idx, new Instruction.Jump(remainingExecutableBlock));
+            source.update(idx, new Instruction.Jump(remainingExecutableBlock));
         }
         // Remove phis in target corresponding to the input
         for (var phi: target.phis()) {
@@ -318,6 +318,7 @@ public class SparseConditionalConstantPropagation {
      */
     private boolean evalInstruction(Instruction instruction) {
         BasicBlock block = instruction.block;
+        assert block != null;
         boolean changed = false;
         switch (instruction) {
             case Instruction.Ret retInst -> {
@@ -448,8 +449,13 @@ public class SparseConditionalConstantPropagation {
             BasicBlock pred = block.predecessors.get(j);
             // We ignore non-executable edges
             if (isEdgeExecutable(pred, block)) {
-                LatticeElement varValue = valueLattice.get(phiInst.inputAsRegister(j));
-                newValue.meet(varValue);
+                if (phiInst.isRegisterInput(j)) {
+                    LatticeElement varValue = valueLattice.get(phiInst.inputAsRegister(j));
+                    newValue.meet(varValue);
+                }
+                else if (phiInst.input(j) instanceof Operand.ConstantOperand constantOperand) {
+                    newValue.meet(constantOperand.value);
+                }
             }
         }
         return oldValue.meet(newValue);
