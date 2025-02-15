@@ -67,11 +67,19 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.BinaryExpr binaryExpr, boolean enter) {
         if (!enter) {
-            validType(binaryExpr.expr1.type);
-            validType(binaryExpr.expr2.type);
-            if (binaryExpr.expr1.type instanceof Type.TypeInteger t1 &&
-                binaryExpr.expr2.type instanceof Type.TypeInteger t2) {
-                binaryExpr.type = typeDictionary.merge(t1, t2);
+            validType(binaryExpr.expr1.type, true);
+            validType(binaryExpr.expr2.type, true);
+            if (binaryExpr.expr1.type instanceof Type.TypeInteger &&
+                binaryExpr.expr2.type instanceof Type.TypeInteger) {
+                // booleans are int too
+                binaryExpr.type = typeDictionary.INT;
+            }
+            else if (((binaryExpr.expr1.type instanceof Type.TypeNull &&
+                     binaryExpr.expr2.type instanceof Type.TypeNullable) ||
+                    (binaryExpr.expr1.type instanceof Type.TypeNullable &&
+                     binaryExpr.expr2.type instanceof Type.TypeNull)) &&
+                    (binaryExpr.op.str.equals("==") || binaryExpr.op.str.equals("!="))) {
+                binaryExpr.type = typeDictionary.INT;
             }
             else {
                 throw new CompilerException("Binary operator " + binaryExpr.op + " not supported for operands");
@@ -85,7 +93,7 @@ public class SemaAssignTypes implements ASTVisitor {
         if (enter) {
             return this;
         }
-        validType(unaryExpr.expr.type);
+        validType(unaryExpr.expr.type, false);
         if (unaryExpr.expr.type instanceof Type.TypeInteger ti) {
             unaryExpr.type = unaryExpr.expr.type;
         }
@@ -99,7 +107,7 @@ public class SemaAssignTypes implements ASTVisitor {
     public ASTVisitor visit(AST.FieldExpr fieldExpr, boolean enter) {
         if (enter)
             return this;
-        validType(fieldExpr.object.type);
+        validType(fieldExpr.object.type, false);
         Type.TypeStruct structType = null;
         if (fieldExpr.object.type instanceof Type.TypeStruct ts) {
             structType = ts;
@@ -120,7 +128,7 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.CallExpr callExpr, boolean enter) {
         if (!enter) {
-            validType(callExpr.callee.type);
+            validType(callExpr.callee.type, false);
             if (callExpr.callee.type instanceof Type.TypeFunction f) {
                 callExpr.type = f.returnType;
             }
@@ -133,7 +141,7 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.SetFieldExpr setFieldExpr, boolean enter) {
         if (!enter) {
-            validType(setFieldExpr.value.type);
+            validType(setFieldExpr.value.type, true);
         }
         return this;
     }
@@ -168,6 +176,10 @@ public class SemaAssignTypes implements ASTVisitor {
             if (literalExpr.value.kind == Token.Kind.NUM) {
                 literalExpr.type = typeDictionary.INT;
             }
+            else if (literalExpr.value.kind == Token.Kind.IDENT
+                     && literalExpr.value.str.equals("null")) {
+                literalExpr.type = typeDictionary.NULL;
+            }
             else {
                 throw new CompilerException("Unsupported literal " + literalExpr.value);
             }
@@ -178,7 +190,7 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.ArrayIndexExpr arrayIndexExpr, boolean enter) {
         if (!enter) {
-            validType(arrayIndexExpr.array.type);
+            validType(arrayIndexExpr.array.type, false);
             Type.TypeArray arrayType = null;
             if (arrayIndexExpr.array.type instanceof Type.TypeArray ta) {
                 arrayType = ta;
@@ -189,8 +201,10 @@ public class SemaAssignTypes implements ASTVisitor {
             }
             else
                 throw new CompilerException("Unexpected array type " + arrayIndexExpr.array.type);
+            if (!(arrayIndexExpr.expr.type instanceof Type.TypeInteger))
+                throw new CompilerException("Array index must be integer type");
             arrayIndexExpr.type = arrayType.getElementType();
-            validType(arrayIndexExpr.type);
+            validType(arrayIndexExpr.type, false);
         }
         return this;
     }
@@ -201,6 +215,7 @@ public class SemaAssignTypes implements ASTVisitor {
             return this;
         if (newExpr.typeExpr.type == null)
             throw new CompilerException("Unresolved type in new expression");
+        validType(newExpr.typeExpr.type, false);
         if (newExpr.typeExpr.type instanceof Type.TypeStruct ||
             newExpr.typeExpr.type instanceof Type.TypeArray) {
             newExpr.type = newExpr.typeExpr.type;
@@ -223,7 +238,7 @@ public class SemaAssignTypes implements ASTVisitor {
         if (symbol == null) {
             throw new CompilerException("Unknown symbol " + nameExpr.name);
         }
-        validType(symbol.type);
+        validType(symbol.type, false);
         nameExpr.symbol = symbol;
         nameExpr.type = symbol.type;
         return this;
@@ -244,7 +259,7 @@ public class SemaAssignTypes implements ASTVisitor {
         if (enter)
             return this;
         if (returnStmt.expr != null)
-            validType(returnStmt.expr.type);
+            validType(returnStmt.expr.type, false);
         return this;
     }
 
@@ -261,9 +276,11 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.VarStmt varStmt, boolean enter) {
         if (!enter) {
-            validType(varStmt.expr.type);
+            validType(varStmt.expr.type, true);
             var symbol = currentScope.lookup(varStmt.varName);
             symbol.type = typeDictionary.merge(varStmt.expr.type, symbol.type);
+            if (symbol.type == typeDictionary.NULL)
+                throw new CompilerException("Variable " + varStmt.varName + " cannot be Null type");
         }
         return this;
     }
@@ -292,10 +309,9 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.AssignStmt assignStmt, boolean enter) {
         if (!enter) {
-            validType(assignStmt.lhs.type);
-            validType(assignStmt.rhs.type);
-            if (!assignStmt.lhs.type.isAssignable(assignStmt.rhs.type))
-                throw new CompilerException("Value of type " + assignStmt.rhs.type + " cannot be assigned to type " + assignStmt.lhs.type);
+            validType(assignStmt.lhs.type, false);
+            validType(assignStmt.rhs.type, true);
+            checkAssignmentCompatible(assignStmt.lhs.type, assignStmt.rhs.type);
         }
         return this;
     }
@@ -304,10 +320,17 @@ public class SemaAssignTypes implements ASTVisitor {
         program.accept(this);
     }
 
-    private void validType(Type t) {
+    private void validType(Type t, boolean allowNull) {
         if (t == null)
             throw new CompilerException("Undefined type");
         if (t == typeDictionary.UNKNOWN)
             throw new CompilerException("Undefined type");
+        if (!allowNull && t == typeDictionary.NULL)
+            throw new CompilerException("Null type not allowed");
+    }
+
+    private void checkAssignmentCompatible(Type var, Type value) {
+        if (!var.isAssignable(value))
+            throw new CompilerException("Value of type " + value + " cannot be assigned to type " + var);
     }
 }

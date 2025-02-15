@@ -358,7 +358,12 @@ public class Parser {
                 return x;
             }
             case IDENT -> {
-                if (isToken(currentToken, "new")) {
+                if (isToken(currentToken, "null")) {
+                    var x = new AST.LiteralExpr(currentToken);
+                    nextToken(lexer);
+                    return x;
+                }
+                else if (isToken(currentToken, "new")) {
                     return parseNew(lexer);
                 }
                 else {

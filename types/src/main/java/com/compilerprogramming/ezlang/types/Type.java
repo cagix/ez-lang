@@ -61,6 +61,12 @@ public abstract class Type {
                 return true;
             return nullable.baseType.isAssignable(other);
         }
+        else if (other instanceof TypeNullable nullable) {
+            // At compile time we allow nullable value to be
+            // assigned to base type, but null check must be inserted
+            // Optimizer may remove null check
+            return isAssignable(nullable.baseType);
+        }
         return false;
     }
 
