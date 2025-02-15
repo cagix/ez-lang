@@ -28,6 +28,10 @@ public class SSAEdges {
             this.instruction = instruction;
             this.useList = new ArrayList<>();
         }
+
+        public void addUse(Instruction instruction) {
+            useList.add(instruction);
+        }
     }
 
     public static Map<Register, SSADef> buildDefUseChains(CompiledFunction function) {
@@ -39,6 +43,14 @@ public class SSAEdges {
         recordUses(function, defUseChains);
 
         return defUseChains;
+    }
+
+    public static SSADef addDef(Map<Register, SSADef> defUseChains, Register register, Instruction instruction) {
+        if (defUseChains.get(register) != null)
+            throw new CompilerException("Duplicate definition for register " + register);
+        var ssaDef = new SSADef(instruction);
+        defUseChains.put(register, ssaDef);
+        return ssaDef;
     }
 
     private static void recordDefs(CompiledFunction function, Map<Register, SSADef> defUseChains) {

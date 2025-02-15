@@ -7,8 +7,14 @@ public class Optimizer {
     public void optimize(CompiledFunction function, EnumSet<Options> options) {
         if (options.contains(Options.OPTIMIZE)) {
             new EnterSSA(function, options);
-            if (options.contains(Options.SCCP))
+            if (options.contains(Options.SCCP)) {
                 new SparseConditionalConstantPropagation().constantPropagation(function).apply(options);
+                if (new ConstantComparisonPropagation(function).apply(options)) {
+                    // Run SCCP again
+                    // We could repeat this until no further changes occur
+                    new SparseConditionalConstantPropagation().constantPropagation(function).apply(options);
+                }
+            }
             new ExitSSA(function, options);
         }
         if (options.contains(Options.REGALLOC))
