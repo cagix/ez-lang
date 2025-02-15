@@ -14,7 +14,7 @@ public abstract class Type {
 
     // Type classes
     static final byte TVOID = 0;
-    static final byte TANY = 1;
+    static final byte TUNKNOWN = 1;
     static final byte TNULL = 2;
     static final byte TINT = 3;      // Int, Bool
     static final byte TNULLABLE = 4;   // Null, or not null ptr
@@ -52,19 +52,31 @@ public abstract class Type {
     }
     public String name() { return name; }
 
+    public boolean isAssignable(Type other) {
+        if (other instanceof TypeVoid || other instanceof TypeUnknown)
+            return false;
+        if (this == other || equals(other)) return true;
+        if (this instanceof TypeNullable nullable) {
+            if (other instanceof TypeNull)
+                return true;
+            return nullable.baseType.isAssignable(other);
+        }
+        return false;
+    }
+
+    /**
+     * Represents no type - useful for defining functions
+     * that do not return a value
+     */
     public static class TypeVoid extends Type {
         public TypeVoid() {
             super(TVOID, "$Void");
         }
     }
 
-    /**
-     * We give it the name $Any so that it cannot be referenced in
-     * the language
-     */
-    public static class TypeAny extends Type {
-        public TypeAny() {
-            super(TANY, "$Any");
+    public static class TypeUnknown extends Type {
+        public TypeUnknown() {
+            super(TUNKNOWN, "$Unknown");
         }
     }
 
@@ -127,11 +139,9 @@ public abstract class Type {
 
     public static class TypeArray extends Type {
         Type elementType;
-        Type.TypeInteger size;
 
-        public TypeArray(Type baseType, Type.TypeInteger size) {
-            super(TARRAY, "[" + baseType.name() + "," + size.name() + "]");
-            this.size = size;
+        public TypeArray(Type baseType) {
+            super(TARRAY, "[" + baseType.name() + "]");
             this.elementType = baseType;
             if (baseType instanceof TypeArray)
                 throw new CompilerException("Array of array type not supported");
@@ -139,7 +149,6 @@ public abstract class Type {
         public Type getElementType() {
             return elementType;
         }
-        public Type getSizeType() { return size; }
     }
 
     // This is really a dedicated Union type for T|Null.

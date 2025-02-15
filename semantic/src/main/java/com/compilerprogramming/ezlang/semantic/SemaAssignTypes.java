@@ -294,7 +294,8 @@ public class SemaAssignTypes implements ASTVisitor {
         if (!enter) {
             validType(assignStmt.lhs.type);
             validType(assignStmt.rhs.type);
-            // TODO check assignment
+            if (!assignStmt.lhs.type.isAssignable(assignStmt.rhs.type))
+                throw new CompilerException("Value of type " + assignStmt.rhs.type + " cannot be assigned to type " + assignStmt.lhs.type);
         }
         return this;
     }
@@ -306,7 +307,7 @@ public class SemaAssignTypes implements ASTVisitor {
     private void validType(Type t) {
         if (t == null)
             throw new CompilerException("Undefined type");
-        if (t == typeDictionary.ANY)
+        if (t == typeDictionary.UNKNOWN)
             throw new CompilerException("Undefined type");
     }
 }

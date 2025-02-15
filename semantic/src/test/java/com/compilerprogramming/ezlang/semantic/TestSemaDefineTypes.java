@@ -56,7 +56,7 @@ struct TreeArray {
         sema.analyze(program);
         var symbol = typeDict.lookup("TreeArray");
         Assert.assertNotNull(symbol);
-        Assert.assertEquals("struct TreeArray{data: [Tree,Int];}", symbol.type.describe());
+        Assert.assertEquals("struct TreeArray{data: [Tree];}", symbol.type.describe());
     }
 
     @Test
@@ -72,7 +72,7 @@ struct TreeArray {
         sema.analyze(program);
         var symbol = typeDict.lookup("TreeArray");
         Assert.assertNotNull(symbol);
-        Assert.assertEquals("struct TreeArray{data: [Tree?,Int];}", symbol.type.describe());
+        Assert.assertEquals("struct TreeArray{data: [Tree?];}", symbol.type.describe());
     }
 
     @Test
@@ -88,7 +88,7 @@ struct TreeArray {
         sema.analyze(program);
         var symbol = typeDict.lookup("TreeArray");
         Assert.assertNotNull(symbol);
-        Assert.assertEquals("struct TreeArray{data: [Tree?,Int]?;}", symbol.type.describe());
+        Assert.assertEquals("struct TreeArray{data: [Tree?]?;}", symbol.type.describe());
     }
 
     @Test
@@ -147,7 +147,7 @@ struct TreeArray {
         sema.analyze(program);
         var symbol = typeDict.lookup("TreeArray");
         Assert.assertNotNull(symbol);
-        Assert.assertEquals("struct TreeArray{data: [Int,Int];}", symbol.type.describe());
+        Assert.assertEquals("struct TreeArray{data: [Int];}", symbol.type.describe());
     }
 
 }

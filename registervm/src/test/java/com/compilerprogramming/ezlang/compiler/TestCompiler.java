@@ -203,7 +203,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = New([Int,Int])
+                    %t0 = New([Int])
                     %t0.append(1)
                     %t0.append(2)
                     %t0.append(3)
@@ -223,7 +223,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t1 = New([Int,Int])
+                    %t1 = New([Int])
                     %t1.append(n)
                     %ret = %t1
                     goto  L1
