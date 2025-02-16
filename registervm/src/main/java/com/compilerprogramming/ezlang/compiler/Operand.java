@@ -18,6 +18,16 @@ public class Operand {
         }
     }
 
+    public static class NullConstantOperand extends Operand {
+        public NullConstantOperand(Type type) {
+            this.type = type;
+        }
+        @Override
+        public String toString() {
+            return "null";
+        }
+    }
+
     public static abstract class RegisterOperand extends Operand {
         public final int regnum;
         public RegisterOperand(int regnum) {

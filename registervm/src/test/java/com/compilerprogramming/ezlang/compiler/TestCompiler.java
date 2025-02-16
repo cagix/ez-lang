@@ -564,4 +564,20 @@ public class TestCompiler {
                 L1:
                 """, result);
     }
+
+    @Test
+    public void testFunction29() {
+        String src = """
+                struct Foo { var bar: Int }
+                func foo()->Foo? { return null; }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+    ret null
+    goto  L1
+L1:
+""", result);
+    }
+
 }

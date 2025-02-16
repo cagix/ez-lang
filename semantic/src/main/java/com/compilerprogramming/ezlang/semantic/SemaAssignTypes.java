@@ -77,6 +77,8 @@ public class SemaAssignTypes implements ASTVisitor {
             else if (((binaryExpr.expr1.type instanceof Type.TypeNull &&
                      binaryExpr.expr2.type instanceof Type.TypeNullable) ||
                     (binaryExpr.expr1.type instanceof Type.TypeNullable &&
+                     binaryExpr.expr2.type instanceof Type.TypeNull) ||
+                    (binaryExpr.expr1.type instanceof Type.TypeNull &&
                      binaryExpr.expr2.type instanceof Type.TypeNull)) &&
                     (binaryExpr.op.str.equals("==") || binaryExpr.op.str.equals("!="))) {
                 binaryExpr.type = typeDictionary.INT;

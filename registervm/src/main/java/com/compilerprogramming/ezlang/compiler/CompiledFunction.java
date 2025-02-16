@@ -5,6 +5,7 @@ import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ public class CompiledFunction {
     private BasicBlock currentContinueTarget;
     public int maxLocalReg;
     public int maxStackSize;
+    private final TypeDictionary typeDictionary;
 
     /**
      * We essentially do a form of abstract interpretation as we generate
@@ -30,7 +32,7 @@ public class CompiledFunction {
      */
     private List<Operand> virtualStack = new ArrayList<>();
 
-    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
+    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         setVirtualRegisters(funcDecl.scope);
         this.BID = 0;
@@ -38,6 +40,7 @@ public class CompiledFunction {
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
+        this.typeDictionary = typeDictionary;
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
     }
@@ -408,18 +411,72 @@ public class CompiledFunction {
         return false;
     }
 
+    private boolean codeBoolean(AST.BinaryExpr binaryExpr) {
+        BasicBlock l1;
+        BasicBlock l2;
+        BasicBlock l3;
+        boolean indexed;
+        boolean isAnd;
+
+        l1 = createBlock();
+        l2 = createBlock();
+        l3 = createBlock();
+        indexed = compileExpr(binaryExpr.expr1);
+        if (indexed) {
+            codeIndexedLoad();
+        }
+        isAnd = binaryExpr.op.str.equals("&&");
+        // FIXME ensure temp
+        var operand = pop();
+        var temp = createTemp(typeDictionary.INT);
+        code(new Instruction.Move(operand, temp));
+        if (isAnd) {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l1, l2));
+        } else {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l2, l1));
+        }
+        startBlock(l1);
+        indexed = compileExpr(binaryExpr.expr2);
+        if (indexed) {
+            codeIndexedLoad();
+        }
+        operand = pop();
+        temp = createTemp(typeDictionary.INT);
+        code(new Instruction.Move(operand, temp));
+        jumpTo(l3);
+        startBlock(l2);
+        code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp));
+        jumpTo(l3);
+        startBlock(l3);
+        return false;
+    }
+
+
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
-        String opCode = null;
+        String opCode = binaryExpr.op.str;
+        if (opCode.equals("&&") ||
+            opCode.equals("||")) {
+            return codeBoolean(binaryExpr);
+        }
         boolean indexed = compileExpr(binaryExpr.expr1);
         if (indexed)
             codeIndexedLoad();
         indexed = compileExpr(binaryExpr.expr2);
         if (indexed)
             codeIndexedLoad();
-        opCode = binaryExpr.op.str;
         Operand right = pop();
         Operand left = pop();
-        if (left instanceof Operand.ConstantOperand leftconstant &&
+        if (left instanceof Operand.NullConstantOperand &&
+            right instanceof Operand.NullConstantOperand) {
+            long value = 0;
+            switch (opCode) {
+                case "==": value = 1; break;
+                case "!=": value = 0; break;
+                default: throw new CompilerException("Invalid binary op");
+            }
+            pushConstant(value, typeDictionary.INT);
+        }
+        else if (left instanceof Operand.ConstantOperand leftconstant &&
                 right instanceof Operand.ConstantOperand rightconstant) {
             long value = 0;
             switch (opCode) {
@@ -468,12 +525,20 @@ public class CompiledFunction {
     }
 
     private boolean compileConstantExpr(AST.LiteralExpr constantExpr) {
-        pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
+        if (constantExpr.type instanceof Type.TypeInteger)
+            pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
+        else if (constantExpr.type instanceof Type.TypeNull)
+            pushNullConstant(constantExpr.type);
+        else throw new CompilerException("Invalid constant type");
         return false;
     }
 
     private void pushConstant(long value, Type type) {
         pushOperand(new Operand.ConstantOperand(value, type));
+    }
+
+    private void pushNullConstant(Type type) {
+        pushOperand(new Operand.NullConstantOperand(type));
     }
 
     private Operand.TempRegisterOperand createTemp(Type type) {
