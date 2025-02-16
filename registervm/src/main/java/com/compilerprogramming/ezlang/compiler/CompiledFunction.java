@@ -13,8 +13,8 @@ public class CompiledFunction {
 
     public BasicBlock entry;
     public BasicBlock exit;
-    private int bid = 0;
-    private BasicBlock currentBlock;
+    private int BID = 0;
+    public BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
     public int maxLocalReg;
@@ -33,7 +33,7 @@ public class CompiledFunction {
     public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         setVirtualRegisters(funcDecl.scope);
-        this.bid = 0;
+        this.BID = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
@@ -71,11 +71,11 @@ public class CompiledFunction {
     }
 
     private BasicBlock createBlock() {
-        return new BasicBlock(bid++);
+        return new BasicBlock(BID++);
     }
 
     private BasicBlock createLoopHead() {
-        return new BasicBlock(bid++, true);
+        return new BasicBlock(BID++, true);
     }
 
     private void compileBlock(AST.BlockStmt block) {
@@ -90,7 +90,7 @@ public class CompiledFunction {
             if (isIndexed)
                 codeIndexedLoad();
             if (virtualStack.size() == 1)
-                code(new Instruction.Return(pop()));
+                code(new Instruction.Ret(pop()));
             else if (virtualStack.size() > 1)
                 throw new CompilerException("Virtual stack has more than one item at return");
         }
@@ -109,6 +109,7 @@ public class CompiledFunction {
             case AST.VarStmt letStmt -> {
                 compileLet(letStmt);
             }
+            case AST.VarDeclStmt varDeclStmt -> {}
             case AST.IfElseStmt ifElseStmt -> {
                 compileIf(ifElseStmt);
             }

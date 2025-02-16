@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.types;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 public class TypeDictionary extends Scope {
-    public final Type.TypeAny ANY;
+    public final Type.TypeUnknown UNKNOWN;
     public final Type.TypeInteger INT;
     public final Type.TypeNull NULL;
     public final Type.TypeVoid VOID;
@@ -11,22 +11,22 @@ public class TypeDictionary extends Scope {
     public TypeDictionary() {
         super(null);
         INT = (Type.TypeInteger) intern(new Type.TypeInteger());
-        ANY = (Type.TypeAny) intern(new Type.TypeAny());
+        UNKNOWN = (Type.TypeUnknown) intern(new Type.TypeUnknown());
         NULL = (Type.TypeNull) intern(new Type.TypeNull());
         VOID = (Type.TypeVoid) intern(new Type.TypeVoid());
     }
     public Type makeArrayType(Type elementType, boolean isNullable) {
         switch (elementType) {
             case Type.TypeInteger ti -> {
-                var arrayType = intern(new Type.TypeArray(ti, INT));
+                var arrayType = intern(new Type.TypeArray(ti));
                 return isNullable ? intern(new Type.TypeNullable(arrayType)) : arrayType;
             }
             case Type.TypeStruct ts -> {
-                var arrayType = intern(new Type.TypeArray(ts, INT));
+                var arrayType = intern(new Type.TypeArray(ts));
                 return isNullable ? intern(new Type.TypeNullable(arrayType)) : arrayType;
             }
             case Type.TypeNullable nullable when nullable.baseType instanceof Type.TypeStruct -> {
-                var arrayType = intern(new Type.TypeArray(elementType, INT));
+                var arrayType = intern(new Type.TypeArray(elementType));
                 return isNullable ? intern(new Type.TypeNullable(arrayType)) : arrayType;
             }
             case null, default -> throw new CompilerException("Unsupported array element type: " + elementType);
@@ -50,9 +50,9 @@ public class TypeDictionary extends Scope {
         else if (t2 instanceof Type.TypeArray && t1 instanceof Type.TypeNull) {
             return intern(new Type.TypeNullable(t2));
         }
-        else if (t1 instanceof Type.TypeAny)
+        else if (t1 instanceof Type.TypeUnknown)
             return t2;
-        else if (t2 instanceof Type.TypeAny)
+        else if (t2 instanceof Type.TypeUnknown)
             return t1;
         else if (!t1.equals(t2))
             throw new CompilerException("Unsupported merge type: " + t1 + " and " + t2);

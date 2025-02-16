@@ -162,7 +162,7 @@ public class SemaDefineTypes implements ASTVisitor {
         else
             baseType = typeSymbol.type;
         if (baseType.isPrimitive())
-            throw new CompilerException("Cannot make nullable instance of primitive type");
+            throw new CompilerException("Cannot make Nullable instance of primitive type");
         return typeDictionary.intern(new Type.TypeNullable(baseType));
     }
 
@@ -293,7 +293,7 @@ public class SemaDefineTypes implements ASTVisitor {
         if (enter) {
             if (currentScope.localLookup(varStmt.varName) != null)
                 throw new CompilerException("Variable " + varStmt.varName + " already declared in current scope");
-            varStmt.symbol = (Symbol.VarSymbol) currentScope.install(varStmt.varName, new Symbol.VarSymbol(varStmt.varName, typeDictionary.ANY));
+            varStmt.symbol = (Symbol.VarSymbol) currentScope.install(varStmt.varName, new Symbol.VarSymbol(varStmt.varName, typeDictionary.UNKNOWN));
         }
         return this;
     }

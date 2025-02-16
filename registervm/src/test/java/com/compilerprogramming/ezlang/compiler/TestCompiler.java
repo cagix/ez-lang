@@ -21,7 +21,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = 1
+                    ret 1
                     goto  L1
                 L1:
                 """, result);
@@ -37,7 +37,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = -1
+                    ret -1
                     goto  L1
                 L1:
                 """, result);
@@ -53,7 +53,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = n
+                    ret n
                     goto  L1
                 L1:
                 """, result);
@@ -70,7 +70,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t1 = -n
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -87,7 +87,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t1 = n+1
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -103,7 +103,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = 2
+                    ret 2
                     goto  L1
                 L1:
                 """, result);
@@ -119,7 +119,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = 1
+                    ret 1
                     goto  L1
                 L1:
                 """, result);
@@ -135,7 +135,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = 1
+                    ret 1
                     goto  L1
                 L1:
                 """, result);
@@ -151,7 +151,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %ret = 0
+                    ret 0
                     goto  L1
                 L1:
                 """, result);
@@ -168,7 +168,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t1 = n[0]
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -187,7 +187,7 @@ public class TestCompiler {
                     %t1 = n[0]
                     %t2 = n[1]
                     %t1 = %t1+%t2
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -203,11 +203,11 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = New([Int,Int])
+                    %t0 = New([Int])
                     %t0.append(1)
                     %t0.append(2)
                     %t0.append(3)
-                    %ret = %t0
+                    ret %t0
                     goto  L1
                 L1:
                 """, result);
@@ -223,9 +223,9 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t1 = New([Int,Int])
+                    %t1 = New([Int])
                     %t1.append(n)
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -242,7 +242,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t2 = x+y
-                    %ret = %t2
+                    ret %t2
                     goto  L1
                 L1:
                 """, result);
@@ -287,7 +287,7 @@ public class TestCompiler {
                     %t0 = New(Person)
                     %t0.age = 10
                     %t0.children = 0
-                    %ret = %t0
+                    ret %t0
                     goto  L1
                 L1:
                 """, result);
@@ -326,11 +326,11 @@ public class TestCompiler {
                     %t2 = x<y
                     if %t2 goto L2 else goto L3
                 L2:
-                    %ret = x
+                    ret x
                     goto  L1
                 L1:
                 L3:
-                    %ret = y
+                    ret y
                     goto  L1
                 """, result);
     }
@@ -456,7 +456,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t2 = x+y
-                    %ret = %t2
+                    ret %t2
                     goto  L1
                 L1:
                 L0:
@@ -465,7 +465,7 @@ public class TestCompiler {
                     %t1 = call foo params %t1, %t2
                     t = %t1
                     %t1 = t+1
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -487,7 +487,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t1 = p.age
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -510,7 +510,7 @@ public class TestCompiler {
                 L0:
                     %t1 = p.parent
                     %t1 = %t1.age
-                    %ret = %t1
+                    ret %t1
                     goto  L1
                 L1:
                 """, result);
@@ -534,7 +534,7 @@ public class TestCompiler {
                     %t2 = p[i]
                     %t2 = %t2.parent
                     %t2 = %t2.age
-                    %ret = %t2
+                    ret %t2
                     goto  L1
                 L1:
                 """, result);
@@ -550,7 +550,7 @@ public class TestCompiler {
         Assert.assertEquals("""
                 L0:
                     %t2 = x+y
-                    %ret = %t2
+                    ret %t2
                     goto  L1
                 L1:
                 L0:
@@ -559,7 +559,7 @@ public class TestCompiler {
                     %t2 = call foo params %t2, %t3
                     t = %t2
                     %t2 = t+1
-                    %ret = %t2
+                    ret %t2
                     goto  L1
                 L1:
                 """, result);

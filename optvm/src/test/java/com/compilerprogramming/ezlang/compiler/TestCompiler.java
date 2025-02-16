@@ -214,7 +214,7 @@ L1:
         String result = compileSrc(src);
         Assert.assertEquals("""
 L0:
-    %t0 = New([Int,Int])
+    %t0 = New([Int])
     %t0.append(1)
     %t0.append(2)
     %t0.append(3)
@@ -235,7 +235,7 @@ L1:
         Assert.assertEquals("""
 L0:
     arg n
-    %t1 = New([Int,Int])
+    %t1 = New([Int])
     %t1.append(n)
     ret %t1
     goto  L1

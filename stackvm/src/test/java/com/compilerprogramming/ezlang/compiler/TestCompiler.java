@@ -227,7 +227,7 @@ L1:
         String result = compileSrc(src);
         Assert.assertEquals("""
 L0:
-	new [Int,Int]
+	new [Int]
 	pushi 1
 	storeappend
 	pushi 2
@@ -249,7 +249,7 @@ L1:
         String result = compileSrc(src);
         Assert.assertEquals("""
 L0:
-	new [Int,Int]
+	new [Int]
 	load 0
 	storeappend
 	jump L1
