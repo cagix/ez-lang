@@ -216,13 +216,22 @@ public class SemaAssignTypes implements ASTVisitor {
         if (newExpr.typeExpr.type == null)
             throw new CompilerException("Unresolved type in new expression");
         validType(newExpr.typeExpr.type, false);
-        if (newExpr.typeExpr.type instanceof Type.TypeStruct ||
-            newExpr.typeExpr.type instanceof Type.TypeArray) {
+        if (newExpr.typeExpr.type instanceof Type.TypeNullable)
+            throw new CompilerException("new cannot be used to create a Nullable type");
+        if (newExpr.typeExpr.type instanceof Type.TypeStruct typeStruct) {
             newExpr.type = newExpr.typeExpr.type;
             for (AST.Expr expr: newExpr.initExprList) {
                 if (expr instanceof AST.SetFieldExpr setFieldExpr) {
                     setFieldExpr.objectType = newExpr.typeExpr.type;
+                    var fieldType = typeStruct.getField(setFieldExpr.fieldName);
+                    checkAssignmentCompatible(fieldType, setFieldExpr.value.type);
                 }
+            }
+        }
+        else if (newExpr.typeExpr.type instanceof Type.TypeArray arrayType) {
+            newExpr.type = newExpr.typeExpr.type;
+            for (AST.Expr expr: newExpr.initExprList) {
+                checkAssignmentCompatible(arrayType.getElementType(), expr.type);
             }
         }
         else
@@ -258,8 +267,14 @@ public class SemaAssignTypes implements ASTVisitor {
     public ASTVisitor visit(AST.ReturnStmt returnStmt, boolean enter) {
         if (enter)
             return this;
-        if (returnStmt.expr != null)
+        Type.TypeFunction functionType = (Type.TypeFunction) currentFuncDecl.symbol.type;
+        if (returnStmt.expr != null) {
             validType(returnStmt.expr.type, false);
+            checkAssignmentCompatible(functionType.returnType, returnStmt.expr.type);
+        }
+        else if (!(functionType.returnType instanceof Type.TypeVoid)) {
+            throw new CompilerException("A return value of type " + functionType.returnType + " is expected");
+        }
         return this;
     }
 

@@ -788,7 +788,7 @@ L1:
                     return x;
                 }
 
-                func foo() {
+                func foo()->Int {
                     return bar(10);
                 }
                 """;

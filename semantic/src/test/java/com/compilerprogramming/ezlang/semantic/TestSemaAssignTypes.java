@@ -298,14 +298,14 @@ public class TestSemaAssignTypes {
     {
         var bar: [Int]
     }
-    func foo()->Foo 
+    func foo()->Int 
     {
        var f: Foo
        f = new Foo{}
        return f.bar[0]
     }
 """;
-        analyze(src, "foo", "func foo()->Foo");
+        analyze(src, "foo", "func foo()->Int");
     }
 
     @Test(expected = CompilerException.class)
@@ -346,6 +346,76 @@ public class TestSemaAssignTypes {
     func foo()
     {
        var f = null
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test(expected = CompilerException.class)
+    public void test17() {
+        String src = """
+    func foo()
+    {
+       var f = new [Int] {null}
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test(expected = CompilerException.class)
+    public void test18() {
+        String src = """
+    func foo()
+    {
+       var f = new [Int?] {null}
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test
+    public void test19() {
+        String src = """
+    struct Foo { var bar: Int }
+    func foo()
+    {
+       var f = new [Foo?] {null}
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test
+    public void test20() {
+        String src = """
+    struct Foo { var bar: Int }
+    func foo()
+    {
+       var f = new [Foo?] {new Foo{ bar = 1}}
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test(expected = CompilerException.class)
+    public void test21() {
+        String src = """
+    struct Foo { var bar: Int }
+    func foo()
+    {
+       var f = new [Foo?] {new Foo{ bar = null}}
+    }
+""";
+        analyze(src, "foo", "func foo()");
+    }
+
+    @Test(expected = CompilerException.class)
+    public void test22() {
+        String src = """
+    struct Foo { var bar: Int }
+    func foo()
+    {
+       var f = new [Foo?]? {}
     }
 """;
         analyze(src, "foo", "func foo()");

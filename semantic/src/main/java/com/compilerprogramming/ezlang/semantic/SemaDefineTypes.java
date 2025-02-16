@@ -162,7 +162,7 @@ public class SemaDefineTypes implements ASTVisitor {
         else
             baseType = typeSymbol.type;
         if (baseType.isPrimitive())
-            throw new CompilerException("Cannot make nullable instance of primitive type");
+            throw new CompilerException("Cannot make Nullable instance of primitive type");
         return typeDictionary.intern(new Type.TypeNullable(baseType));
     }
 

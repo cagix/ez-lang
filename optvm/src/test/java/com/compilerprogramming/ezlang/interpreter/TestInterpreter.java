@@ -167,7 +167,7 @@ public class TestInterpreter {
                     return f2;
                 }
 
-                func foo() {
+                func foo()->Int {
                     return fib(10);
                 }
                 """;
@@ -229,7 +229,7 @@ public class TestInterpreter {
                     else
                         data[2] = 123 + j + 10
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2];
@@ -253,7 +253,7 @@ public class TestInterpreter {
                     else
                         data[2] = 123 - j + 10
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2];
@@ -277,7 +277,7 @@ public class TestInterpreter {
                         data[2] = 15
                     data[3] = j + 21    
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {0,0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2]+data[3];
@@ -301,7 +301,7 @@ public class TestInterpreter {
                         data[2] = j * 15
                     data[3] = j * 21    
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {0,0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2]+data[3];
@@ -329,7 +329,7 @@ public class TestInterpreter {
                     }
                     data[3] = j + 21
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {1,0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2]+data[3]
@@ -361,7 +361,7 @@ public class TestInterpreter {
                     }
                     data[3] = (j+k) * 21
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {1,0,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2]+data[3]
@@ -389,7 +389,7 @@ public class TestInterpreter {
                     data[1] = j
                     data[2] = i
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {2,0,0}
                     bar(data)
                     return data[0]+data[1]+data[2];
@@ -411,7 +411,7 @@ public class TestInterpreter {
                     else j = data[0]
                     data[0] = j * 21 + data[1]
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {2,3}
                     bar(data)
                     return data[0]+data[1];
@@ -433,7 +433,7 @@ public class TestInterpreter {
                         j = j * 21 + 25 / j
                     data[1] = j
                 }
-                func foo() {
+                func foo()->Int {
                     var data = new [Int] {5,3}
                     bar(data)
                     return data[0]+data[1];
