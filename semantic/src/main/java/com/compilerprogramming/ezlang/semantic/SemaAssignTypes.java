@@ -269,7 +269,7 @@ public class SemaAssignTypes implements ASTVisitor {
             return this;
         Type.TypeFunction functionType = (Type.TypeFunction) currentFuncDecl.symbol.type;
         if (returnStmt.expr != null) {
-            validType(returnStmt.expr.type, false);
+            validType(returnStmt.expr.type, true);
             checkAssignmentCompatible(functionType.returnType, returnStmt.expr.type);
         }
         else if (!(functionType.returnType instanceof Type.TypeVoid)) {
