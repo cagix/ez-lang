@@ -412,42 +412,28 @@ public class CompiledFunction {
     }
 
     private boolean codeBoolean(AST.BinaryExpr binaryExpr) {
-        BasicBlock l1;
-        BasicBlock l2;
-        BasicBlock l3;
-        boolean indexed;
-        boolean isAnd;
-
-        l1 = createBlock();
-        l2 = createBlock();
-        l3 = createBlock();
-        indexed = compileExpr(binaryExpr.expr1);
-        if (indexed) {
+        boolean isAnd = binaryExpr.op.str.equals("&&");
+        BasicBlock l1 = createBlock();
+        BasicBlock l2 = createBlock();
+        BasicBlock l3 = createBlock();
+        boolean indexed = compileExpr(binaryExpr.expr1);
+        if (indexed)
             codeIndexedLoad();
-        }
-        isAnd = binaryExpr.op.str.equals("&&");
-        // FIXME ensure temp
-        var operand = pop();
-        var temp = createTemp(typeDictionary.INT);
-        code(new Instruction.Move(operand, temp));
         if (isAnd) {
             code(new Instruction.ConditionalBranch(currentBlock, pop(), l1, l2));
         } else {
             code(new Instruction.ConditionalBranch(currentBlock, pop(), l2, l1));
         }
         startBlock(l1);
-        indexed = compileExpr(binaryExpr.expr2);
-        if (indexed) {
-            codeIndexedLoad();
-        }
-        operand = pop();
-        temp = createTemp(typeDictionary.INT);
-        code(new Instruction.Move(operand, temp));
+        compileExpr(binaryExpr.expr2);
+        var temp = ensureTemp();
         jumpTo(l3);
         startBlock(l2);
+        // Below we must write to the same temp
         code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp));
         jumpTo(l3);
         startBlock(l3);
+        // leave temp on virtual stack
         return false;
     }
 
@@ -549,6 +535,36 @@ public class CompiledFunction {
         return tempRegister;
     }
 
+    Type typeOfOperand(Operand operand) {
+        if (operand instanceof Operand.ConstantOperand constant)
+            return constant.type;
+        else if (operand instanceof Operand.NullConstantOperand nullConstantOperand)
+            return nullConstantOperand.type;
+        else if (operand instanceof Operand.RegisterOperand registerOperand)
+            return registerOperand.type;
+        else throw new CompilerException("Invalid operand");
+    }
+
+    private Operand.TempRegisterOperand createTempAndMove(Operand src) {
+        Type type = typeOfOperand(src);
+        var temp = createTemp(type);
+        code(new Instruction.Move(src, temp));
+        return temp;
+    }
+
+    private Operand.RegisterOperand ensureTemp() {
+        Operand top = top();
+        if (top instanceof Operand.ConstantOperand
+                || top instanceof Operand.NullConstantOperand
+                || top instanceof Operand.LocalRegisterOperand) {
+            return createTempAndMove(pop());
+        } else if (top instanceof Operand.IndexedOperand) {
+            return codeIndexedLoad();
+        } else if (top instanceof Operand.TempRegisterOperand tempRegisterOperand) {
+            return tempRegisterOperand;
+        } else throw new CompilerException("Cannot convert to temporary register");
+    }
+
     private void pushLocal(int regnum, String varName) {
         pushOperand(new Operand.LocalRegisterOperand(regnum, varName));
     }
@@ -565,7 +581,7 @@ public class CompiledFunction {
         return virtualStack.getLast();
     }
 
-    private void codeIndexedLoad() {
+    private Operand.TempRegisterOperand codeIndexedLoad() {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
         if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
@@ -576,6 +592,7 @@ public class CompiledFunction {
         }
         else
             code(new Instruction.Move(indexed, temp));
+        return temp;
     }
 
     private void codeIndexedStore() {

@@ -176,4 +176,72 @@ public class TestInterpreter {
                 integerValue.value == 1);
     }
 
+    @Test
+    public void testFunction104() {
+        String src = """
+                func foo()->Int 
+                {
+                    return 1 == 1 && 2 == 2
+                }
+
+                """;
+        var value = compileAndRun(src, "foo");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
+    @Test
+    public void testFunction105() {
+        String src = """
+                func bar(a: Int, b: Int)->Int 
+                {
+                    return a+1 == b-1 && b / a == 2
+                }
+                func foo()->Int
+                {
+                    return bar(3,5)
+                }
+                """;
+        var value = compileAndRun(src, "foo");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 0);
+    }
+
+    @Test
+    public void testFunction106() {
+        String src = """
+                func bar(a: Int, b: Int)->Int 
+                {
+                    return a+1 == b-1 || b / a == 2
+                }
+                func foo()->Int
+                {
+                    return bar(3,5)
+                }
+                """;
+        var value = compileAndRun(src, "foo");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
+    @Test
+    public void testFunction107() {
+        String src = """
+                func bar(a: [Int])->Int 
+                {
+                    return a[0]+a[2] == a[1]-a[2] || a[1] / a[0] == 2
+                }
+                func foo()->Int
+                {
+                    return bar(new [Int] {3,5,1})
+                }
+                """;
+        var value = compileAndRun(src, "foo");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
 }
