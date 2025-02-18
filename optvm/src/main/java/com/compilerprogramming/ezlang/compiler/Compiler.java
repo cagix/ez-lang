@@ -16,7 +16,7 @@ public class Compiler {
         for (Symbol symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.FunctionTypeSymbol functionSymbol) {
                 Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
-                var function = new CompiledFunction(functionSymbol);
+                var function = new CompiledFunction(functionSymbol, typeDictionary);
                 if (options.contains(Options.DUMP_INITIAL_IR))
                     function.dumpIR(false, "Initial IR");
                 functionType.code = function;

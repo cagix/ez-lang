@@ -5,6 +5,7 @@ import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -20,6 +21,7 @@ public class CompiledFunction {
     private BasicBlock currentContinueTarget;
     private Type.TypeFunction functionType;
     public final RegisterPool registerPool;
+    private final TypeDictionary typeDictionary;
 
     private int frameSlots;
 
@@ -36,7 +38,7 @@ public class CompiledFunction {
      */
     private List<Operand> virtualStack = new ArrayList<>();
 
-    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
+    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         this.functionType = (Type.TypeFunction) functionSymbol.type;
         this.registerPool = new RegisterPool();
@@ -46,13 +48,14 @@ public class CompiledFunction {
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
+        this.typeDictionary = typeDictionary;
         generateArgInstructions(funcDecl.scope);
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
         this.frameSlots = registerPool.numRegisters();
     }
 
-    public CompiledFunction(Type.TypeFunction functionType) {
+    public CompiledFunction(Type.TypeFunction functionType, TypeDictionary typeDictionary) {
         this.functionType = (Type.TypeFunction) functionType;
         this.registerPool = new RegisterPool();
         this.BID = 0;
@@ -60,6 +63,7 @@ public class CompiledFunction {
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
+        this.typeDictionary = typeDictionary;
         this.frameSlots = registerPool.numRegisters();
     }
 
@@ -437,8 +441,42 @@ public class CompiledFunction {
         return false;
     }
 
+    private boolean codeBoolean(AST.BinaryExpr binaryExpr) {
+        boolean isAnd = binaryExpr.op.str.equals("&&");
+        BasicBlock l1 = createBlock();
+        BasicBlock l2 = createBlock();
+        BasicBlock l3 = createBlock();
+        boolean indexed = compileExpr(binaryExpr.expr1);
+        if (indexed)
+            codeIndexedLoad();
+        if (isAnd) {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l1, l2));
+        } else {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l2, l1));
+        }
+        startBlock(l1);
+        compileExpr(binaryExpr.expr2);
+        var temp = ensureTemp();
+        jumpTo(l3);
+        startBlock(l2);
+        // Below we must write to the same temp
+        //code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), new Operand.TempRegisterOperand(temp.reg)));
+        code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp));
+        jumpTo(l3);
+        startBlock(l3);
+        // leave temp on virtual stack
+//        var temp2 = (Operand.TempRegisterOperand) pop();
+//        pushOperand(new Operand.TempRegisterOperand(temp2.reg));
+        return false;
+    }
+
+
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
-        String opCode = null;
+        String opCode = binaryExpr.op.str;
+        if (opCode.equals("&&") ||
+            opCode.equals("||")) {
+            return codeBoolean(binaryExpr);
+        }
         boolean indexed = compileExpr(binaryExpr.expr1);
         if (indexed)
             codeIndexedLoad();
@@ -511,6 +549,36 @@ public class CompiledFunction {
         return tempRegister;
     }
 
+    Type typeOfOperand(Operand operand) {
+        if (operand instanceof Operand.ConstantOperand constant)
+            return constant.type;
+//        else if (operand instanceof Operand.NullConstantOperand nullConstantOperand)
+//            return nullConstantOperand.type;
+        else if (operand instanceof Operand.RegisterOperand registerOperand)
+            return registerOperand.type;
+        else throw new CompilerException("Invalid operand");
+    }
+
+    private Operand.TempRegisterOperand createTempAndMove(Operand src) {
+        Type type = typeOfOperand(src);
+        var temp = createTemp(type);
+        code(new Instruction.Move(src, temp));
+        return temp;
+    }
+
+    private Operand.RegisterOperand ensureTemp() {
+        Operand top = top();
+        if (top instanceof Operand.ConstantOperand
+                //|| top instanceof Operand.NullConstantOperand
+                || top instanceof Operand.LocalRegisterOperand) {
+            return createTempAndMove(pop());
+        } else if (top instanceof Operand.IndexedOperand) {
+            return codeIndexedLoad();
+        } else if (top instanceof Operand.TempRegisterOperand tempRegisterOperand) {
+            return tempRegisterOperand;
+        } else throw new CompilerException("Cannot convert to temporary register");
+    }
+
     private void pushLocal(Register reg) {
         pushOperand(new Operand.LocalRegisterOperand(reg));
     }
@@ -527,7 +595,7 @@ public class CompiledFunction {
         return virtualStack.getLast();
     }
 
-    private void codeIndexedLoad() {
+    private Operand.TempRegisterOperand codeIndexedLoad() {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
         if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
@@ -538,6 +606,7 @@ public class CompiledFunction {
         }
         else
             code(new Instruction.Move(indexed, temp));
+        return temp;
     }
 
     private void codeIndexedStore() {
