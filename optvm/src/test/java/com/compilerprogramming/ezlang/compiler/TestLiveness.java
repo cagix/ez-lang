@@ -247,7 +247,7 @@ L1:
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.setReturnType(typeDictionary.INT);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register i = regPool.newReg("i", typeDictionary.INT);
         Register s = regPool.newReg("s", typeDictionary.INT);

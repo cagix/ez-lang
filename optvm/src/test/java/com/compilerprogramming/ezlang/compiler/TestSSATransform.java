@@ -640,7 +640,7 @@ L3:
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
         functionType.setReturnType(typeDictionary.INT);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register p = regPool.newReg("p", typeDictionary.INT);
         Register x1 = regPool.newReg("x1", typeDictionary.INT);
@@ -708,7 +708,7 @@ L1:
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
         functionType.setReturnType(typeDictionary.VOID);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register p = regPool.newReg("p", typeDictionary.INT);
         Register a1 = regPool.newReg("a1", typeDictionary.INT);
@@ -2469,7 +2469,6 @@ L1:
 """, result);
     }
 
-    @Ignore
     @Test
     public void testSSA14() {
         String src = """

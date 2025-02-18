@@ -13,7 +13,7 @@ public class TestInterferenceGraph {
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.addArg(new Symbol.ParameterSymbol("a", typeDictionary.INT));
         functionType.setReturnType(typeDictionary.INT);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register a = regPool.newReg("a", typeDictionary.INT);
         Register b = regPool.newReg("b", typeDictionary.INT);
@@ -82,7 +82,7 @@ public class TestInterferenceGraph {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.setReturnType(typeDictionary.VOID);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register a = regPool.newReg("a", typeDictionary.INT);
         Register b = regPool.newReg("b", typeDictionary.INT);
@@ -158,7 +158,7 @@ public class TestInterferenceGraph {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
         functionType.setReturnType(typeDictionary.VOID);
-        CompiledFunction function = new CompiledFunction(functionType);
+        CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register a = regPool.newReg("a", typeDictionary.INT);
         Register b = regPool.newReg("b", typeDictionary.INT);
