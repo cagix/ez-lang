@@ -67,14 +67,14 @@ public abstract class Instruction {
     }
     public void replaceDef(Register newReg) {
         if (def == null) throw new IllegalStateException();
-        def.replaceRegister(newReg);
+        def = def.copy(newReg);
     }
     public void replaceUses(Register[] newUses) {
         int j = 0;
         for (int i = 0; i < uses.length; i++) {
             Operand use = uses[i];
             if (use != null && use instanceof Operand.RegisterOperand registerOperand) {
-                registerOperand.replaceRegister(newUses[j++]);
+                uses[i] = registerOperand.copy(newUses[j++]);
             }
         }
     }
@@ -83,7 +83,7 @@ public abstract class Instruction {
         for (int i = 0; i < uses.length; i++) {
             Operand operand = uses[i];
             if (operand != null && operand instanceof Operand.RegisterOperand registerOperand && registerOperand.reg.id == source.id) {
-                registerOperand.replaceRegister(target);
+                uses[i] = registerOperand.copy(target);
                 replaced = true;
             }
         }
@@ -362,7 +362,7 @@ public abstract class Instruction {
             }
         }
         public void replaceInput(int i, Register newReg) {
-            uses[i].replaceRegister(newReg);
+            uses[i] =  new Operand.RegisterOperand(newReg);
         }
         /**
          * This will fail in input was replaced by a constant

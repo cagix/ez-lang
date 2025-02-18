@@ -6,8 +6,6 @@ public class Operand {
 
     Type type;
 
-    public void replaceRegister(Register register) {}
-
     public static class ConstantOperand extends Operand {
         public final long value;
         public ConstantOperand(long value, Type type) {
@@ -21,17 +19,16 @@ public class Operand {
     }
 
     public static class RegisterOperand extends Operand {
-        Register reg;
-        public RegisterOperand(Register reg) {
+        final Register reg;
+        protected RegisterOperand(Register reg) {
             this.reg = reg;
             if (reg == null)
                 throw new NullPointerException();
         }
         public int frameSlot() { return reg.nonSSAId(); }
 
-        @Override
-        public void replaceRegister(Register register) {
-            this.reg = register;
+        public RegisterOperand copy(Register register) {
+           return new RegisterOperand(register);
         }
 
         @Override
@@ -43,6 +40,10 @@ public class Operand {
     public static class LocalRegisterOperand extends RegisterOperand {
         public LocalRegisterOperand(Register reg) {
             super(reg);
+        }
+        @Override
+        public RegisterOperand copy(Register register) {
+            return new LocalRegisterOperand(register);
         }
     }
 
@@ -65,6 +66,10 @@ public class Operand {
     public static class TempRegisterOperand extends RegisterOperand {
         public TempRegisterOperand(Register reg) {
             super(reg);
+        }
+        @Override
+        public RegisterOperand copy(Register register) {
+            return new TempRegisterOperand(register);
         }
     }
 

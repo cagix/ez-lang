@@ -445,4 +445,147 @@ public class TestInterpreter {
                 && integerValue.value == 5+(5*21+25/5));
     }
 
+
+//    @Test
+//    public void testFunction100() {
+//        String src = """
+//                struct Test
+//                {
+//                    var field: Int
+//                }
+//                func foo()->Test?
+//                {
+//                    return null;
+//                }
+//
+//                """;
+//        var value = compileAndRun(src, "foo", Options.OPT);
+//        Assert.assertNotNull(value);
+//        Assert.assertTrue(value instanceof Value.NullValue);
+//    }
+//
+//    @Test
+//    public void testFunction101() {
+//        String src = """
+//                func foo()->Int
+//                {
+//                    return null == null;
+//                }
+//
+//                """;
+//        var value = compileAndRun(src, "foo", Options.OPT);
+//        Assert.assertNotNull(value);
+//        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+//                integerValue.value == 1);
+//    }
+//
+//    @Test
+//    public void testFunction102() {
+//        String src = """
+//                struct Foo
+//                {
+//                    var next: Foo?
+//                }
+//                func foo()->Int
+//                {
+//                    var f = new Foo{ next = null }
+//                    return null == f.next
+//                }
+//
+//                """;
+//        var value = compileAndRun(src, "foo", Options.OPT);
+//        Assert.assertNotNull(value);
+//        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+//                integerValue.value == 1);
+//    }
+//
+//    @Test
+//    public void testFunction103() {
+//        String src = """
+//                struct Foo
+//                {
+//                    var i: Int
+//                }
+//                func foo()->Int
+//                {
+//                    var f = new [Foo?] { new Foo{i = 1}, null }
+//                    return null == f[1] && 1 == f[0].i
+//                }
+//
+//                """;
+//        var value = compileAndRun(src, "foo", Options.OPT);
+//        Assert.assertNotNull(value);
+//        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+//                integerValue.value == 1);
+//    }
+
+    @Test
+    public void testFunction104() {
+        String src = """
+                func foo()->Int
+                {
+                    return 1 == 1 && 2 == 2
+                }
+
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
+    @Test
+    public void testFunction105() {
+        String src = """
+                func bar(a: Int, b: Int)->Int
+                {
+                    return a+1 == b-1 && b / a == 2
+                }
+                func foo()->Int
+                {
+                    return bar(3,5)
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 0);
+    }
+
+    @Test
+    public void testFunction106() {
+        String src = """
+                func bar(a: Int, b: Int)->Int
+                {
+                    return a+1 == b-1 || b / a == 2
+                }
+                func foo()->Int
+                {
+                    return bar(3,5)
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
+    @Test
+    public void testFunction107() {
+        String src = """
+                func bar(a: [Int])->Int
+                {
+                    return a[0]+a[2] == a[1]-a[2] || a[1] / a[0] == 2
+                }
+                func foo()->Int
+                {
+                    return bar(new [Int] {3,5,1})
+                }
+                """;
+        var value = compileAndRun(src, "foo", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
 }
