@@ -377,35 +377,40 @@ public class SparseConditionalConstantPropagation {
             }
             case Instruction.Binary binaryInst -> {
                 var cell = valueLattice.get(binaryInst.result().reg);
-                LatticeElement left, right;
+                LatticeElement left = null;
+                LatticeElement right = null;
+                // TODO we cannot yet evaluate null in comparisons
                 if (binaryInst.left() instanceof Operand.ConstantOperand constant)
                     left = new LatticeElement(V_CONSTANT, constant.value);
                 else if (binaryInst.left() instanceof Operand.RegisterOperand registerOperand)
                     left = valueLattice.get(registerOperand.reg);
-                else throw new IllegalStateException();
                 if (binaryInst.right() instanceof Operand.ConstantOperand constant)
                     right = new LatticeElement(V_CONSTANT, constant.value);
                 else if (binaryInst.right() instanceof Operand.RegisterOperand registerOperand)
                     right = valueLattice.get(registerOperand.reg);
-                else throw new IllegalStateException();
-                switch (binaryInst.binOp) {
-                    case "+":
-                    case "-":
-                    case "*":
-                    case "/":
-                    case "%":
-                        changed = evalArith(cell, left, right, binaryInst.binOp);
-                        break;
-                    case "==":
-                    case "!=":
-                    case "<":
-                    case ">":
-                    case "<=":
-                    case ">=":
-                        changed = evalLogical(cell, left, right, binaryInst.binOp);
-                        break;
-                    default:
-                        throw new IllegalStateException();
+                if (left != null && right != null) {
+                    switch (binaryInst.binOp) {
+                        case "+":
+                        case "-":
+                        case "*":
+                        case "/":
+                        case "%":
+                            changed = evalArith(cell, left, right, binaryInst.binOp);
+                            break;
+                        case "==":
+                        case "!=":
+                        case "<":
+                        case ">":
+                        case "<=":
+                        case ">=":
+                            changed = evalLogical(cell, left, right, binaryInst.binOp);
+                            break;
+                        default:
+                            throw new IllegalStateException();
+                    }
+                }
+                else {
+                    cell.setKind(V_VARYING);
                 }
             }
             case Instruction.NewArray newArrayInst -> {
