@@ -16,7 +16,7 @@ public class Compiler {
         for (Symbol symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.FunctionTypeSymbol functionSymbol) {
                 Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
-                functionType.code = new CompiledFunction(functionSymbol);
+                functionType.code = new CompiledFunction(functionSymbol, typeDictionary);
             }
         }
     }

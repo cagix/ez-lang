@@ -2527,4 +2527,98 @@ L3:
     goto  L4
 """, result);
     }
+
+    @Test
+    public void testSSA15() {
+        String src = """
+                struct Foo
+                {
+                    var i: Int
+                }
+                func foo()->Int
+                {
+                    var f = new [Foo?] { new Foo{i = 1}, null }
+                    return null == f[1] && 1 == f[0].i
+                }
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    %t1 = New([Foo?])
+    %t2 = New(Foo)
+    %t2.i = 1
+    %t1.append(%t2)
+    %t1.append(null)
+    f = %t1
+    %t3 = f[1]
+    %t4 = null==%t3
+    if %t4 goto L2 else goto L3
+L2:
+    %t5 = f[0]
+    %t6 = %t5.i
+    %t7 = 1==%t6
+    goto  L4
+L4:
+    ret %t7
+    goto  L1
+L1:
+L3:
+    %t7 = 0
+    goto  L4
+After SSA
+=========
+L0:
+    %t1_0 = New([Foo?])
+    %t2_0 = New(Foo)
+    %t2_0.i = 1
+    %t1_0.append(%t2_0)
+    %t1_0.append(null)
+    f_0 = %t1_0
+    %t3_0 = f_0[1]
+    %t4_0 = null==%t3_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = f_0[0]
+    %t6_0 = %t5_0.i
+    %t7_1 = 1==%t6_0
+    goto  L4
+L4:
+    %t7_2 = phi(%t7_1, %t7_0)
+    ret %t7_2
+    goto  L1
+L1:
+L3:
+    %t7_0 = 0
+    goto  L4
+After exiting SSA
+=================
+L0:
+    %t1_0 = New([Foo?])
+    %t2_0 = New(Foo)
+    %t2_0.i = 1
+    %t1_0.append(%t2_0)
+    %t1_0.append(null)
+    f_0 = %t1_0
+    %t3_0 = f_0[1]
+    %t4_0 = null==%t3_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = f_0[0]
+    %t6_0 = %t5_0.i
+    %t7_1 = 1==%t6_0
+    %t7_2 = %t7_1
+    goto  L4
+L4:
+    ret %t7_2
+    goto  L1
+L1:
+L3:
+    %t7_0 = 0
+    %t7_2 = %t7_0
+    goto  L4
+""", result);
+    }
 }

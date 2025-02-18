@@ -5,6 +5,7 @@ import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ public class CompiledFunction {
     private BasicBlock currentContinueTarget;
     public int maxLocalReg;
     public int maxStackSize;
+    private final TypeDictionary typeDictionary;
 
     /**
      * We essentially do a form of abstract interpretation as we generate
@@ -30,7 +32,7 @@ public class CompiledFunction {
      */
     private List<Operand> virtualStack = new ArrayList<>();
 
-    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol) {
+    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         setVirtualRegisters(funcDecl.scope);
         this.BID = 0;
@@ -38,6 +40,7 @@ public class CompiledFunction {
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
+        this.typeDictionary = typeDictionary;
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
     }
@@ -408,18 +411,58 @@ public class CompiledFunction {
         return false;
     }
 
+    private boolean codeBoolean(AST.BinaryExpr binaryExpr) {
+        boolean isAnd = binaryExpr.op.str.equals("&&");
+        BasicBlock l1 = createBlock();
+        BasicBlock l2 = createBlock();
+        BasicBlock l3 = createBlock();
+        boolean indexed = compileExpr(binaryExpr.expr1);
+        if (indexed)
+            codeIndexedLoad();
+        if (isAnd) {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l1, l2));
+        } else {
+            code(new Instruction.ConditionalBranch(currentBlock, pop(), l2, l1));
+        }
+        startBlock(l1);
+        compileExpr(binaryExpr.expr2);
+        var temp = ensureTemp();
+        jumpTo(l3);
+        startBlock(l2);
+        // Below we must write to the same temp
+        code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp));
+        jumpTo(l3);
+        startBlock(l3);
+        // leave temp on virtual stack
+        return false;
+    }
+
+
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
-        String opCode = null;
+        String opCode = binaryExpr.op.str;
+        if (opCode.equals("&&") ||
+            opCode.equals("||")) {
+            return codeBoolean(binaryExpr);
+        }
         boolean indexed = compileExpr(binaryExpr.expr1);
         if (indexed)
             codeIndexedLoad();
         indexed = compileExpr(binaryExpr.expr2);
         if (indexed)
             codeIndexedLoad();
-        opCode = binaryExpr.op.str;
         Operand right = pop();
         Operand left = pop();
-        if (left instanceof Operand.ConstantOperand leftconstant &&
+        if (left instanceof Operand.NullConstantOperand &&
+            right instanceof Operand.NullConstantOperand) {
+            long value = 0;
+            switch (opCode) {
+                case "==": value = 1; break;
+                case "!=": value = 0; break;
+                default: throw new CompilerException("Invalid binary op");
+            }
+            pushConstant(value, typeDictionary.INT);
+        }
+        else if (left instanceof Operand.ConstantOperand leftconstant &&
                 right instanceof Operand.ConstantOperand rightconstant) {
             long value = 0;
             switch (opCode) {
@@ -468,12 +511,20 @@ public class CompiledFunction {
     }
 
     private boolean compileConstantExpr(AST.LiteralExpr constantExpr) {
-        pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
+        if (constantExpr.type instanceof Type.TypeInteger)
+            pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
+        else if (constantExpr.type instanceof Type.TypeNull)
+            pushNullConstant(constantExpr.type);
+        else throw new CompilerException("Invalid constant type");
         return false;
     }
 
     private void pushConstant(long value, Type type) {
         pushOperand(new Operand.ConstantOperand(value, type));
+    }
+
+    private void pushNullConstant(Type type) {
+        pushOperand(new Operand.NullConstantOperand(type));
     }
 
     private Operand.TempRegisterOperand createTemp(Type type) {
@@ -482,6 +533,36 @@ public class CompiledFunction {
         if (maxStackSize < virtualStack.size())
             maxStackSize = virtualStack.size();
         return tempRegister;
+    }
+
+    Type typeOfOperand(Operand operand) {
+        if (operand instanceof Operand.ConstantOperand constant)
+            return constant.type;
+        else if (operand instanceof Operand.NullConstantOperand nullConstantOperand)
+            return nullConstantOperand.type;
+        else if (operand instanceof Operand.RegisterOperand registerOperand)
+            return registerOperand.type;
+        else throw new CompilerException("Invalid operand");
+    }
+
+    private Operand.TempRegisterOperand createTempAndMove(Operand src) {
+        Type type = typeOfOperand(src);
+        var temp = createTemp(type);
+        code(new Instruction.Move(src, temp));
+        return temp;
+    }
+
+    private Operand.RegisterOperand ensureTemp() {
+        Operand top = top();
+        if (top instanceof Operand.ConstantOperand
+                || top instanceof Operand.NullConstantOperand
+                || top instanceof Operand.LocalRegisterOperand) {
+            return createTempAndMove(pop());
+        } else if (top instanceof Operand.IndexedOperand) {
+            return codeIndexedLoad();
+        } else if (top instanceof Operand.TempRegisterOperand tempRegisterOperand) {
+            return tempRegisterOperand;
+        } else throw new CompilerException("Cannot convert to temporary register");
     }
 
     private void pushLocal(int regnum, String varName) {
@@ -500,7 +581,7 @@ public class CompiledFunction {
         return virtualStack.getLast();
     }
 
-    private void codeIndexedLoad() {
+    private Operand.TempRegisterOperand codeIndexedLoad() {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
         if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
@@ -511,6 +592,7 @@ public class CompiledFunction {
         }
         else
             code(new Instruction.Move(indexed, temp));
+        return temp;
     }
 
     private void codeIndexedStore() {

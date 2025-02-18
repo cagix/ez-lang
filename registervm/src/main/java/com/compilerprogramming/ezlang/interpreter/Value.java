@@ -11,6 +11,9 @@ public class Value {
         }
         public final long value;
     }
+    static public class NullValue extends Value {
+        public NullValue() {}
+    }
     static public class ArrayValue extends Value {
         public final Type.TypeArray arrayType;
         public final ArrayList<Value> values;
