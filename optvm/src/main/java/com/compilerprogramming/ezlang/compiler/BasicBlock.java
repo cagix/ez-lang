@@ -67,11 +67,12 @@ public class BasicBlock {
     LiveSet liveOut;
 
     /**
-     * Inputs to successor block's phi function
+     * phiUses(B) is the set of variables used in a phi-operation at entry of a block successor of the block B
+     * That is, inputs to successor block's phi functions.
      */
     LiveSet phiUses;
     /**
-     * Phi definitions in this block
+     * phiDefs(B) the variables defined by phi-operations at entry of the block B
      */
     LiveSet phiDefs;
     /**
