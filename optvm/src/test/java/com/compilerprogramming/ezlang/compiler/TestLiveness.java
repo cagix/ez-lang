@@ -444,4 +444,120 @@ L1:
 """, actual);
     }
 
+    @Test
+    public void testSimpleCase() {
+        String src = """
+                func foo()->Int 
+                {
+                    return 1 && 2
+                }
+                """;
+        var typeDict = compileSrc(src);
+        var funcSymbol = typeDict.lookup("foo");
+        CompiledFunction func = (CompiledFunction) ((Symbol.FunctionTypeSymbol) funcSymbol).code();
+        func.livenessAnalysis();
+        StringBuilder result = new StringBuilder();
+        result.append("Pre-SSA\n");
+        func.toStr(result, true);
+        new EnterSSA(func, Options.NONE);
+        func.livenessAnalysis();
+        result.append("Post-SSA\n");
+        func.toStr(result, true);
+        Assert.assertEquals("""
+Pre-SSA
+func foo()->Int
+Reg #0 %t0
+L0:
+    if 1 goto L2 else goto L3
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEIN  = {}
+    #LIVEOUT = {}
+L2:
+    %t0 = 2
+    goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {0}
+    #LIVEIN  = {}
+    #LIVEOUT = {0}
+L4:
+    ret %t0
+    goto  L1
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {0}
+    #VARKILL = {}
+    #LIVEIN  = {0}
+    #LIVEOUT = {}
+L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEIN  = {}
+    #LIVEOUT = {}
+L3:
+    %t0 = 0
+    goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {0}
+    #LIVEIN  = {}
+    #LIVEOUT = {0}
+Post-SSA
+func foo()->Int
+Reg #0 %t0
+Reg #1 %t0_0
+Reg #2 %t0_1
+Reg #3 %t0_2
+L0:
+    if 1 goto L2 else goto L3
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEIN  = {}
+    #LIVEOUT = {}
+L2:
+    %t0_1 = 2
+    goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {2}
+    #UEVAR   = {}
+    #VARKILL = {2}
+    #LIVEIN  = {}
+    #LIVEOUT = {2}
+L4:
+    %t0_2 = phi(%t0_1, %t0_0)
+    ret %t0_2
+    goto  L1
+    #PHIDEFS = {3}
+    #PHIUSES = {}
+    #UEVAR   = {3}
+    #VARKILL = {}
+    #LIVEIN  = {3}
+    #LIVEOUT = {}
+L1:
+    #PHIDEFS = {}
+    #PHIUSES = {}
+    #UEVAR   = {}
+    #VARKILL = {}
+    #LIVEIN  = {}
+    #LIVEOUT = {}
+L3:
+    %t0_0 = 0
+    goto  L4
+    #PHIDEFS = {}
+    #PHIUSES = {1}
+    #UEVAR   = {}
+    #VARKILL = {1}
+    #LIVEIN  = {}
+    #LIVEOUT = {1}
+""", result.toString());
+    }
 }
