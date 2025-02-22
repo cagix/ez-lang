@@ -7,9 +7,7 @@ import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 
 public class CompiledFunction {
 
@@ -27,6 +25,7 @@ public class CompiledFunction {
 
     public boolean isSSA;
     public boolean hasLiveness;
+    private final IncrementalSSA issa;
 
     /**
      * We essentially do a form of abstract interpretation as we generate
@@ -38,10 +37,11 @@ public class CompiledFunction {
      */
     private List<Operand> virtualStack = new ArrayList<>();
 
-    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary) {
+    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary, EnumSet<Options> options) {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         this.functionType = (Type.TypeFunction) functionSymbol.type;
         this.registerPool = new RegisterPool();
+        this.issa = (options != null && options.contains(Options.ISSA)) ? new IncrementalSSABraun(this) : new NoopIncrementalSSA();
         setVirtualRegisters(funcDecl.scope);
         this.BID = 0;
         this.entry = this.currentBlock = createBlock();
@@ -52,18 +52,22 @@ public class CompiledFunction {
         generateArgInstructions(funcDecl.scope);
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
+        issa.finish(options);
         this.frameSlots = registerPool.numRegisters();
     }
-
+    public CompiledFunction(Symbol.FunctionTypeSymbol functionSymbol, TypeDictionary typeDictionary) {
+        this(functionSymbol,typeDictionary,null);
+    }
     public CompiledFunction(Type.TypeFunction functionType, TypeDictionary typeDictionary) {
         this.functionType = (Type.TypeFunction) functionType;
         this.registerPool = new RegisterPool();
-        this.BID = 0;
+        this.issa = new NoopIncrementalSSA();        this.BID = 0;
         this.entry = this.currentBlock = createBlock();
         this.exit = createBlock();
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
         this.typeDictionary = typeDictionary;
+        issa.finish(null);
         this.frameSlots = registerPool.numRegisters();
     }
 
@@ -71,7 +75,7 @@ public class CompiledFunction {
         if (scope.isFunctionParameterScope) {
             for (Symbol symbol: scope.getLocalSymbols()) {
                 if (symbol instanceof Symbol.ParameterSymbol parameterSymbol) {
-                    code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(registerPool.getReg(parameterSymbol.regNumber))));
+                    codeArg(new Operand.LocalRegisterOperand(registerPool.getReg(parameterSymbol.regNumber), parameterSymbol));
                 }
             }
         }
@@ -122,7 +126,7 @@ public class CompiledFunction {
             if (isIndexed)
                 codeIndexedLoad();
             if (virtualStack.size() == 1)
-                code(new Instruction.Ret(pop()));
+                codeReturn(pop());
             else if (virtualStack.size() > 1)
                 throw new CompilerException("Virtual stack has more than one item at return");
         }
@@ -179,7 +183,7 @@ public class CompiledFunction {
             codeIndexedStore();
         else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(varSymbol.regNumber))));
+            codeMove(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(varSymbol.regNumber), varSymbol));
         }
         else
             throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
@@ -196,34 +200,37 @@ public class CompiledFunction {
     private void compileContinue(AST.ContinueStmt continueStmt) {
         if (currentContinueTarget == null)
             throw new CompilerException("No continue target found");
+        assert !issa.isSealed(currentContinueTarget);
         jumpTo(currentContinueTarget);
     }
 
     private void compileBreak(AST.BreakStmt breakStmt) {
         if (currentBreakTarget == null)
             throw new CompilerException("No break target found");
+        assert !issa.isSealed(currentBreakTarget);
         jumpTo(currentBreakTarget);
     }
 
     private void compileWhile(AST.WhileStmt whileStmt) {
-        BasicBlock loopBlock = createLoopHead();
+        BasicBlock loopHead = createLoopHead();
         BasicBlock bodyBlock = createBlock();
         BasicBlock exitBlock = createBlock();
         BasicBlock savedBreakTarget = currentBreakTarget;
         BasicBlock savedContinueTarget = currentContinueTarget;
         currentBreakTarget = exitBlock;
-        currentContinueTarget = loopBlock;
-        startBlock(loopBlock);
+        currentContinueTarget = loopHead;
+        startBlock(loopHead);   // ISSA cannot seal until all back edges done
         boolean indexed = compileExpr(whileStmt.condition);
         if (indexed)
             codeIndexedLoad();
-        code(new Instruction.ConditionalBranch(currentBlock, pop(), bodyBlock, exitBlock));
+        codeCBR(currentBlock, pop(), bodyBlock, exitBlock);
         assert vstackEmpty();
-        startBlock(bodyBlock);
+        startSealedBlock(bodyBlock);  // ISSA If we seal this here fib test fails, wrong code generated, why?
         compileStatement(whileStmt.stmt);
         if (!isBlockTerminated(currentBlock))
-            jumpTo(loopBlock);
-        startBlock(exitBlock);
+            jumpTo(loopHead);
+        issa.sealBlock(loopHead);
+        startSealedBlock(exitBlock);
         currentContinueTarget = savedContinueTarget;
         currentBreakTarget = savedBreakTarget;
     }
@@ -235,6 +242,7 @@ public class CompiledFunction {
 
     public void jumpTo(BasicBlock block) {
         assert !isBlockTerminated(currentBlock);
+        assert !issa.isSealed(block);
         currentBlock.add(new Instruction.Jump(block));
         currentBlock.addSuccessor(block);
     }
@@ -245,28 +253,32 @@ public class CompiledFunction {
         }
         currentBlock = block;
     }
-
+    public void startSealedBlock(BasicBlock block) {
+        startBlock(block);
+        assert !issa.isSealed(currentBlock);
+        issa.sealBlock(currentBlock);
+    }
     private void compileIf(AST.IfElseStmt ifElseStmt) {
-        BasicBlock ifBlock = createBlock();
+        BasicBlock thenBlock = createBlock();
         boolean needElse = ifElseStmt.elseStmt != null;
         BasicBlock elseBlock = needElse ? createBlock() : null;
         BasicBlock exitBlock = createBlock();
         boolean indexed = compileExpr(ifElseStmt.condition);
         if (indexed)
             codeIndexedLoad();
-        code(new Instruction.ConditionalBranch(currentBlock, pop(), ifBlock, needElse ? elseBlock : exitBlock));
+        codeCBR(currentBlock, pop(), thenBlock, needElse ? elseBlock : exitBlock);
         assert vstackEmpty();
-        startBlock(ifBlock);
+        startSealedBlock(thenBlock);        // ISSA seal immediately
         compileStatement(ifElseStmt.ifStmt);
         if (!isBlockTerminated(currentBlock))
             jumpTo(exitBlock);
         if (elseBlock != null) {
-            startBlock(elseBlock);
+            startSealedBlock(elseBlock);    // ISSA seal immediately
             compileStatement(ifElseStmt.elseStmt);
             if (!isBlockTerminated(currentBlock))
                 jumpTo(exitBlock);
         }
-        startBlock(exitBlock);
+        startSealedBlock(exitBlock);        // ISSA seal immediately
     }
 
     private void compileLet(AST.VarStmt letStmt) {
@@ -274,7 +286,7 @@ public class CompiledFunction {
             boolean indexed = compileExpr(letStmt.expr);
             if (indexed)
                 codeIndexedLoad();
-            code(new Instruction.Move(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(letStmt.symbol.regNumber))));
+            codeMove(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(letStmt.symbol.regNumber), letStmt.symbol));
         }
     }
 
@@ -328,7 +340,7 @@ public class CompiledFunction {
             if (!(arg instanceof Operand.TempRegisterOperand) ) {
                 var origArg = pop();
                 arg = createTemp(origArg.type);
-                code(new Instruction.Move(origArg, arg));
+                codeMove(origArg, arg);
             }
             args.add((Operand.RegisterOperand) arg);
         }
@@ -339,9 +351,8 @@ public class CompiledFunction {
         if (callExpr.callee.type instanceof Type.TypeFunction tf &&
                 !(tf.returnType instanceof Type.TypeVoid)) {
             ret = createTemp(tf.returnType);
-            //assert ret.regnum-maxLocalReg == returnStackPos;
         }
-        code(new Instruction.Call(returnStackPos, ret, calleeType, args.toArray(new Operand.RegisterOperand[args.size()])));
+        codeCall(returnStackPos, ret, calleeType, args.toArray(new Operand.RegisterOperand[args.size()]));
         return false;
     }
 
@@ -419,7 +430,7 @@ public class CompiledFunction {
             pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            pushLocal(registerPool.getReg(varSymbol.regNumber));
+            pushLocal(registerPool.getReg(varSymbol.regNumber), varSymbol);
         }
         return false;
     }
@@ -433,28 +444,27 @@ public class CompiledFunction {
         if (indexed)
             codeIndexedLoad();
         if (isAnd) {
-            code(new Instruction.ConditionalBranch(currentBlock, pop(), l1, l2));
+            codeCBR(currentBlock, pop(), l1, l2);
         } else {
-            code(new Instruction.ConditionalBranch(currentBlock, pop(), l2, l1));
+            codeCBR(currentBlock, pop(), l2, l1);
         }
-        startBlock(l1);
+        startSealedBlock(l1);       // ISSA seal immediately
         compileExpr(binaryExpr.expr2);
         var temp = ensureTemp();
         jumpTo(l3);
-        startBlock(l2);
+        startSealedBlock(l2);       // ISSA seal immediately
         // Below we must write to the same temp
-        code(new Instruction.Move(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp));
+        codeMove(new Operand.ConstantOperand(isAnd ? 0 : 1, typeDictionary.INT), temp);
         jumpTo(l3);
-        startBlock(l3);
+        startSealedBlock(l3);       // ISSA seal immediately
         // leave temp on virtual stack
         return false;
     }
 
-
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
         String opCode = binaryExpr.op.str;
         if (opCode.equals("&&") ||
-            opCode.equals("||")) {
+                opCode.equals("||")) {
             return codeBoolean(binaryExpr);
         }
         boolean indexed = compileExpr(binaryExpr.expr1);
@@ -466,7 +476,7 @@ public class CompiledFunction {
         Operand right = pop();
         Operand left = pop();
         if (left instanceof Operand.NullConstantOperand &&
-            right instanceof Operand.NullConstantOperand) {
+                right instanceof Operand.NullConstantOperand) {
             long value = 0;
             switch (opCode) {
                 case "==": value = 1; break;
@@ -496,7 +506,7 @@ public class CompiledFunction {
         }
         else {
             var temp = createTemp(binaryExpr.type);
-            code(new Instruction.Binary(opCode, temp, left, right));
+            codeBinary(opCode, temp, left, right);
         }
         return false;
     }
@@ -518,7 +528,7 @@ public class CompiledFunction {
         }
         else {
             var temp = createTemp(unaryExpr.type);
-            code(new Instruction.Unary(opCode, temp, top));
+            codeUnary(opCode, temp, top);
         }
         return false;
     }
@@ -559,7 +569,7 @@ public class CompiledFunction {
     private Operand.TempRegisterOperand createTempAndMove(Operand src) {
         Type type = typeOfOperand(src);
         var temp = createTemp(type);
-        code(new Instruction.Move(src, temp));
+        codeMove(src, temp);
         return temp;
     }
 
@@ -576,8 +586,8 @@ public class CompiledFunction {
         } else throw new CompilerException("Cannot convert to temporary register");
     }
 
-    private void pushLocal(Register reg) {
-        pushOperand(new Operand.LocalRegisterOperand(reg));
+    private void pushLocal(Register reg, Symbol.VarSymbol varSymbol) {
+        pushOperand(new Operand.LocalRegisterOperand(reg, varSymbol));
     }
 
     private void pushOperand(Operand operand) {
@@ -596,13 +606,13 @@ public class CompiledFunction {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
         if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
-            code(new Instruction.ArrayLoad(loadIndexedOperand, temp));
+            codeArrayLoad(loadIndexedOperand, temp);
         }
         else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
-            code(new Instruction.GetField(loadFieldOperand, temp));
+            codeGetField(loadFieldOperand, temp);
         }
         else
-            code(new Instruction.Move(indexed, temp));
+            codeMove(indexed, temp);
         return temp;
     }
 
@@ -610,30 +620,158 @@ public class CompiledFunction {
         Operand value = pop();
         Operand indexed = pop();
         if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
-            code(new Instruction.ArrayStore(value, loadIndexedOperand));
+            codeArrayStore(value, loadIndexedOperand);
         }
         else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
-            code(new Instruction.SetField(value, loadFieldOperand));
+            codeSetField(value, loadFieldOperand);
         }
         else
-            code(new Instruction.Move(value, indexed));
+            codeMove(value, indexed);
     }
 
     private void codeNew(Type type) {
-        var temp = createTemp(type);
-        if (type instanceof Type.TypeArray typeArray) {
-            code(new Instruction.NewArray(typeArray, temp));
-        }
-        else if (type instanceof Type.TypeStruct typeStruct) {
-            code(new Instruction.NewStruct(typeStruct, temp));
-        }
+        if (type instanceof Type.TypeArray typeArray)
+            codeNewArray(typeArray);
+        else if (type instanceof Type.TypeStruct typeStruct)
+            codeNewStruct(typeStruct);
         else
             throw new CompilerException("Unexpected type: " + type);
     }
 
+    private void codeNewArray(Type.TypeArray typeArray) {
+        var temp = createTemp(typeArray);
+        var target = (Operand.RegisterOperand) issa.write(temp);
+        var insn = new Instruction.NewArray(typeArray, target);
+        issa.recordDef(target, insn);
+        code(insn);
+    }
+
+    private void codeNewStruct(Type.TypeStruct typeStruct) {
+        var temp = createTemp(typeStruct);
+        var target = (Operand.RegisterOperand) issa.write(temp);
+        var insn = new Instruction.NewStruct(typeStruct, target);
+        issa.recordDef(target, insn);
+        code(insn);
+    }
+
     private void codeStoreAppend() {
-        var operand = pop();
-        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
+        var operand = issa.read(pop());
+        Operand.RegisterOperand arrayOperand = (Operand.RegisterOperand) issa.read(top());
+        var insn = new Instruction.AStoreAppend(arrayOperand, operand);
+        issa.recordUse(arrayOperand, insn);
+        issa.recordUse(operand, insn);
+        code(insn);
+    }
+
+    private void codeArg(Operand.LocalRegisterOperand target) {
+        var newtarget = (Operand.RegisterOperand) issa.write(target);
+        var insn = new Instruction.ArgInstruction(newtarget);
+        issa.recordDef(newtarget, insn);
+        code(insn);
+    }
+
+    private void codeMove(Operand srcOperand, Operand destOperand) {
+        srcOperand = issa.read(srcOperand);
+        destOperand = issa.write(destOperand);
+        var insn = new Instruction.Move(srcOperand, destOperand);
+        issa.recordDef(destOperand, insn);
+        issa.recordUse(srcOperand, insn);
+        code(insn);
+    }
+
+    private void codeReturn(Operand resultOperand) {
+        resultOperand = issa.read(resultOperand);
+        var insn = new Instruction.Ret(resultOperand);
+        issa.recordUse(resultOperand, insn);
+        code(insn);
+    }
+
+    private void codeCBR(BasicBlock block, Operand condition, BasicBlock trueBlock, BasicBlock falseBlock) {
+        condition = issa.read(condition);
+        var insn = new Instruction.ConditionalBranch(block, condition, trueBlock, falseBlock);
+        assert !issa.isSealed(trueBlock);
+        assert !issa.isSealed(falseBlock);
+        block.addSuccessor(trueBlock);
+        block.addSuccessor(falseBlock);
+        issa.recordUse(condition, insn);
+        code(insn);
+    }
+
+    private void codeCall(int newBase,
+                          Operand.RegisterOperand targetOperand,
+                          Type.TypeFunction calleeType,
+                          Operand.RegisterOperand ...arguments) {
+        if (targetOperand != null)
+            targetOperand = (Operand.RegisterOperand) issa.write(targetOperand);
+        Operand.RegisterOperand args[] = new Operand.RegisterOperand[arguments.length];
+        for (int i = 0; i < args.length; i++) {
+            args[i] = (Operand.RegisterOperand) issa.read(arguments[i]);
+        }
+        var insn = new Instruction.Call(newBase, targetOperand, calleeType, args);
+        for (int i = 0; i < args.length; i++) {
+            issa.recordUse(args[i], insn);
+        }
+        if (targetOperand != null)
+            issa.recordDef(targetOperand, insn);
+        code(insn);
+    }
+
+    private void codeUnary(String opCode, Operand.RegisterOperand result, Operand operand) {
+        operand = issa.read(operand);
+        result = (Operand.RegisterOperand) issa.write(result);
+        var insn = new Instruction.Unary(opCode, result, operand);
+        issa.recordDef(result, insn);
+        issa.recordUse(operand, insn);
+        code(insn);
+    }
+
+    private void codeBinary(String opCode, Operand.RegisterOperand result, Operand left, Operand right) {
+        left = issa.read(left);
+        right = issa.read(right);
+        result = (Operand.RegisterOperand) issa.write(result);
+        var insn = new Instruction.Binary(opCode, result, left, right);
+        issa.recordDef(result, insn);
+        issa.recordUse(left, insn);
+        issa.recordUse(right, insn);
+        code(insn);
+    }
+
+    private void codeArrayLoad(Operand.LoadIndexedOperand loadIndexedOperand, Operand.RegisterOperand target) {
+        loadIndexedOperand = new Operand.LoadIndexedOperand(issa.read(loadIndexedOperand.arrayOperand), issa.read(loadIndexedOperand.indexOperand));
+        target = (Operand.RegisterOperand) issa.write(target);
+        var insn = new Instruction.ArrayLoad(loadIndexedOperand, target);
+        issa.recordDef(target, insn);
+        issa.recordUse(loadIndexedOperand.arrayOperand, insn);
+        issa.recordUse(loadIndexedOperand.indexOperand, insn);
+        code(insn);
+    }
+
+    private void codeGetField(Operand.LoadFieldOperand loadFieldOperand, Operand.RegisterOperand target) {
+        loadFieldOperand = new Operand.LoadFieldOperand(issa.read(loadFieldOperand.structOperand), loadFieldOperand.fieldName, loadFieldOperand.fieldIndex);
+        target = (Operand.RegisterOperand) issa.write(target);
+        var insn = new Instruction.GetField(loadFieldOperand, target);
+        issa.recordDef(target, insn);
+        issa.recordUse(loadFieldOperand.structOperand, insn);
+        code(insn);
+    }
+
+    private void codeArrayStore(Operand value, Operand.LoadIndexedOperand loadIndexedOperand) {
+        loadIndexedOperand = new Operand.LoadIndexedOperand(issa.read(loadIndexedOperand.arrayOperand), issa.read(loadIndexedOperand.indexOperand));
+        value = issa.read(value);
+        var insn = new Instruction.ArrayStore(value, loadIndexedOperand);
+        issa.recordUse(loadIndexedOperand.arrayOperand, insn);
+        issa.recordUse(loadIndexedOperand.indexOperand, insn);
+        issa.recordUse(value, insn);
+        code(insn);
+    }
+
+    private void codeSetField(Operand value, Operand.LoadFieldOperand loadFieldOperand) {
+        loadFieldOperand = new Operand.LoadFieldOperand(issa.read(loadFieldOperand.structOperand), loadFieldOperand.fieldName, loadFieldOperand.fieldIndex);
+        value = issa.read(value);
+        var insn = new Instruction.SetField(value, loadFieldOperand);
+        issa.recordUse(loadFieldOperand.structOperand, insn);
+        issa.recordUse(value, insn);
+        code(insn);
     }
 
     private boolean vstackEmpty() {
@@ -676,5 +814,308 @@ public class CompiledFunction {
         }
         sb.append("}\n");
         return sb;
+    }
+
+    interface IncrementalSSA {
+        Operand read(Operand operand);
+        Operand write(Operand operand);
+        void recordUse(Operand operand, Instruction instruction);
+        void recordDef(Register reg, Instruction instruction);
+        void recordDef(Operand operand, Instruction instruction);
+        void sealBlock(BasicBlock block);
+        boolean isSealed(BasicBlock block);
+        void finish(EnumSet<Options> options);
+    }
+
+    /**
+     * Support for AST to SSA IR using Braun's method.
+     * See Simple and Efficient Construction of Static Single Assignment Form, 2013
+     * Matthias Braun, Sebastian Buchwald, Sebastian Hack, Roland Leißa
+     */
+    static final class IncrementalSSABraun implements IncrementalSSA {
+
+        CompiledFunction function;
+
+        // For each unique variable (variable with same name in different scopes must be distinct)
+        // a mapping is maintained for the name to SSA value (virtual register) in each block.
+        // we could add this mapping to the BB itself but it seems nicer to keep it separate
+        // at least for now.
+        // Note that we use the nonSSAId as proxy for variable name
+        // because this id is unique for non-SSA variables, but for SSA versions this refers
+        // back to the original ID
+        Map<Integer, Map<BasicBlock, Register>> currentDef = new HashMap<>();
+        // Flags blocks that are completed in terms of instruction generation
+        BitSet sealedBlocks = new BitSet();
+        // Tracks Phis that are not finalized because the basic block is not yet sealed
+        Map<BasicBlock, Map<Register, Instruction.Phi>> incompletePhis = new HashMap<>();
+
+        // Not explicitly stated in the paper but implicit in the algo is
+        // the availability of Def-use chains. We have to main this incrementally as we
+        // generate code - used when eliminating trivial phis
+        Map<Register, SSAEdges.SSADef> ssaDefUses = new HashMap<>();
+
+        // This is not part of the spec, it is just an implementation detail
+        // We pre-assign registers to local declared vars, but then the SSA part
+        // creates new ones. However, the first time a variable is versioned we could just use the
+        // original regnum.
+        // This set tracks whether a version is being created first time
+        // It also helps us maintain version numbers similar to traditional SSA
+        Map<Integer,Integer> versioned = new HashMap<>();
+
+        private IncrementalSSABraun(CompiledFunction function) {
+            this.function = function;
+        }
+
+        /**
+         * Associates a new definition (value) to a variable name within a basic block
+         */
+        private void writeVariable(Register variable, BasicBlock block, Register value) {
+            currentDef.computeIfAbsent(variable.nonSSAId(), k -> new HashMap<>()).put(block, value);
+        }
+
+        /**
+         * Looks up the current SSA value (virtual register) associated with a name, inside a block.
+         * If no mapping is found, processing depends on status of the block.
+         * @see #readVariableRecursive(Register, BasicBlock)
+         */
+        private Register readVariable(Register variable, BasicBlock block) {
+            Map<BasicBlock, Register> defs = currentDef.get(variable.nonSSAId());
+            if (defs != null && defs.containsKey(block)) {
+                // local value numbering
+                return defs.get(block);
+            }
+            // global value numbering
+            return readVariableRecursive(variable, block);
+        }
+
+        /**
+         * Called when a block does not have a mapping for a variable.
+         * If the block is still under construction, then a Phi is inserted into the
+         * block - and the phi is marked as incomplete.
+         * If block is constructed, then we look at predecessors for definitions;
+         * in case of more than 1 predecessor a phi is created with input
+         * obtained recursively via each predecessor block.
+         * In case of 1 predecessor the value is read recursively from that predecessor.
+         */
+        private Register readVariableRecursive(Register variable, BasicBlock block) {
+            Register val;
+            if (!isSealed(block)) {
+                // incomplete CFG
+                val = makeVersion(variable);
+                Instruction.Phi phi = makePhi(val, block);
+                incompletePhis.computeIfAbsent(block, k -> new HashMap<>()).put(variable, phi);
+            }
+            else if (block.predecessors.size() == 1) {
+                // Optimize the common case of one predecessor: No phi needed
+                val = readVariable(variable, block.predecessors.get(0));
+            }
+            else {
+                // Break potential cycles with operandless phis
+                val = makeVersion(variable);
+                Instruction.Phi phi = makePhi(val, block);
+                writeVariable(variable, block, val);
+                val = addPhiOperands(variable,phi);
+            }
+            writeVariable(variable, block, val);
+            return val;
+        }
+
+        private Instruction.Phi makePhi(Register val, BasicBlock block) {
+            Instruction.Phi phi = new Instruction.Phi(val, new ArrayList<>());
+            recordDef(val, phi);
+            block.add(0, phi);
+            return phi;
+        }
+
+        /**
+         * Populate the members of a phi instruction
+         */
+        private Register addPhiOperands(Register variable, Instruction.Phi phi) {
+            assert phi.numInputs() == 0;
+            // Determine operands from predecessors
+            for (BasicBlock pred: phi.block.predecessors) {
+                phi.addInput(readVariable(variable,pred));
+            }
+            return tryRemovingPhi(phi);
+        }
+
+        private Register tryRemovingPhi(Instruction.Phi phi) {
+            Register same = null;
+            // Check if phi has distinct inputs
+            for (int i = 0; i < phi.numInputs(); i++) {
+                if (!phi.isRegisterInput(i))
+                    // Cannot happen?
+                    throw new IllegalStateException();
+                var use = phi.inputAsRegister(i);
+                if (use.equals(same) || use.equals(phi.value()))
+                    continue; // Unique value or self reference
+                if (same != null)
+                    // More than 1 distinct value, so keep phi
+                    return phi.value();
+                same = use;
+            }
+            if (same == null) {
+                // phi is unreachable or in the start block
+                // Paper suggests we create an Undef, but we throw an exception
+                // same = function.registerPool.newReg("Undef", null);
+                throw new CompilerException("Undefined value for phi " + phi.value());
+            }
+            // remember uses except phi
+            var users = getUsesExcept(phi);
+            // remove all uses of phi to same and remove phi
+            replacePhiValueAndUsers(phi, same);
+            phi.block.deleteInstruction(phi);
+            // try to recursively remove all phi users, which might have become trivial
+            for (var use: users) {
+                if (use instanceof Instruction.Phi phiuser)
+                    tryRemovingPhi(phiuser);
+            }
+            return same;
+        }
+
+        /**
+         * Reroute all uses of phi to new value
+         */
+        private void replacePhiValueAndUsers(Instruction.Phi phi, Register newValue) {
+            var oldDefUseChain = ssaDefUses.get(phi.value());
+            var newDefUseChain = ssaDefUses.get(newValue);
+            if (newDefUseChain == null) {
+                // Can be null because this may be existing def
+                newDefUseChain = SSAEdges.addDef(ssaDefUses, newValue, phi);
+            }
+            if (oldDefUseChain != null) {
+                for (Instruction instruction: oldDefUseChain.useList) {
+                    if (instruction instanceof Instruction.Phi somePhi) {
+                        somePhi.replaceInput(phi.value(), newValue);
+                    }
+                    else {
+                        instruction.replaceUse(phi.value(), newValue);
+                    }
+                }
+                // Users of phi old value become users of the new value
+                newDefUseChain.useList.addAll(oldDefUseChain.useList);
+                oldDefUseChain.useList.clear();
+                // FIXME remove old def from def-use chains
+            }
+        }
+
+        private List<Instruction> getUsesExcept(Instruction.Phi phi) {
+            var oldDefUseChain = ssaDefUses.get(phi.value());
+            if (oldDefUseChain == null) {
+                return new ArrayList<>();
+            }
+            var useList = new ArrayList<>(oldDefUseChain.useList);
+            useList.remove(phi);
+            return useList;
+        }
+
+        @Override
+        public Operand read(Operand operand) {
+            // We have to consider temps too because of boolean expressions
+            // where temps are not SSA
+            if (operand instanceof Operand.RegisterOperand localRegisterOperand) {
+                var reg = readVariable(localRegisterOperand.reg, function.currentBlock);
+                operand = new Operand.RegisterOperand(reg);
+            }
+            return operand;
+        }
+        @Override
+        public Operand write(Operand operand) {
+            // We have to consider temps too because of boolean expressions
+            // where temps are not SSA
+            if (operand instanceof Operand.RegisterOperand localRegisterOperand) {
+                var variable = localRegisterOperand.reg;
+                Register newValue = makeVersion(variable);
+                writeVariable(variable, function.currentBlock, newValue);
+                operand = new Operand.RegisterOperand(newValue);
+            }
+            return operand;
+        }
+
+        private Register makeVersion(Register variable) {
+            Register newValue;
+            Integer version = versioned.get(variable.nonSSAId());
+            // Avoid creating a new value first time because we already
+            // have a pre-created register we can use
+            if (version == null) {
+                newValue = variable;
+                versioned.put(variable.nonSSAId(), 1);
+            }
+            else {
+                versioned.put(variable.nonSSAId(), version + 1);
+                newValue = function.registerPool.ssaReg(variable, version);
+            }
+            return newValue;
+        }
+
+        @Override
+        public void recordUse(Operand operand, Instruction instruction) {
+            if (operand instanceof Operand.RegisterOperand registerOperand) {
+                SSAEdges.recordUse(ssaDefUses, instruction, registerOperand.reg);
+            }
+        }
+        @Override
+        public void recordDef(Register reg, Instruction instruction) {
+            SSAEdges.recordDef(ssaDefUses, reg, instruction);
+        }
+        @Override
+        public void recordDef(Operand operand, Instruction instruction) {
+            if (operand instanceof Operand.RegisterOperand registerOperand) {
+                SSAEdges.recordDef(ssaDefUses, registerOperand.reg, instruction);
+            }
+        }
+        @Override
+        public void sealBlock(BasicBlock block) {
+            if (isSealed(block))
+                return;
+            var pendingPhis = incompletePhis.remove(block);
+            if (pendingPhis != null) {
+                for (var variable : pendingPhis.keySet()) {
+                    addPhiOperands(variable, pendingPhis.get(variable));
+                }
+            }
+            sealedBlocks.set(block.bid);
+        }
+        @Override
+        public boolean isSealed(BasicBlock block) {
+            return sealedBlocks.get(block.bid);
+        }
+        @Override
+        public void finish(EnumSet<Options> options) {
+            function.isSSA = true;
+            if (options != null && options.contains(Options.DUMP_SSA_IR)) {
+                function.dumpIR(false, "Post SSA IR");
+            }
+        }
+    }
+
+    static final class NoopIncrementalSSA implements IncrementalSSA {
+        @Override
+        public Operand read(Operand operand) {
+            return operand;
+        }
+        @Override
+        public Operand write(Operand operand) {
+            return operand;
+        }
+        @Override
+        public void recordUse(Operand operand, Instruction instruction) {
+        }
+        @Override
+        public void recordDef(Register reg, Instruction instruction) {
+        }
+        @Override
+        public void recordDef(Operand operand, Instruction instruction) {
+        }
+        @Override
+        public void sealBlock(BasicBlock block) {
+        }
+        @Override
+        public boolean isSealed(BasicBlock block) {
+            return false;
+        }
+        @Override
+        public void finish(EnumSet<Options> options) {
+        }
     }
 }

@@ -83,12 +83,16 @@ public class SSAEdges {
 
     private static void recordUses(Map<Register, SSADef> defUseChains, Register[] inputs, BasicBlock block, Instruction instruction) {
         for (Register register : inputs) {
-            SSADef def = defUseChains.get(register);
-            def.useList.add(instruction);
+            recordUse(defUseChains, instruction, register);
         }
     }
 
-    private static void recordDef(Map<Register, SSADef> defUseChains, Register value, Instruction instruction) {
+    public static void recordUse(Map<Register, SSADef> defUseChains, Instruction instruction, Register register) {
+        SSADef def = defUseChains.get(register);
+        def.useList.add(instruction);
+    }
+
+    public static void recordDef(Map<Register, SSADef> defUseChains, Register value, Instruction instruction) {
         if (defUseChains.containsKey(value))
             throw new CompilerException("Register already defined, invalid multiple definition in SSA");
         defUseChains.put(value, new SSADef(instruction));

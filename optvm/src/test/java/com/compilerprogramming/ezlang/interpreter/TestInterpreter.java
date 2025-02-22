@@ -13,6 +13,7 @@ public class TestInterpreter {
         return compileAndRun(src, mainFunction, Options.NONE);
     }
     Value compileAndRun(String src, String mainFunction, EnumSet<Options> options) {
+        //options.add(Options.ISSA);
         var compiler = new Compiler();
         var typeDict = compiler.compileSrc(src, options);
         var compiled = compiler.dumpIR(typeDict);

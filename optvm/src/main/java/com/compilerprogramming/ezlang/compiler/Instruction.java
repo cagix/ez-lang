@@ -290,8 +290,6 @@ public abstract class Instruction {
             super(I_CBR, (Operand.RegisterOperand) null, condition);
             this.trueBlock = trueBlock;
             this.falseBlock = falseBlock;
-            currentBlock.addSuccessor(trueBlock);
-            currentBlock.addSuccessor(falseBlock);
         }
         public Operand condition() { return uses[0]; }
         @Override
@@ -425,6 +423,22 @@ public abstract class Instruction {
             }
             sb.append(")");
             return sb;
+        }
+        public void addInput(Register register) {
+            var newUses = new Operand[uses.length + 1];
+            System.arraycopy(uses, 0, newUses, 0, uses.length);
+            newUses[newUses.length-1] = new Operand.RegisterOperand(register);
+            this.uses = newUses;
+        }
+        public void replaceInput(Register oldReg, Register newReg) {
+            for (int i = 0; i < numInputs(); i++) {
+                if (isRegisterInput(i)) {
+                    Register in = inputAsRegister(i);
+                    if (in.equals(oldReg)) {
+                        replaceInput(i, newReg);
+                    }
+                }
+            }
         }
     }
 

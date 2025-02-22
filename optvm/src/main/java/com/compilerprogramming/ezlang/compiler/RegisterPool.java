@@ -49,7 +49,7 @@ public class RegisterPool {
     }
     public void toStr(StringBuilder sb) {
         for (Register reg : registers) {
-            sb.append("Reg #").append(reg.id).append(" ").append(reg.name()).append("\n");
+            sb.append("Reg #").append(reg.id).append(" ").append(reg.name()).append(" ").append(reg.nonSSAId()).append("\n");
         }
     }
 }
