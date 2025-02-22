@@ -393,23 +393,6 @@ public class CompiledFunction {
         return false;
     }
 
-    private void codeNew(Type type) {
-        var temp = createTemp(type);
-        if (type instanceof Type.TypeArray typeArray) {
-            code(new Instruction.NewArray(typeArray, temp));
-        }
-        else if (type instanceof Type.TypeStruct typeStruct) {
-            code(new Instruction.NewStruct(typeStruct, temp));
-        }
-        else
-            throw new CompilerException("Unexpected type: " + type);
-    }
-
-    private void codeStoreAppend() {
-        var operand = pop();
-        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
-    }
-
     private boolean compileNewExpr(AST.NewExpr newExpr) {
         codeNew(newExpr.type);
         if (newExpr.initExprList != null && !newExpr.initExprList.isEmpty()) {
@@ -634,6 +617,23 @@ public class CompiledFunction {
         }
         else
             code(new Instruction.Move(value, indexed));
+    }
+
+    private void codeNew(Type type) {
+        var temp = createTemp(type);
+        if (type instanceof Type.TypeArray typeArray) {
+            code(new Instruction.NewArray(typeArray, temp));
+        }
+        else if (type instanceof Type.TypeStruct typeStruct) {
+            code(new Instruction.NewStruct(typeStruct, temp));
+        }
+        else
+            throw new CompilerException("Unexpected type: " + type);
+    }
+
+    private void codeStoreAppend() {
+        var operand = pop();
+        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
     }
 
     private boolean vstackEmpty() {
