@@ -39,19 +39,19 @@ public class TestLiveness {
         String output = Compiler.dumpIR(typeDict, true);
         Assert.assertEquals("""
 func print(n: Int)
-Reg #0 n
+Reg #0 n 0
 L0:
     arg n
     goto  L1
 L1:
 func foo()
-Reg #0 i
-Reg #1 s
-Reg #2 %t2
-Reg #3 %t3
-Reg #4 %t4
-Reg #5 %t5
-Reg #6 %t6
+Reg #0 i 0
+Reg #1 s 1
+Reg #2 %t2 2
+Reg #3 %t3 3
+Reg #4 %t4 4
+Reg #5 %t5 5
+Reg #6 %t6 6
 L0:
     i = 1
     s = 1
@@ -159,13 +159,13 @@ L1:
         String output = Compiler.dumpIR(typeDict, true);
         Assert.assertEquals("""
 func foo(a: Int,b: Int)
-Reg #0 a
-Reg #1 b
-Reg #2 %t2
-Reg #3 %t3
-Reg #4 %t4
-Reg #5 %t5
-Reg #6 %t6
+Reg #0 a 0
+Reg #1 b 1
+Reg #2 %t2 2
+Reg #3 %t3 3
+Reg #4 %t4 4
+Reg #5 %t5 5
+Reg #6 %t6 6
 L0:
     arg a
     arg b
@@ -264,6 +264,8 @@ L1:
                 function.currentBlock,
                 new Operand.RegisterOperand(i),
                 b2, b3));
+        function.currentBlock.addSuccessor(b2);
+        function.currentBlock.addSuccessor(b3);
         function.startBlock(b2);
         function.code(new Instruction.Move(
                 new Operand.ConstantOperand(0, typeDictionary.INT),
@@ -284,6 +286,8 @@ L1:
                 function.currentBlock,
                 new Operand.RegisterOperand(i),
                 b1, b4));
+        function.currentBlock.addSuccessor(b1);
+        function.currentBlock.addSuccessor(b4);
         function.startBlock(b4);
         function.code(new Instruction.Ret(new Operand.RegisterOperand(s)));
         function.startBlock(function.exit);
@@ -301,8 +305,8 @@ L1:
         String actual = function.toStr(new StringBuilder(), true).toString();
         Assert.assertEquals("""
 func foo()->Int
-Reg #0 i
-Reg #1 s
+Reg #0 i 0
+Reg #1 s 1
 L0:
     i = 1
     goto  L2
@@ -366,11 +370,11 @@ L1:
         String actual = function.toStr(new StringBuilder(), true).toString();
         Assert.assertEquals("""
 func foo(p: Int)
-Reg #0 p
-Reg #1 a1
-Reg #2 a2
-Reg #3 b1
-Reg #4 b2
+Reg #0 p 0
+Reg #1 a1 1
+Reg #2 a2 2
+Reg #3 b1 3
+Reg #4 b2 4
 L0:
     arg p
     a1 = 42
@@ -409,10 +413,10 @@ L1:
         String actual = function.toStr(new StringBuilder(), true).toString();
         Assert.assertEquals("""
 func foo(p: Int)->Int
-Reg #0 p
-Reg #1 x1
-Reg #2 x3
-Reg #3 x2
+Reg #0 p 0
+Reg #1 x1 1
+Reg #2 x3 2
+Reg #3 x2 3
 L0:
     arg p
     x1 = 1
@@ -466,7 +470,7 @@ L1:
         Assert.assertEquals("""
 Pre-SSA
 func foo()->Int
-Reg #0 %t0
+Reg #0 %t0 0
 L0:
     if 1 goto L2 else goto L3
     #PHIDEFS = {}
@@ -511,10 +515,10 @@ L3:
     #LIVEOUT = {0}
 Post-SSA
 func foo()->Int
-Reg #0 %t0
-Reg #1 %t0_0
-Reg #2 %t0_1
-Reg #3 %t0_2
+Reg #0 %t0 0
+Reg #1 %t0_0 0
+Reg #2 %t0_1 0
+Reg #3 %t0_2 0
 L0:
     if 1 goto L2 else goto L3
     #PHIDEFS = {}

@@ -11,7 +11,8 @@ public class TestInterferenceGraph {
     private CompiledFunction buildTest1() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
-        functionType.addArg(new Symbol.ParameterSymbol("a", typeDictionary.INT));
+        var argSymbol = new Symbol.ParameterSymbol("a", typeDictionary.INT);
+        functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.INT);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
@@ -19,7 +20,7 @@ public class TestInterferenceGraph {
         Register b = regPool.newReg("b", typeDictionary.INT);
         Register c = regPool.newReg("c", typeDictionary.INT);
         Register d = regPool.newReg("d", typeDictionary.INT);
-        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(a)));
+        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(a, argSymbol)));
         function.code(new Instruction.Binary(
                 "+",
                 new Operand.RegisterOperand(a),
@@ -100,6 +101,8 @@ public class TestInterferenceGraph {
                 function.currentBlock,
                 new Operand.RegisterOperand(a),
                 b1, b2));
+        function.currentBlock.addSuccessor(b1);
+        function.currentBlock.addSuccessor(b2);
         function.startBlock(b1);
         function.code(new Instruction.Move(
                 new Operand.ConstantOperand(2, typeDictionary.INT),

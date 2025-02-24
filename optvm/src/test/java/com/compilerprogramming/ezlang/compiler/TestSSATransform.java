@@ -638,13 +638,14 @@ L3:
     static CompiledFunction buildLostCopyTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
-        functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
+        var argSymbol = new Symbol.ParameterSymbol("p", typeDictionary.INT);
+        functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.INT);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
         Register p = regPool.newReg("p", typeDictionary.INT);
         Register x1 = regPool.newReg("x1", typeDictionary.INT);
-        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(p)));
+        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(p, argSymbol)));
         function.code(new Instruction.Move(
                 new Operand.ConstantOperand(1, typeDictionary.INT),
                 new Operand.RegisterOperand(x1)));
@@ -659,6 +660,8 @@ L3:
                 new Operand.ConstantOperand(1, typeDictionary.INT)));
         function.code(new Instruction.ConditionalBranch(B2,
                 new Operand.RegisterOperand(p), B2, function.exit));
+        function.currentBlock.addSuccessor(B2);
+        function.currentBlock.addSuccessor(function.exit);
         function.startBlock(function.exit);
         function.code(new Instruction.Ret(new Operand.RegisterOperand(x2)));
         function.isSSA = true;
@@ -706,7 +709,8 @@ L1:
     static CompiledFunction buildSwapTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
         Type.TypeFunction functionType = new Type.TypeFunction("foo");
-        functionType.addArg(new Symbol.ParameterSymbol("p", typeDictionary.INT));
+        var argSymbol = new Symbol.ParameterSymbol("p", typeDictionary.INT);
+        functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.VOID);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
@@ -715,7 +719,7 @@ L1:
         Register a2 = regPool.newReg("a2", typeDictionary.INT);
         Register b1 = regPool.newReg("b1", typeDictionary.INT);
         Register b2 = regPool.newReg("b2", typeDictionary.INT);
-        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(p)));
+        function.code(new Instruction.ArgInstruction(new Operand.LocalRegisterOperand(p, argSymbol)));
         function.code(new Instruction.Move(
                 new Operand.ConstantOperand(42, typeDictionary.INT),
                 new Operand.RegisterOperand(a1)));
@@ -728,6 +732,8 @@ L1:
         function.code(new Instruction.Phi(b2, Arrays.asList(b1, a2)));
         function.code(new Instruction.ConditionalBranch(B2,
                 new Operand.RegisterOperand(p), B2, function.exit));
+        function.currentBlock.addSuccessor(B2);
+        function.currentBlock.addSuccessor(function.exit);
         function.startBlock(function.exit);
         function.isSSA = true;
         return function;

@@ -83,11 +83,13 @@ public class Register {
      * During SSA form this is not valid for registers that are instances of SSARegister.
      */
     public int nonSSAId() {
+        //assert frameSlot >= 0; // assert inteferes with verbose display
         return frameSlot;
     }
     public void updateSlot(int slot) {
         this.frameSlot = slot;
     }
+    public int frameSlot() { return frameSlot; }
 
     /**
      * An SSA Register retains a reference to the original
@@ -106,4 +108,6 @@ public class Register {
             return originalRegNumber;
         }
     }
+
+
 }

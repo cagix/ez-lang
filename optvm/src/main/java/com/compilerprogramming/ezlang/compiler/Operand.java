@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler;
 
+import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.Type;
 
 public class Operand {
@@ -35,7 +36,7 @@ public class Operand {
             if (reg == null)
                 throw new NullPointerException();
         }
-        public int frameSlot() { return reg.nonSSAId(); }
+        public int frameSlot() { return reg.frameSlot(); }
 
         public RegisterOperand copy(Register register) {
            return new RegisterOperand(register);
@@ -48,12 +49,14 @@ public class Operand {
     }
 
     public static class LocalRegisterOperand extends RegisterOperand {
-        public LocalRegisterOperand(Register reg) {
+        Symbol.VarSymbol variable;
+        public LocalRegisterOperand(Register reg, Symbol.VarSymbol variable) {
             super(reg);
+            this.variable = variable;
         }
         @Override
         public RegisterOperand copy(Register register) {
-            return new LocalRegisterOperand(register);
+            return new LocalRegisterOperand(register, variable);
         }
     }
 
