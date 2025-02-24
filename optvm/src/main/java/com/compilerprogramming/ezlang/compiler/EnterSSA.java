@@ -94,6 +94,8 @@ public class EnterSSA {
                 while (b != null) {
                     visited.set(b.bid);
                     for (BasicBlock d: b.dominationFrontier) {
+                        if (d == function.exit) // The exit block does not need any phis as it has no instructions
+                            continue;
                         // insert phi for x in d
                         d.insertPhiFor(x);
                         if (!visited.get(d.bid))

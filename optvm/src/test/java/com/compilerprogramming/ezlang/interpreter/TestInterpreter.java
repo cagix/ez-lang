@@ -4,15 +4,24 @@ import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Options;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
 
+@RunWith(Parameterized.class)
 public class TestInterpreter {
 
+    @Parameterized.Parameter
+    public EnumSet<Options> options;
+
     Value compileAndRun(String src, String mainFunction) {
-        return compileAndRun(src, mainFunction, Options.NONE);
+        return compileAndRun(src, mainFunction, options);
     }
-    Value compileAndRun(String src, String mainFunction, EnumSet<Options> options) {
+    Value compileAndRun(String src, String mainFunction, EnumSet<Options> optionsIgnored) {
         //options.add(Options.ISSA);
         var compiler = new Compiler();
         var typeDict = compiler.compileSrc(src, options);
@@ -21,6 +30,16 @@ public class TestInterpreter {
         var interpreter = new Interpreter(typeDict);
         return interpreter.run(mainFunction);
     }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        List<Object[]> parameters = new ArrayList<>();
+        parameters.add(new Object[] { Options.NONE });
+        parameters.add(new Object[] { Options.OPT });
+        parameters.add(new Object[] { Options.OPT_ISSA });
+        return parameters;
+    }
+
 
     @Test
     public void testFunction1() {

@@ -176,14 +176,14 @@ public class CompiledFunction {
     }
 
     private void compileWhile(AST.WhileStmt whileStmt) {
-        BasicBlock loopBlock = createLoopHead();
+        BasicBlock loopHead = createLoopHead();
         BasicBlock bodyBlock = createBlock();
         BasicBlock exitBlock = createBlock();
         BasicBlock savedBreakTarget = currentBreakTarget;
         BasicBlock savedContinueTarget = currentContinueTarget;
         currentBreakTarget = exitBlock;
-        currentContinueTarget = loopBlock;
-        startBlock(loopBlock);
+        currentContinueTarget = loopHead;
+        startBlock(loopHead);
         boolean indexed = compileExpr(whileStmt.condition);
         if (indexed)
             codeIndexedLoad();
@@ -192,7 +192,7 @@ public class CompiledFunction {
         startBlock(bodyBlock);
         compileStatement(whileStmt.stmt);
         if (!isBlockTerminated(currentBlock))
-            jumpTo(loopBlock);
+            jumpTo(loopHead);
         startBlock(exitBlock);
         currentContinueTarget = savedContinueTarget;
         currentBreakTarget = savedBreakTarget;
@@ -217,16 +217,16 @@ public class CompiledFunction {
     }
 
     private void compileIf(AST.IfElseStmt ifElseStmt) {
-        BasicBlock ifBlock = createBlock();
+        BasicBlock thenBlock = createBlock();
         boolean needElse = ifElseStmt.elseStmt != null;
         BasicBlock elseBlock = needElse ? createBlock() : null;
         BasicBlock exitBlock = createBlock();
         boolean indexed = compileExpr(ifElseStmt.condition);
         if (indexed)
             codeIndexedLoad();
-        code(new Instruction.ConditionalBranch(currentBlock, pop(), ifBlock, needElse ? elseBlock : exitBlock));
+        code(new Instruction.ConditionalBranch(currentBlock, pop(), thenBlock, needElse ? elseBlock : exitBlock));
         assert vstackEmpty();
-        startBlock(ifBlock);
+        startBlock(thenBlock);
         compileStatement(ifElseStmt.ifStmt);
         if (!isBlockTerminated(currentBlock))
             jumpTo(exitBlock);
@@ -363,23 +363,6 @@ public class CompiledFunction {
         return false;
     }
 
-    private void codeNew(Type type) {
-        var temp = createTemp(type);
-        if (type instanceof Type.TypeArray typeArray) {
-            code(new Instruction.NewArray(typeArray, temp));
-        }
-        else if (type instanceof Type.TypeStruct typeStruct) {
-            code(new Instruction.NewStruct(typeStruct, temp));
-        }
-        else
-            throw new CompilerException("Unexpected type: " + type);
-    }
-
-    private void codeStoreAppend() {
-        var operand = pop();
-        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
-    }
-
     private boolean compileNewExpr(AST.NewExpr newExpr) {
         codeNew(newExpr.type);
         if (newExpr.initExprList != null && !newExpr.initExprList.isEmpty()) {
@@ -436,7 +419,6 @@ public class CompiledFunction {
         // leave temp on virtual stack
         return false;
     }
-
 
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
         String opCode = binaryExpr.op.str;
@@ -581,15 +563,17 @@ public class CompiledFunction {
         return virtualStack.getLast();
     }
 
+    private boolean vstackEmpty() {
+        return virtualStack.isEmpty();
+    }
+
     private Operand.TempRegisterOperand codeIndexedLoad() {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
-        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand)
             code(new Instruction.ArrayLoad(loadIndexedOperand, temp));
-        }
-        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand)
             code(new Instruction.GetField(loadFieldOperand, temp));
-        }
         else
             code(new Instruction.Move(indexed, temp));
         return temp;
@@ -598,17 +582,28 @@ public class CompiledFunction {
     private void codeIndexedStore() {
         Operand value = pop();
         Operand indexed = pop();
-        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand)
             code(new Instruction.ArrayStore(value, loadIndexedOperand));
-        }
-        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand)
             code(new Instruction.SetField(value, loadFieldOperand));
-        }
         else
             code(new Instruction.Move(value, indexed));
     }
 
-    private boolean vstackEmpty() {
-        return virtualStack.isEmpty();
+    private void codeNew(Type type) {
+        var temp = createTemp(type);
+        if (type instanceof Type.TypeArray typeArray)
+            code(new Instruction.NewArray(typeArray, temp));
+        else if (type instanceof Type.TypeStruct typeStruct)
+            code(new Instruction.NewStruct(typeStruct, temp));
+        else
+            throw new CompilerException("Unexpected type: " + type);
     }
+
+    private void codeStoreAppend() {
+        var operand = pop();
+        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
+    }
+
+
 }
