@@ -824,7 +824,6 @@ L1:
     // http://users.csc.calpoly.edu/~akeen/courses/csc431/handouts/references/ssa_example.pdf
     @Test
     public void testSSAExample() {
-        // TODO
         String src = """
 func foo(x: Int, y: Int)->Int {
    var sum: Int
@@ -843,8 +842,117 @@ func foo(x: Int, y: Int)->Int {
 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
-
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg x
+    arg y
+    %t3 = x>=y
+    if %t3 goto L2 else goto L3
+L2:
+    ret 0
+    goto  L1
+L1:
+L3:
+    sum = 0
+    goto  L4
+L4:
+    %t4 = x<y
+    if %t4 goto L5 else goto L6
+L5:
+    %t5 = x/2
+    %t6 = %t5*2
+    %t7 = %t6==x
+    if %t7 goto L7 else goto L8
+L7:
+    %t8 = sum+1
+    sum = %t8
+    goto  L8
+L8:
+    %t9 = x+1
+    x = %t9
+    goto  L4
+L6:
+    ret sum
+    goto  L1
+After SSA
+=========
+L0:
+    arg x_0
+    arg y_0
+    %t3_0 = x_0>=y_0
+    if %t3_0 goto L2 else goto L3
+L2:
+    ret 0
+    goto  L1
+L1:
+L3:
+    sum_0 = 0
+    goto  L4
+L4:
+    sum_1 = phi(sum_0, sum_3)
+    x_1 = phi(x_0, x_2)
+    %t4_0 = x_1<y_0
+    if %t4_0 goto L5 else goto L6
+L5:
+    %t5_0 = x_1/2
+    %t6_0 = %t5_0*2
+    %t7_0 = %t6_0==x_1
+    if %t7_0 goto L7 else goto L8
+L7:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    goto  L8
+L8:
+    sum_3 = phi(sum_1, sum_2)
+    %t9_0 = x_1+1
+    x_2 = %t9_0
+    goto  L4
+L6:
+    ret sum_1
+    goto  L1
+After exiting SSA
+=================
+L0:
+    arg x_0
+    arg y_0
+    %t3_0 = x_0>=y_0
+    if %t3_0 goto L2 else goto L3
+L2:
+    ret 0
+    goto  L1
+L1:
+L3:
+    sum_0 = 0
+    sum_1 = sum_0
+    x_1 = x_0
+    goto  L4
+L4:
+    %t4_0 = x_1<y_0
+    if %t4_0 goto L5 else goto L6
+L5:
+    %t5_0 = x_1/2
+    %t6_0 = %t5_0*2
+    %t7_0 = %t6_0==x_1
+    sum_3 = sum_1
+    if %t7_0 goto L7 else goto L8
+L7:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    sum_3 = sum_2
+    goto  L8
+L8:
+    %t9_0 = x_1+1
+    x_2 = %t9_0
+    sum_1 = sum_3
+    x_1 = x_2
+    goto  L4
+L6:
+    ret sum_1
+    goto  L1
+""", result);
     }
 
     @Test
@@ -1069,7 +1177,81 @@ L1:
                 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg n
+    a = 1
+    b = 2
+    goto  L2
+L2:
+    %t4 = n>0
+    if %t4 goto L3 else goto L4
+L3:
+    t = a
+    a = b
+    b = t
+    %t5 = n-1
+    n = %t5
+    goto  L2
+L4:
+    ret a
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg n_0
+    a_0 = 1
+    b_0 = 2
+    goto  L2
+L2:
+    b_1 = phi(b_0, b_2)
+    a_1 = phi(a_0, a_2)
+    n_1 = phi(n_0, n_2)
+    %t4_0 = n_1>0
+    if %t4_0 goto L3 else goto L4
+L3:
+    t_0 = a_1
+    a_2 = b_1
+    b_2 = t_0
+    %t5_0 = n_1-1
+    n_2 = %t5_0
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg n_0
+    a_0 = 1
+    b_0 = 2
+    b_1 = b_0
+    a_1 = a_0
+    n_1 = n_0
+    goto  L2
+L2:
+    %t4_0 = n_1>0
+    if %t4_0 goto L3 else goto L4
+L3:
+    t_0 = a_1
+    a_2 = b_1
+    b_2 = t_0
+    %t5_0 = n_1-1
+    n_2 = %t5_0
+    b_1 = b_2
+    a_1 = a_2
+    n_1 = n_2
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+""", result);
     }
 
     @Test

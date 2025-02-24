@@ -41,6 +41,7 @@ public class CompiledFunction {
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionSymbol.functionDecl;
         this.functionType = (Type.TypeFunction) functionSymbol.type;
         this.registerPool = new RegisterPool();
+        // Incremental SSA is an optional feature
         this.issa = (options != null && options.contains(Options.ISSA)) ? new IncrementalSSABraun(this) : new NoopIncrementalSSA();
         setVirtualRegisters(funcDecl.scope);
         this.BID = 0;
@@ -49,6 +50,7 @@ public class CompiledFunction {
         this.currentBreakTarget = null;
         this.currentContinueTarget = null;
         this.typeDictionary = typeDictionary;
+        issa.sealBlock(entry);          // Incremental SSA is an optional feature
         generateArgInstructions(funcDecl.scope);
         compileStatement(funcDecl.block);
         exitBlockIfNeeded();
@@ -135,7 +137,7 @@ public class CompiledFunction {
 
     public void code(Instruction instruction) {
         currentBlock.add(instruction);
-        instruction.block = currentBlock;
+        assert instruction.block == currentBlock;
     }
 
     private void compileStatement(AST.Stmt statement) {
@@ -225,12 +227,12 @@ public class CompiledFunction {
             codeIndexedLoad();
         codeCBR(currentBlock, pop(), bodyBlock, exitBlock);
         assert vstackEmpty();
-        startSealedBlock(bodyBlock);  // ISSA If we seal this here fib test fails, wrong code generated, why?
+        startSealedBlock(bodyBlock);  // ISSA Body is immediately sealed as no new predecessors possible
         compileStatement(whileStmt.stmt);
         if (!isBlockTerminated(currentBlock))
             jumpTo(loopHead);
         issa.sealBlock(loopHead);
-        startSealedBlock(exitBlock);
+        startSealedBlock(exitBlock);    // ISSA seal exit block (breaks already done)
         currentContinueTarget = savedContinueTarget;
         currentBreakTarget = savedBreakTarget;
     }
@@ -450,7 +452,7 @@ public class CompiledFunction {
         }
         startSealedBlock(l1);       // ISSA seal immediately
         compileExpr(binaryExpr.expr2);
-        var temp = ensureTemp();
+        var temp = ensureTemp();    // Normally temps are SSA but this temp gets two assignments, thus must be included during SSA conversion
         jumpTo(l3);
         startSealedBlock(l2);       // ISSA seal immediately
         // Below we must write to the same temp
@@ -464,7 +466,7 @@ public class CompiledFunction {
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
         String opCode = binaryExpr.op.str;
         if (opCode.equals("&&") ||
-                opCode.equals("||")) {
+            opCode.equals("||")) {
             return codeBoolean(binaryExpr);
         }
         boolean indexed = compileExpr(binaryExpr.expr1);
@@ -476,7 +478,7 @@ public class CompiledFunction {
         Operand right = pop();
         Operand left = pop();
         if (left instanceof Operand.NullConstantOperand &&
-                right instanceof Operand.NullConstantOperand) {
+            right instanceof Operand.NullConstantOperand) {
             long value = 0;
             switch (opCode) {
                 case "==": value = 1; break;
@@ -602,15 +604,17 @@ public class CompiledFunction {
         return virtualStack.getLast();
     }
 
+    private boolean vstackEmpty() {
+        return virtualStack.isEmpty();
+    }
+
     private Operand.TempRegisterOperand codeIndexedLoad() {
         Operand indexed = pop();
         var temp = createTemp(indexed.type);
-        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand)
             codeArrayLoad(loadIndexedOperand, temp);
-        }
-        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand)
             codeGetField(loadFieldOperand, temp);
-        }
         else
             codeMove(indexed, temp);
         return temp;
@@ -619,12 +623,10 @@ public class CompiledFunction {
     private void codeIndexedStore() {
         Operand value = pop();
         Operand indexed = pop();
-        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand) {
+        if (indexed instanceof Operand.LoadIndexedOperand loadIndexedOperand)
             codeArrayStore(value, loadIndexedOperand);
-        }
-        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand) {
+        else if (indexed instanceof Operand.LoadFieldOperand loadFieldOperand)
             codeSetField(value, loadFieldOperand);
-        }
         else
             codeMove(value, indexed);
     }
@@ -636,6 +638,15 @@ public class CompiledFunction {
             codeNewStruct(typeStruct);
         else
             throw new CompilerException("Unexpected type: " + type);
+    }
+
+    private void codeStoreAppend() {
+        var operand = issa.read(pop());
+        Operand.RegisterOperand arrayOperand = (Operand.RegisterOperand) issa.read(top());
+        var insn = new Instruction.AStoreAppend(arrayOperand, operand);
+        issa.recordUse(arrayOperand, insn);
+        issa.recordUse(operand, insn);
+        code(insn);
     }
 
     private void codeNewArray(Type.TypeArray typeArray) {
@@ -651,15 +662,6 @@ public class CompiledFunction {
         var target = (Operand.RegisterOperand) issa.write(temp);
         var insn = new Instruction.NewStruct(typeStruct, target);
         issa.recordDef(target, insn);
-        code(insn);
-    }
-
-    private void codeStoreAppend() {
-        var operand = issa.read(pop());
-        Operand.RegisterOperand arrayOperand = (Operand.RegisterOperand) issa.read(top());
-        var insn = new Instruction.AStoreAppend(arrayOperand, operand);
-        issa.recordUse(arrayOperand, insn);
-        issa.recordUse(operand, insn);
         code(insn);
     }
 
@@ -772,10 +774,6 @@ public class CompiledFunction {
         issa.recordUse(loadFieldOperand.structOperand, insn);
         issa.recordUse(value, insn);
         code(insn);
-    }
-
-    private boolean vstackEmpty() {
-        return virtualStack.isEmpty();
     }
 
     public StringBuilder toStr(StringBuilder sb, boolean verbose) {
