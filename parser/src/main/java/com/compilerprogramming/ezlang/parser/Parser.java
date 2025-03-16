@@ -246,7 +246,19 @@ public class Parser {
         testPunctuation(lexer, ";");
         if (rhs == null)
             return new AST.ExprStmt(lhs);
-        return new AST.AssignStmt(lhs, rhs);
+        return new AST.AssignStmt(storing(lhs), rhs);
+    }
+
+    private AST.Expr storing(AST.Expr lhs) {
+        if (lhs instanceof AST.ArrayIndexExpr arrayIndexExpr &&
+            arrayIndexExpr.loading) {
+            return new AST.ArrayIndexExpr(arrayIndexExpr.array, arrayIndexExpr.expr, false);
+        }
+        else if (lhs instanceof AST.FieldExpr fieldExpr &&
+                fieldExpr.loading) {
+            return new AST.FieldExpr(fieldExpr.object, fieldExpr.fieldName, false);
+        }
+        return lhs;
     }
 
     private AST.Expr parseBool(Lexer lexer) {

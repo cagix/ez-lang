@@ -372,9 +372,14 @@ public abstract class AST {
     public static class ArrayIndexExpr extends Expr {
         public final Expr array;
         public final Expr expr;
+        public final boolean loading;
         public ArrayIndexExpr(Expr array, Expr expr) {
+            this(array, expr, true);
+        }
+        public ArrayIndexExpr(Expr array, Expr expr, boolean loading) {
             this.array = array;
             this.expr = expr;
+            this.loading = loading;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
@@ -398,9 +403,14 @@ public abstract class AST {
     public static class FieldExpr extends Expr {
         public final Expr object;
         public final String fieldName;
+        public final boolean loading;
         public FieldExpr(Expr object, String fieldName) {
+            this(object, fieldName, true);
+        }
+        public FieldExpr(Expr object, String fieldName, boolean loading) {
             this.object = object;
             this.fieldName = fieldName;
+            this.loading = loading;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
