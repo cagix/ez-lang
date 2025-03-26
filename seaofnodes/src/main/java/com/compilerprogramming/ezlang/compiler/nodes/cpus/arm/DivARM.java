@@ -1,0 +1,19 @@
+package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
+
+import com.compilerprogramming.ezlang.compiler.*;
+import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.nodes.*;
+
+public class DivARM extends MachConcreteNode implements MachNode {
+    DivARM( Node div ) { super(div); }
+    @Override public String op() { return "div"; }
+    @Override public RegMask regmap(int i) { return arm.RMASK; }
+    @Override public RegMask outregmap() { return arm.RMASK; }
+    // SDIV
+    @Override public void encoding( Encoding enc ) { arm.madd(enc,this,0b10011010110,3); }
+    // General form: "div  dst /= src"
+    @Override public void asm(CodeGen code, SB sb) {
+        sb.p(code.reg(this)).p(" = ").p(code.reg(in(1))).p(" / ").p(code.reg(in(2)));
+    }
+
+}

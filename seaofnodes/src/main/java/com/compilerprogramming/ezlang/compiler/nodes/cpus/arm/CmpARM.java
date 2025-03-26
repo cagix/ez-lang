@@ -1,0 +1,22 @@
+package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
+
+import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.nodes.*;
+
+public class CmpARM extends MachConcreteNode implements MachNode {
+    CmpARM( Node cmp ) { super(cmp); }
+    @Override public String op() { return "cmp"; }
+    @Override public RegMask regmap(int i) { return arm.RMASK; }
+    @Override public RegMask outregmap() { return arm.FLAGS_MASK; }
+
+    // SUBS (shifted register)
+    @Override public void encoding( Encoding enc ) { arm.r_reg(enc,this,0b11101011); }
+
+    // General form: "cmp  rs1, rs2"
+    @Override public void asm(CodeGen code, SB sb) {
+        String dst = code.reg(this);
+        if( dst!="flags" )  sb.p(dst).p(" = ");
+        sb.p(code.reg(in(1))).p(", ").p(code.reg(in(2)));
+    }
+}

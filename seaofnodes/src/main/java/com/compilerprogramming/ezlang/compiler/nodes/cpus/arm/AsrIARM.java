@@ -1,0 +1,31 @@
+package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
+
+import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
+import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
+import com.compilerprogramming.ezlang.compiler.nodes.MachConcreteNode;
+import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
+import com.compilerprogramming.ezlang.compiler.nodes.Node;
+
+public class AsrIARM extends MachConcreteNode implements MachNode {
+    final int _imm;
+    AsrIARM(Node asr, int imm) {
+        super(asr);
+        _inputs.pop();
+        _imm = imm;
+    }
+    @Override public String op() { return "asri"; }
+    @Override public RegMask regmap(int i) { return arm.RMASK; }
+    @Override public RegMask outregmap() { return arm.RMASK; }
+    @Override public void encoding( Encoding enc ) {
+        short rd = enc.reg(this);
+        short rn = enc.reg(in(1));
+        assert _imm > 0;
+        enc.add4(arm.imm_shift(0b1001001101,_imm, 0b111111, rn, rd));
+    }
+    // General form: "asri  rd = rs1 >> imm"
+    @Override public void asm(CodeGen code, SB sb) {
+        sb.p(code.reg(this)).p(" = ").p(code.reg(in(1))).p(" >> #").p(_imm);
+    }
+}

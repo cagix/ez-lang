@@ -1,0 +1,199 @@
+package com.compilerprogramming.ezlang.compiler.nodes;
+
+import com.compilerprogramming.ezlang.compiler.*;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeTuple;
+
+import java.util.BitSet;
+import static com.compilerprogramming.ezlang.compiler.codegen.CodeGen.CODE;
+
+public class FunNode extends RegionNode {
+
+    // When set true, this Call/CallEnd/Fun/Return is being trivially inlined
+    boolean _folding;
+
+    private SONTypeFunPtr _sig;    // Initial signature
+    private ReturnNode _ret;    // Return pointer
+
+    public String _name;        // Debug name
+
+    public FunNode(SONTypeFunPtr sig, Node... nodes ) { super(nodes); _sig = sig; }
+    public FunNode( FunNode fun ) {
+        super( fun );
+        if( fun!=null ) {
+            _sig = fun.sig();
+            _name = fun._name;
+        } else {
+            _sig = SONTypeFunPtr.BOT;
+            _name = "";
+        }
+    }
+
+    @Override
+    public String label() { return _name == null ? "$fun"+_sig.fidx() : _name; }
+
+    // Find the one CFG user from Fun.  It's not always the Return, but always
+    // the Return *is* a CFG user of Fun.
+    @Override public CFGNode uctrl() {
+        for( Node n : _outputs )
+            if( n instanceof CFGNode cfg &&
+                (cfg instanceof RegionNode || cfg.cfg0()==this) )
+                return cfg;
+        return null;
+    }
+
+    public ParmNode rpc() {
+        ParmNode rpc = null;
+        for( Node n : _outputs )
+            if( n instanceof ParmNode parm && parm._idx==0 )
+                { assert rpc==null; rpc=parm; }
+        return rpc;
+    }
+
+    // Cannot create the Return and Fun at the same time; one has to be first.
+    // So setting the return requires a second step.
+    public void setRet(ReturnNode ret) { _ret=ret; }
+    public ReturnNode ret() { assert _ret!=null; return _ret; }
+
+    // Signature can improve over time
+    public SONTypeFunPtr sig() { return _sig; }
+    public void setSig( SONTypeFunPtr sig ) {
+        assert sig.isa(_sig);
+        if( _sig != sig ) {
+            CODE.add(this);
+            _sig = sig;
+        }
+    }
+
+    @Override
+    public SONType compute() {
+        // Only dead if no callers after SCCP
+        return SONType.CONTROL;
+    }
+
+    @Override
+    public Node idealize() {
+
+        // Some linked path dies
+        Node progress = deadPath();
+        if( progress!=null ) {
+            if( nIns()==3 && in(2) instanceof CallNode call )
+                CODE.add(call.cend()); // If Start and one call, check for inline
+            return progress;
+        }
+
+        // Upgrade inferred or user-written return type to actual
+        if( _ret!=null && _ret._type instanceof SONTypeTuple tt && tt.ret() != _sig.ret() )
+            //throw Utils.TODO();
+            return null;
+
+        // When can we assume no callers?  Or no other callers (except main)?
+        // In a partial compilation, we assume Start gets access to any/all
+        // top-level public structures and recursively what they point to.
+        // This in turn is valid arguments to every callable function.
+        //
+        // In a total compilation, we can start from Start and keep things
+        // more contained.
+
+        // If no default/unknown caller, use the normal RegionNode ideal rules
+        // to collapse
+        if( unknownCallers() ) return null;
+
+        // If down to a single input, become that input
+        if( nIns()==2 && !hasPhi() ) {
+            CODE.add( CODE._stop ); // Stop will remove dead path
+            CODE.add( _ret );       // Return will compute to TOP control
+            return in(1); // Collapse if no Phis; 1-input Phis will collapse on their own
+        }
+
+        return null;
+    }
+
+    // Bypass Region idom, always assume depth == 1, one more than Start
+    @Override public int idepth() { return (_idepth=1); }
+    // Bypass Region idom, always assume idom is Start
+    @Override public CFGNode idom(Node dep) { return cfg(1); }
+
+    // Always in-progress until we run out of unknown callers
+    public boolean unknownCallers() { return in(1) instanceof StartNode; }
+
+    @Override public boolean inProgress() { return unknownCallers(); }
+
+    // Add a new function exit point.
+    public void addReturn(Node ctrl, Node mem, Node rez) {  _ret.addReturn(ctrl,mem,rez);  }
+
+    // Build the function body
+    public BitSet body() {
+
+        // Reverse up (stop to start) CFG only, collect bitmap.
+        BitSet cfgs = new BitSet();
+        cfgs.set(_nid);
+        walkUp(ret(),cfgs );
+
+        // Top down (start to stop) all flavors.  CFG limit to bitmap.
+        // If data use bottoms out in wrong CFG, returns false - but tries all outputs.
+        // If any output hits an in-CFG use (e.g. phi), then keep node.
+        BitSet body = new BitSet();
+        walkDown(this, cfgs, body, new BitSet());
+        return body;
+    }
+
+    private static void walkUp(CFGNode n, BitSet cfgs) {
+        if( cfgs.get(n._nid) ) return;
+        cfgs.set(n._nid);
+        if( n instanceof RegionNode r )
+            for( int i=1; i<n.nIns(); i++ )
+                walkUp(n.cfg(i),cfgs);
+        else walkUp(n.cfg0(),cfgs);
+    }
+
+    private static boolean walkDown( Node n, BitSet cfgs, BitSet body, BitSet visit ) {
+        if( visit.get(n._nid) ) return body.get(n._nid);
+        visit.set(n._nid);
+
+        if( n instanceof CFGNode && !cfgs.get(n._nid) )
+            return false;
+        if( n.in(0)!=null && !cfgs.get(n.in(0)._nid) )
+            return false;
+        boolean in = n.in(0)!=null || n instanceof CFGNode;
+        for( Node use : n._outputs )
+            in |= walkDown(use,cfgs,body,visit);
+        if( in ) body.set(n._nid);
+        return in;
+    }
+
+
+    // | CALLER |
+    // |        |
+    // | argN+1 | // slot 1, callER +32
+    // | argN   | // slot 0, callER +24
+    // +--------+ // OLD FRAME
+    // |  PAD   | // Alignment pad  +16
+    // | callee | // slot 3, callEE + 8
+    // | callee | // slot 2, callEE + 0
+    // +--------+ // RSP
+
+    // TODO: lower this field into a generic FunMachNode.
+    // Replace all FunXXX variants with FunMachNode.
+
+    // Function may call other functions?  X86 requires 16b aligned SP on
+    // outbound calls, but not leaf.  Set during an unrelated RA scan.
+    public boolean _hasCalls;
+
+    // Max observed spill slot, set during RA postcolor
+    public short _maxSlot = -1;
+    // Max argument slot, set during early Encoding.
+    public short _maxArgSlot = -1;
+    // Frame adjust, including padding, st during early Encoding
+    public short _frameAdjust;
+
+
+    // Convert a stack slot, based on the frame, into an offset.  Stack layout
+    // is the same for all CPUs; X86 will pre-spill the RPC.
+    public final int computeStackSlot(int slotN) {
+        return slotN < _maxArgSlot
+            ? slotN + _frameAdjust
+            : slotN - _maxArgSlot;
+    }
+}

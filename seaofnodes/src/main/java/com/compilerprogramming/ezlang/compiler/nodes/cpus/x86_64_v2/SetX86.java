@@ -1,0 +1,50 @@
+package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
+
+import com.compilerprogramming.ezlang.compiler.*;
+import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.nodes.*;
+
+// Corresponds to the x86 instruction "sete && setne".
+// Use result of comparison without jump.
+public class SetX86 extends MachConcreteNode implements MachNode {
+    final String _bop;          // One of <,<=,==
+    // Constructor expects input is an X86 and not an Ideal node.
+    SetX86( Node cmp, String bop ) {
+        super(cmp);
+        _inputs.setLen(1);   // Pop the cmp inputs
+        // Replace with the matched cmp
+        _inputs.push(cmp);
+        _bop = bop;
+    }
+    @Override public String op() { return "set"+_bop; }
+    @Override public RegMask regmap(int i) { assert i==1; return x86_64_v2.FLAGS_MASK; }
+    @Override public RegMask outregmap() { return x86_64_v2.WMASK; }
+
+    @Override public void encoding( Encoding enc ) {
+        // REX + 0F 94
+        short dst = enc.reg(this );
+
+        // Optional rex, for dst
+        if( dst >= 8 ) enc.add1(x86_64_v2.rex(0, dst, 0));
+        enc.add1(0x0F);         // opcode
+        enc.add1(switch (_bop) {
+            case "==" -> 0x94;  // SETE
+            case "<"  -> 0x9C;  // SETL
+            case "<=" -> 0X9E;  // SETLE
+            default -> throw Utils.TODO();
+            });
+        enc.add1(x86_64_v2.modrm(x86_64_v2.MOD.DIRECT, 0, dst));
+
+        // low 8 bites are set, now zero extend for next instruction
+        if( dst >= 8 ) enc.add1(x86_64_v2.rex(0, dst, 0));
+        enc.add1(0x0F); // opcode
+        enc.add1(0xB6); // opcode
+        enc.add1(x86_64_v2.modrm(x86_64_v2.MOD.DIRECT, dst, dst));
+    }
+
+    @Override public void asm(CodeGen code, SB sb) {
+        sb.p(code.reg(this));
+        String src = code.reg(in(1));
+        if( src!="flags" )  sb.p(" = ").p(src);
+    }
+}
