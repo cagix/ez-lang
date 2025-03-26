@@ -265,11 +265,17 @@ public class CompiledFunction {
             case AST.NewExpr newExpr -> {
                 return compileNewExpr(newExpr);
             }
-            case AST.ArrayIndexExpr arrayIndexExpr -> {
-                return compileArrayIndexExpr(arrayIndexExpr);
+            case AST.InitExpr initExpr -> {
+                return compileInitExpr(initExpr);
             }
-            case AST.FieldExpr fieldExpr -> {
-                return compileFieldExpr(fieldExpr);
+            case AST.ArrayLoadExpr arrayLoadExpr -> {
+                return compileArrayIndexExpr(arrayLoadExpr);
+            }
+            case AST.ArrayStoreExpr arrayStoreExpr -> {
+                return compileArrayStoreExpr(arrayStoreExpr);
+            }
+            case AST.GetFieldExpr getFieldExpr -> {
+                return compileFieldExpr(getFieldExpr);
             }
             case AST.SetFieldExpr setFieldExpr -> {
                 return compileSetFieldExpr(setFieldExpr);
@@ -327,7 +333,7 @@ public class CompiledFunction {
             throw new CompilerException("Unexpected type: " + t);
     }
 
-    private boolean compileFieldExpr(AST.FieldExpr fieldExpr) {
+    private boolean compileFieldExpr(AST.GetFieldExpr fieldExpr) {
         Type.TypeStruct typeStruct = getStructType(fieldExpr.object.type);
         int fieldIndex = typeStruct.getFieldIndex(fieldExpr.fieldName);
         if (fieldIndex < 0)
@@ -339,7 +345,7 @@ public class CompiledFunction {
         return true;
     }
 
-    private boolean compileArrayIndexExpr(AST.ArrayIndexExpr arrayIndexExpr) {
+    private boolean compileArrayIndexExpr(AST.ArrayLoadExpr arrayIndexExpr) {
         compileExpr(arrayIndexExpr.array);
         boolean indexed = compileExpr(arrayIndexExpr.expr);
         if (indexed)
@@ -351,12 +357,34 @@ public class CompiledFunction {
     }
 
     private boolean compileSetFieldExpr(AST.SetFieldExpr setFieldExpr) {
-        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.objectType;
+        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.object.type;
         int fieldIndex = structType.getFieldIndex(setFieldExpr.fieldName);
         if (fieldIndex == -1)
             throw new CompilerException("Field " + setFieldExpr.fieldName + " not found in struct " + structType.name);
-        pushOperand(new Operand.LoadFieldOperand(top(), setFieldExpr.fieldName, fieldIndex));
+        if (setFieldExpr instanceof AST.InitFieldExpr)
+            pushOperand(top());
+        else
+            compileExpr(setFieldExpr.object);
+        pushOperand(new Operand.LoadFieldOperand(pop(), setFieldExpr.fieldName, fieldIndex));
         boolean indexed = compileExpr(setFieldExpr.value);
+        if (indexed)
+            codeIndexedLoad();
+        codeIndexedStore();
+        return false;
+    }
+
+    private boolean compileArrayStoreExpr(AST.ArrayStoreExpr arrayStoreExpr) {
+        if (arrayStoreExpr instanceof AST.ArrayInitExpr)
+            pushOperand(top()); // Array was created by new
+        else
+            compileExpr(arrayStoreExpr.array);
+        boolean indexed = compileExpr(arrayStoreExpr.expr);
+        if (indexed)
+            codeIndexedLoad();
+        Operand index = pop();
+        Operand array = pop();
+        pushOperand(new Operand.LoadIndexedOperand(array, index));
+        indexed = compileExpr(arrayStoreExpr.value);
         if (indexed)
             codeIndexedLoad();
         codeIndexedStore();
@@ -365,20 +393,14 @@ public class CompiledFunction {
 
     private boolean compileNewExpr(AST.NewExpr newExpr) {
         codeNew(newExpr.type);
-        if (newExpr.initExprList != null && !newExpr.initExprList.isEmpty()) {
-            if (newExpr.type instanceof Type.TypeArray) {
-                for (AST.Expr expr : newExpr.initExprList) {
-                    // Maybe have specific AST similar to how we have SetFieldExpr?
-                    boolean indexed = compileExpr(expr);
-                    if (indexed)
-                        codeIndexedLoad();
-                    codeStoreAppend();
-                }
-            }
-            else if (newExpr.type instanceof Type.TypeStruct) {
-                for (AST.Expr expr : newExpr.initExprList) {
-                    compileExpr(expr);
-                }
+        return false;
+    }
+
+    private boolean compileInitExpr(AST.InitExpr initExpr) {
+        compileExpr(initExpr.newExpr);
+        if (initExpr.initExprList != null && !initExpr.initExprList.isEmpty()) {
+            for (AST.Expr expr : initExpr.initExprList) {
+                compileExpr(expr);
             }
         }
         return false;
@@ -599,11 +621,4 @@ public class CompiledFunction {
         else
             throw new CompilerException("Unexpected type: " + type);
     }
-
-    private void codeStoreAppend() {
-        var operand = pop();
-        code(new Instruction.AStoreAppend((Operand.RegisterOperand) top(), operand));
-    }
-
-
 }

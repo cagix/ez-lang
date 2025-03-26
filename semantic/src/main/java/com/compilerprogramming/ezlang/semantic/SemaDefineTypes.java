@@ -139,17 +139,17 @@ public class SemaDefineTypes implements ASTVisitor {
     }
 
     @Override
-    public ASTVisitor visit(AST.FieldExpr fieldExpr, boolean enter) {
+    public ASTVisitor visit(AST.GetFieldExpr fieldExpr, boolean enter) {
+        return this;
+    }
+
+    @Override
+    public ASTVisitor visit(AST.SetFieldExpr fieldExpr, boolean enter) {
         return this;
     }
 
     @Override
     public ASTVisitor visit(AST.CallExpr callExpr, boolean enter) {
-        return this;
-    }
-
-    @Override
-    public ASTVisitor visit(AST.SetFieldExpr setFieldExpr, boolean enter) {
         return this;
     }
 
@@ -249,12 +249,22 @@ public class SemaDefineTypes implements ASTVisitor {
     }
 
     @Override
-    public ASTVisitor visit(AST.ArrayIndexExpr arrayIndexExpr, boolean enter) {
+    public ASTVisitor visit(AST.ArrayLoadExpr arrayLoadExpr, boolean enter) {
+        return this;
+    }
+
+    @Override
+    public ASTVisitor visit(AST.ArrayStoreExpr arrayStoreExpr, boolean enter) {
         return this;
     }
 
     @Override
     public ASTVisitor visit(AST.NewExpr newExpr, boolean enter) {
+        return this;
+    }
+
+    @Override
+    public ASTVisitor visit(AST.InitExpr initExpr, boolean enter) {
         return this;
     }
 

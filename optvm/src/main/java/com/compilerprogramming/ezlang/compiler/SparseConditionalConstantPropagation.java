@@ -421,8 +421,6 @@ public class SparseConditionalConstantPropagation {
                 var cell = valueLattice.get(newStructInst.destOperand().reg);
                 changed = cell.setKind(V_VARYING);
             }
-            case Instruction.AStoreAppend arrayAppendInst -> {
-            }
             case Instruction.ArrayStore arrayStoreInst -> {
             }
             case Instruction.ArrayLoad arrayLoadInst -> {

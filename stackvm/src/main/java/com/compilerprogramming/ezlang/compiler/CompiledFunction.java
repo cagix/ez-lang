@@ -84,6 +84,7 @@ public class CompiledFunction {
             case AST.VarStmt letStmt -> {
                 compileLet(letStmt);
             }
+            case AST.VarDeclStmt varDeclStmt -> {}
             case AST.IfElseStmt ifElseStmt -> {
                 compileIf(ifElseStmt);
             }
@@ -146,14 +147,14 @@ public class CompiledFunction {
     }
 
     private void compileWhile(AST.WhileStmt whileStmt) {
-        BasicBlock loopBlock = createLoopHead();
+        BasicBlock loopHead = createLoopHead();
         BasicBlock bodyBlock = createBlock();
         BasicBlock exitBlock = createBlock();
         BasicBlock savedBreakTarget = currentBreakTarget;
         BasicBlock savedContinueTarget = currentContinueTarget;
         currentBreakTarget = exitBlock;
-        currentContinueTarget = loopBlock;
-        startBlock(loopBlock);
+        currentContinueTarget = loopHead;
+        startBlock(loopHead);
         boolean indexed = compileExpr(whileStmt.condition);
         if (indexed)
             codeIndexedLoad();
@@ -161,7 +162,7 @@ public class CompiledFunction {
         startBlock(bodyBlock);
         compileStatement(whileStmt.stmt);
         if (!isBlockTerminated(currentBlock))
-            jumpTo(loopBlock);
+            jumpTo(loopHead);
         startBlock(exitBlock);
         currentContinueTarget = savedContinueTarget;
         currentBreakTarget = savedBreakTarget;
@@ -173,6 +174,7 @@ public class CompiledFunction {
     }
 
     private void jumpTo(BasicBlock block) {
+        assert !isBlockTerminated(currentBlock);
         currentBlock.add(new Instruction.Jump(block));
         currentBlock.addSuccessor(block);
     }
@@ -185,15 +187,15 @@ public class CompiledFunction {
     }
 
     private void compileIf(AST.IfElseStmt ifElseStmt) {
-        BasicBlock ifBlock = createBlock();
+        BasicBlock thenBlock = createBlock();
         boolean needElse = ifElseStmt.elseStmt != null;
         BasicBlock elseBlock = needElse ? createBlock() : null;
         BasicBlock exitBlock = createBlock();
         boolean indexed = compileExpr(ifElseStmt.condition);
         if (indexed)
             codeIndexedLoad();
-        code(new Instruction.ConditionalBranch(currentBlock, ifBlock, needElse ? elseBlock : exitBlock));
-        startBlock(ifBlock);
+        code(new Instruction.ConditionalBranch(currentBlock, thenBlock, needElse ? elseBlock : exitBlock));
+        startBlock(thenBlock);
         compileStatement(ifElseStmt.ifStmt);
         if (!isBlockTerminated(currentBlock))
             jumpTo(exitBlock);
@@ -232,11 +234,17 @@ public class CompiledFunction {
             case AST.NewExpr newExpr -> {
                 return compileNewExpr(newExpr);
             }
-            case AST.ArrayIndexExpr arrayIndexExpr -> {
-                return compileArrayIndexExpr(arrayIndexExpr);
+            case AST.InitExpr initExpr -> {
+                return compileInitExpr(initExpr);
             }
-            case AST.FieldExpr fieldExpr -> {
-                return compileFieldExpr(fieldExpr);
+            case AST.ArrayLoadExpr arrayLoadExpr -> {
+                return compileArrayIndexExpr(arrayLoadExpr);
+            }
+            case AST.ArrayStoreExpr arrayStoreExpr -> {
+                return compileArrayStoreExpr(arrayStoreExpr);
+            }
+            case AST.GetFieldExpr getFieldExpr -> {
+                return compileFieldExpr(getFieldExpr);
             }
             case AST.SetFieldExpr setFieldExpr -> {
                 return compileSetFieldExpr(setFieldExpr);
@@ -271,7 +279,7 @@ public class CompiledFunction {
             throw new CompilerException("Unexpected type: " + t);
     }
 
-    private boolean compileFieldExpr(AST.FieldExpr fieldExpr) {
+    private boolean compileFieldExpr(AST.GetFieldExpr fieldExpr) {
         Type.TypeStruct typeStruct = getStructType(fieldExpr.object.type);
         int fieldIndex = typeStruct.getFieldIndex(fieldExpr.fieldName);
         if (fieldIndex < 0)
@@ -283,7 +291,7 @@ public class CompiledFunction {
         return true;
     }
 
-    private boolean compileArrayIndexExpr(AST.ArrayIndexExpr arrayIndexExpr) {
+    private boolean compileArrayIndexExpr(AST.ArrayLoadExpr arrayIndexExpr) {
         compileExpr(arrayIndexExpr.array);
         boolean indexed = compileExpr(arrayIndexExpr.expr);
         if (indexed)
@@ -292,10 +300,12 @@ public class CompiledFunction {
     }
 
     private boolean compileSetFieldExpr(AST.SetFieldExpr setFieldExpr) {
-        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.objectType;
+        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.object.type;
         int fieldIndex = structType.getFieldIndex(setFieldExpr.fieldName);
         if (fieldIndex == -1)
             throw new CompilerException("Field " + setFieldExpr.fieldName + " not found in struct " + structType.name);
+        if (!(setFieldExpr instanceof AST.InitFieldExpr))
+            compileExpr(setFieldExpr.object);
         code(new Instruction.PushConst(fieldIndex));
         boolean indexed = compileExpr(setFieldExpr.value);
         if (indexed)
@@ -304,22 +314,29 @@ public class CompiledFunction {
         return false;
     }
 
+    private boolean compileArrayStoreExpr(AST.ArrayStoreExpr arrayStoreExpr) {
+        if (!(arrayStoreExpr instanceof AST.ArrayInitExpr))
+            compileExpr(arrayStoreExpr.array);
+        boolean indexed = compileExpr(arrayStoreExpr.expr);
+        if (indexed)
+            codeIndexedLoad();
+        indexed = compileExpr(arrayStoreExpr.value);
+        if (indexed)
+            codeIndexedLoad();
+        codeIndexedStore();
+        return false;
+    }
+
     private boolean compileNewExpr(AST.NewExpr newExpr) {
         code(new Instruction.New(newExpr.type));
-        if (newExpr.initExprList != null && !newExpr.initExprList.isEmpty()) {
-            if (newExpr.type instanceof Type.TypeArray) {
-                for (AST.Expr expr : newExpr.initExprList) {
-                    // Maybe have specific AST similar to how we have SetFieldExpr?
-                    boolean indexed = compileExpr(expr);
-                    if (indexed)
-                        codeIndexedLoad();
-                    code(new Instruction.StoreAppend());
-                }
-            }
-            else if (newExpr.type instanceof Type.TypeStruct) {
-                for (AST.Expr expr : newExpr.initExprList) {
-                    compileExpr(expr);
-                }
+        return false;
+    }
+
+    private boolean compileInitExpr(AST.InitExpr initExpr) {
+        compileExpr(initExpr.newExpr);
+        if (initExpr.initExprList != null && !initExpr.initExprList.isEmpty()) {
+            for (AST.Expr expr : initExpr.initExprList) {
+                compileExpr(expr);
             }
         }
         return false;

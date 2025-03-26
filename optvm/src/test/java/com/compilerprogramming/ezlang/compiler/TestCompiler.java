@@ -215,9 +215,9 @@ L1:
         Assert.assertEquals("""
 L0:
     %t0 = New([Int])
-    %t0.append(1)
-    %t0.append(2)
-    %t0.append(3)
+    %t0[0] = 1
+    %t0[1] = 2
+    %t0[2] = 3
     ret %t0
     goto  L1
 L1:
@@ -236,7 +236,7 @@ L1:
 L0:
     arg n
     %t1 = New([Int])
-    %t1.append(n)
+    %t1[0] = n
     ret %t1
     goto  L1
 L1:

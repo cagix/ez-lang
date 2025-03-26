@@ -246,19 +246,15 @@ public class Parser {
         testPunctuation(lexer, ";");
         if (rhs == null)
             return new AST.ExprStmt(lhs);
-        return new AST.AssignStmt(storing(lhs), rhs);
-    }
-
-    private AST.Expr storing(AST.Expr lhs) {
-        if (lhs instanceof AST.ArrayIndexExpr arrayIndexExpr &&
-            arrayIndexExpr.loading) {
-            return new AST.ArrayIndexExpr(arrayIndexExpr.array, arrayIndexExpr.expr, false);
+        else {
+            if (lhs instanceof AST.ArrayLoadExpr arrayLoadExpr) {
+                return new AST.ExprStmt(new AST.ArrayStoreExpr(arrayLoadExpr.array, arrayLoadExpr.expr, rhs));
+            }
+            else if (lhs instanceof AST.GetFieldExpr getFieldExpr) {
+                return new AST.ExprStmt(new AST.SetFieldExpr(getFieldExpr.object, getFieldExpr.fieldName, rhs));
+            }
         }
-        else if (lhs instanceof AST.FieldExpr fieldExpr &&
-                fieldExpr.loading) {
-            return new AST.FieldExpr(fieldExpr.object, fieldExpr.fieldName, false);
-        }
-        return lhs;
+        return new AST.AssignStmt(lhs, rhs);
     }
 
     private AST.Expr parseBool(Lexer lexer) {
@@ -333,18 +329,27 @@ public class Parser {
     private AST.Expr parseNew(Lexer lexer) {
         matchIdentifier(lexer, "new");
         AST.TypeExpr resultType = parseTypeExpr(lexer);
+        var newExpr = new AST.NewExpr(resultType);
         List<AST.Expr> initExpr = new ArrayList<>();
+        int initType = 0;
+        int index = 0;
         if (testPunctuation(lexer, "{")) {
             while (!isToken(currentToken, "}")) {
                 if (currentToken.kind == Token.Kind.IDENT && lexer.peekChar() == '=') {
+                    if (initType == 0) initType = 1;
+                    else if (initType != 1) throw new CompilerException("Cannot mix initializer expressions");
                     String fieldname = currentToken.str;
                     nextToken(lexer);
                     matchPunctuation(lexer, "=");
                     AST.Expr value = parseBool(lexer);
-                    initExpr.add(new AST.SetFieldExpr(fieldname, value));
+                    initExpr.add(new AST.InitFieldExpr(newExpr, fieldname, value));
                 }
                 else {
-                    initExpr.add(parseBool(lexer));
+                    if (initType == 0) initType = 2;
+                    else if (initType != 2) throw new CompilerException("Cannot mix initializer expressions");
+                    var indexLit = Integer.valueOf(index++);
+                    var indexExpr = new AST.LiteralExpr(Token.newNum(indexLit,indexLit.toString(),0));
+                    initExpr.add(new AST.ArrayInitExpr(newExpr, indexExpr, parseBool(lexer)));
                 }
                 if (isToken(currentToken, ","))
                     nextToken(lexer);
@@ -352,7 +357,7 @@ public class Parser {
             }
         }
         matchPunctuation(lexer, "}");
-        return new AST.NewExpr(resultType, initExpr);
+        return new AST.InitExpr(newExpr, initExpr);
     }
 
     private AST.Expr parsePrimary(Lexer lexer) {
@@ -401,12 +406,12 @@ public class Parser {
             switch (tok.str) {
                 case "[" -> {
                     AST.Expr expr = parseBool(lexer);
-                    prevExpr = new AST.ArrayIndexExpr(prevExpr, expr);
+                    prevExpr = new AST.ArrayLoadExpr(prevExpr, expr);
                     matchPunctuation(lexer, "]");
                 }
                 case "." -> {
                     if (currentToken.kind == Token.Kind.IDENT) {
-                        prevExpr = new AST.FieldExpr(prevExpr, currentToken.str);
+                        prevExpr = new AST.GetFieldExpr(prevExpr, currentToken.str);
                         nextToken(lexer);
                     }
                     else

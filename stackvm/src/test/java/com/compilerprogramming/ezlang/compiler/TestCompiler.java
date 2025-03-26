@@ -228,12 +228,15 @@ L1:
         Assert.assertEquals("""
 L0:
 	new [Int]
+	pushi 0
 	pushi 1
-	storeappend
+	storeindexed
+	pushi 1
 	pushi 2
-	storeappend
+	storeindexed
+	pushi 2
 	pushi 3
-	storeappend
+	storeindexed
 	jump L1
 L1:
 """, result);
@@ -250,8 +253,9 @@ L1:
         Assert.assertEquals("""
 L0:
 	new [Int]
+	pushi 0
 	load 0
-	storeappend
+	storeindexed
 	jump L1
 L1:
 """, result);
@@ -294,6 +298,7 @@ L0:
 	pushi 0
 	pushi 10
 	storeindexed
+	pop
 	jump L1
 L1:
 """, result);
@@ -341,10 +346,12 @@ L0:
 	pushi 0
 	pushi 1
 	storeindexed
+	pop
 	load 0
 	pushi 1
 	pushi 2
 	storeindexed
+	pop
 	jump L1
 L1:
 """, result);
