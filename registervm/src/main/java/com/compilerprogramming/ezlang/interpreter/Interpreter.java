@@ -205,19 +205,6 @@ public class Interpreter {
                 case Instruction.NewStruct newStructInst -> {
                     execStack.stack[base + newStructInst.destOperand().frameSlot()] = new Value.StructValue(newStructInst.type);
                 }
-                case Instruction.AStoreAppend arrayAppendInst -> {
-                    Value.ArrayValue arrayValue = (Value.ArrayValue) execStack.stack[base + arrayAppendInst.array().frameSlot()];
-                    if (arrayAppendInst.value() instanceof Operand.ConstantOperand constant) {
-                        arrayValue.values.add(new Value.IntegerValue(constant.value));
-                    }
-                    else if (arrayAppendInst.value() instanceof Operand.NullConstantOperand) {
-                        arrayValue.values.add(new Value.NullValue());
-                    }
-                    else if (arrayAppendInst.value() instanceof Operand.RegisterOperand registerOperand) {
-                        arrayValue.values.add(execStack.stack[base + registerOperand.frameSlot()]);
-                    }
-                    else throw new IllegalStateException();
-                }
                 case Instruction.ArrayStore arrayStoreInst -> {
                     if (arrayStoreInst.arrayOperand() instanceof Operand.RegisterOperand arrayOperand) {
                         Value.ArrayValue arrayValue = (Value.ArrayValue) execStack.stack[base + arrayOperand.frameSlot()];
@@ -241,7 +228,10 @@ public class Interpreter {
                             value = execStack.stack[base + registerOperand.frameSlot()];
                         }
                         else throw new IllegalStateException();
-                        arrayValue.values.set(index, value);
+                        if (index == arrayValue.values.size())
+                            arrayValue.values.add(value);
+                        else
+                            arrayValue.values.set(index, value);
                     } else throw new IllegalStateException();
                 }
                 case Instruction.ArrayLoad arrayLoadInst -> {

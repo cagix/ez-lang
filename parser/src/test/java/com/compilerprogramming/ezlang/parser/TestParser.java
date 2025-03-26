@@ -36,6 +36,9 @@ func bar() -> Test {
 func main() {
     var m = 42
     var t: Tree
+    var array = new [Int] {1,2,3}
+    array[1] = 42
+    t.left = null
     if (m < 1)
        print(1)
     else if (m == 5)

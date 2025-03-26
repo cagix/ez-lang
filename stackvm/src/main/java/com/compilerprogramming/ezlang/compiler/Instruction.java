@@ -18,19 +18,18 @@ public class Instruction {
     public static final int LOAD_VAR = 10;
     public static final int NEW = 11;
     public static final int LOAD_INDEXED = 12;
-    public static final int STORE_APPEND = 13; // array append
-    public static final int STORE_INDEXED = 14;
-    public static final int CALL = 15;
-    public static final int STORE = 16;
-    public static final int CBR = 17;
-    public static final int JUMP = 18;
-    public static final int POP = 19;
-    public static final int EQ = 20;
-    public static final int NE = 21;
-    public static final int LT = 22;
-    public static final int GT = 23;
-    public static final int LE = 24;
-    public static final int GE = 25;
+    public static final int STORE_INDEXED = 13;
+    public static final int CALL = 14;
+    public static final int STORE = 15;
+    public static final int CBR = 16;
+    public static final int JUMP = 17;
+    public static final int POP = 18;
+    public static final int EQ = 19;
+    public static final int NE = 20;
+    public static final int LT = 21;
+    public static final int GT = 22;
+    public static final int LE = 23;
+    public static final int GE = 24;
 
     static final String[] opNames = {
         "ret",
@@ -46,7 +45,6 @@ public class Instruction {
         "load",
         "new",
         "loadindexed",
-        "storeappend", // array append
         "storeindexed",
         "call",
         "store",
@@ -138,12 +136,6 @@ public class Instruction {
     public static class LoadIndexed extends Instruction {
         public LoadIndexed() {
             super(LOAD_INDEXED);
-        }
-    }
-
-    public static class StoreAppend extends Instruction {
-        public StoreAppend() {
-            super(STORE_APPEND);
         }
     }
 

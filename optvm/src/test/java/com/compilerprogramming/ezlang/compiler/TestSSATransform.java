@@ -1602,8 +1602,8 @@ Before SSA
 ==========
 L0:
     %t2 = New([Int])
-    %t2.append(1)
-    %t2.append(2)
+    %t2[0] = 1
+    %t2[1] = 2
     arr = %t2
     arr[0] = 10
     %t3 = arr[0]
@@ -1615,8 +1615,8 @@ After SSA
 =========
 L0:
     %t2_0 = New([Int])
-    %t2_0.append(1)
-    %t2_0.append(2)
+    %t2_0[0] = 1
+    %t2_0[1] = 2
     arr_0 = %t2_0
     arr_0[0] = 10
     %t3_0 = arr_0[0]
@@ -1628,8 +1628,8 @@ After exiting SSA
 =================
 L0:
     %t2_0 = New([Int])
-    %t2_0.append(1)
-    %t2_0.append(2)
+    %t2_0[0] = 1
+    %t2_0[1] = 2
     arr_0 = %t2_0
     arr_0[0] = 10
     %t3_0 = arr_0[0]
@@ -2738,8 +2738,8 @@ L0:
     %t1 = New([Foo?])
     %t2 = New(Foo)
     %t2.i = 1
-    %t1.append(%t2)
-    %t1.append(null)
+    %t1[0] = %t2
+    %t1[1] = null
     f = %t1
     %t3 = f[1]
     %t4 = null==%t3
@@ -2762,8 +2762,8 @@ L0:
     %t1_0 = New([Foo?])
     %t2_0 = New(Foo)
     %t2_0.i = 1
-    %t1_0.append(%t2_0)
-    %t1_0.append(null)
+    %t1_0[0] = %t2_0
+    %t1_0[1] = null
     f_0 = %t1_0
     %t3_0 = f_0[1]
     %t4_0 = null==%t3_0
@@ -2787,8 +2787,8 @@ L0:
     %t1_0 = New([Foo?])
     %t2_0 = New(Foo)
     %t2_0.i = 1
-    %t1_0.append(%t2_0)
-    %t1_0.append(null)
+    %t1_0[0] = %t2_0
+    %t1_0[1] = null
     f_0 = %t1_0
     %t3_0 = f_0[1]
     %t4_0 = null==%t3_0

@@ -18,9 +18,8 @@ public abstract class Instruction {
     static final int I_NEW_STRUCT = 11;
     static final int I_ARRAY_STORE = 12;
     static final int I_ARRAY_LOAD = 13;
-    static final int I_ARRAY_APPEND = 14;
-    static final int I_FIELD_GET = 15;
-    static final int I_FIELD_SET = 16;
+    static final int I_FIELD_GET = 14;
+    static final int I_FIELD_SET = 15;
 
     public final int opcode;
     protected Operand.RegisterOperand def;
@@ -206,18 +205,6 @@ public abstract class Instruction {
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             return sb.append(def).append(" = ").append(uses[0]).append(binOp).append(uses[1]);
-        }
-    }
-
-    public static class AStoreAppend extends Instruction {
-        public AStoreAppend(Operand.RegisterOperand array, Operand value) {
-            super(I_ARRAY_APPEND, (Operand.RegisterOperand) null, array, value);
-        }
-        public Operand.RegisterOperand array() { return (Operand.RegisterOperand) uses[0]; }
-        public Operand value() { return uses[1]; }
-        @Override
-        public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(uses[0]).append(".append(").append(uses[1]).append(")");
         }
     }
 

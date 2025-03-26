@@ -137,7 +137,12 @@ public abstract class AST {
                 }
                 args[i].toStr(sb);
             }
-            sb.append(")\n");
+            sb.append(")");
+            if (returnType != null) {
+                sb.append("->");
+                returnType.toStr(sb);
+            }
+            sb.append("\n");
             return block.toStr(sb);
         }
 
@@ -368,18 +373,13 @@ public abstract class AST {
         }
     }
 
-    // Array Index
-    public static class ArrayIndexExpr extends Expr {
+    // array[index]
+    public static class ArrayLoadExpr extends Expr {
         public final Expr array;
         public final Expr expr;
-        public final boolean loading;
-        public ArrayIndexExpr(Expr array, Expr expr) {
-            this(array, expr, true);
-        }
-        public ArrayIndexExpr(Expr array, Expr expr, boolean loading) {
+        public ArrayLoadExpr(Expr array, Expr expr) {
             this.array = array;
             this.expr = expr;
-            this.loading = loading;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
@@ -400,17 +400,55 @@ public abstract class AST {
         }
     }
 
-    public static class FieldExpr extends Expr {
+    // array[index] = value
+    public static class ArrayStoreExpr extends Expr {
+        public final Expr array;
+        public final Expr expr;
+        public final Expr value;
+        public ArrayStoreExpr(Expr array, Expr expr, Expr value) {
+            this.array = array;
+            this.expr = expr;
+            this.value = value;
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            array.toStr(sb);
+            sb.append("[");
+            expr.toStr(sb);
+            return sb.append("]").append("=").append(value);
+        }
+        @Override
+        public void accept(ASTVisitor visitor) {
+            visitor = visitor.visit(this, true);
+            if (visitor == null)
+                return;
+            array.accept(visitor);
+            expr.accept(visitor);
+            value.accept(visitor);
+            visitor.visit(this, false);
+        }
+    }
+
+    /**
+     * Used inside InitExpr
+     * Specializes how we display
+     */
+    public static class ArrayInitExpr extends ArrayStoreExpr {
+        public ArrayInitExpr(Expr array, Expr expr, Expr value) {
+            super(array, expr, value);
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            return sb.append(value);
+        }
+    }
+
+    public static class GetFieldExpr extends Expr {
         public final Expr object;
         public final String fieldName;
-        public final boolean loading;
-        public FieldExpr(Expr object, String fieldName) {
-            this(object, fieldName, true);
-        }
-        public FieldExpr(Expr object, String fieldName, boolean loading) {
+        public GetFieldExpr(Expr object, String fieldName) {
             this.object = object;
             this.fieldName = fieldName;
-            this.loading = loading;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
@@ -425,6 +463,45 @@ public abstract class AST {
                 return;
             object.accept(visitor);
             visitor.visit(this, false);
+        }
+    }
+
+    public static class SetFieldExpr extends Expr {
+        public final Expr object;
+        public final String fieldName;
+        public final Expr value;
+        public SetFieldExpr(Expr object, String fieldName, Expr value) {
+            this.object = object;
+            this.fieldName = fieldName;
+            this.value = value;
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            object.toStr(sb);
+            return sb.append(".").append(fieldName).append("=").append(value);
+        }
+        @Override
+        public void accept(ASTVisitor visitor) {
+            visitor = visitor.visit(this, true);
+            if (visitor == null)
+                return;
+            object.accept(visitor);
+            value.accept(visitor);
+            visitor.visit(this, false);
+        }
+    }
+
+    /**
+     * Used inside InitExpr
+     * Specializes how we display
+     */
+    public static class InitFieldExpr extends SetFieldExpr {
+        public InitFieldExpr(Expr object, String fieldName, Expr value) {
+            super(object, fieldName, value);
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            return sb.append(fieldName).append("=").append(value);
         }
     }
 
@@ -462,44 +539,45 @@ public abstract class AST {
         }
     }
 
-    public static class SetFieldExpr extends Expr {
-        public final String fieldName;
-        public final AST.Expr value;
-        public Type objectType;
-        public SetFieldExpr(String fieldName, Expr value) {
-            this.fieldName = fieldName;
-            this.value = value;
-        }
-        @Override
-        public StringBuilder toStr(StringBuilder sb) {
-            if (fieldName != null) {
-                sb.append(fieldName).append("=");
-            }
-            value.toStr(sb);
-            return sb;
-        }
-
-        @Override
-        public void accept(ASTVisitor visitor) {
-            visitor = visitor.visit(this, true);
-            if (visitor == null)
-                return;
-            value.accept(visitor);
-            visitor.visit(this, false);
-        }
-    }
-
+    /**
+     * new T
+     * result type is T
+     */
     public static class NewExpr extends Expr {
         public final TypeExpr typeExpr;
-        public final List<Expr> initExprList;
-        public NewExpr(TypeExpr typeExpr, List<Expr> initExprList) {
+        public NewExpr(TypeExpr typeExpr) {
             this.typeExpr = typeExpr;
-            this.initExprList = initExprList;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             sb.append("new ");
             typeExpr.toStr(sb);
+            return sb;
+        }
+        @Override
+        public void accept(ASTVisitor visitor) {
+            visitor = visitor.visit(this, true);
+            if (visitor == null)
+                return;
+            typeExpr.accept(visitor);
+            visitor.visit(this, false);
+        }
+    }
+
+    /**
+     * new T { initializers }
+     * result type is T
+     */
+    public static class InitExpr extends Expr {
+        public final NewExpr newExpr;
+        public final List<Expr> initExprList;
+        public InitExpr(NewExpr newExpr, List<Expr> initExprList) {
+            this.newExpr = newExpr;
+            this.initExprList = initExprList;
+        }
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            newExpr.toStr(sb);
             sb.append("{");
             boolean first = true;
             for (Expr expr: initExprList) {
@@ -517,7 +595,7 @@ public abstract class AST {
             visitor = visitor.visit(this, true);
             if (visitor == null)
                 return;
-            typeExpr.accept(visitor);
+            newExpr.accept(visitor);
             for (Expr expr: initExprList) {
                 expr.accept(visitor);
             }
