@@ -28,6 +28,7 @@
         <module>stackvm</module>
         <module>registervm</module>
         <module>optvm</module>
+        <module>seaofnodes</module>
     </modules>
 
     <properties>

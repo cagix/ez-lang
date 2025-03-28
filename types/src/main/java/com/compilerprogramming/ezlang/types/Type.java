@@ -140,6 +140,7 @@ public abstract class Type {
             return  fieldNames.indexOf(name);
         }
         public int numFields() { return fieldNames.size(); }
+        public String getFieldName(int index) { return fieldNames.get(index); }
         public void complete() { pending = false; }
     }
 

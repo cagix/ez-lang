@@ -1,0 +1,22 @@
+package com.compilerprogramming.ezlang.compiler.nodes;
+
+import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import java.util.BitSet;
+
+public abstract class SplitNode extends MachConcreteNode {
+    public final String _kind;  // Kind of split
+    public final byte _round;
+    public SplitNode(String kind, byte round, Node[] nodes) { super(nodes); _kind = kind; _round = round; }
+    @Override public String op() { return "mov"; }
+    @Override public StringBuilder _print1(StringBuilder sb, BitSet visited) {
+        return in(1)._print0(sb.append("mov("),visited).append(")");
+    }
+    @Override public SONType compute() { return in(0)._type; }
+    @Override public Node idealize() { return null; }
+    @Override public void asm(CodeGen code, SB sb) {
+        sb.p(code.reg(this)).p(" = ").p(code.reg(in(1)));
+    }
+    @Override public String comment() { return _kind + " #"+ _round; }
+}
