@@ -5,6 +5,7 @@ import com.compilerprogramming.ezlang.lexer.Lexer;
 import com.compilerprogramming.ezlang.parser.Parser;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestSemaAssignTypes {
@@ -419,5 +420,21 @@ public class TestSemaAssignTypes {
     }
 """;
         analyze(src, "foo", "func foo()");
+    }
+
+    @Ignore
+    @Test(expected = CompilerException.class)
+    public void test23() {
+        String src = """
+    func bar(arg: Int)->Int {
+        if (arg)
+            return 42;
+        return 0;
+    }
+    func foo()->Int {
+        return bar();
+    }
+""";
+        analyze(src, "foo", "func foo()->Int");
     }
 }

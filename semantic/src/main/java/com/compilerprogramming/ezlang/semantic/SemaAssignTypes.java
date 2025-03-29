@@ -385,9 +385,9 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.AssignStmt assignStmt, boolean enter) {
         if (!enter) {
-            validType(assignStmt.lhs.type, false);
+            validType(assignStmt.nameExpr.type, false);
             validType(assignStmt.rhs.type, true);
-            checkAssignmentCompatible(assignStmt.lhs.type, assignStmt.rhs.type);
+            checkAssignmentCompatible(assignStmt.nameExpr.type, assignStmt.rhs.type);
         }
         return this;
     }

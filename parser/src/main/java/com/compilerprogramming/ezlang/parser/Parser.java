@@ -253,8 +253,11 @@ public class Parser {
             else if (lhs instanceof AST.GetFieldExpr getFieldExpr) {
                 return new AST.ExprStmt(new AST.SetFieldExpr(getFieldExpr.object, getFieldExpr.fieldName, rhs));
             }
+            else if (lhs instanceof AST.NameExpr nameExpr) {
+                return new AST.AssignStmt(nameExpr, rhs);
+            }
+            else throw new CompilerException("Expected a name, expr[] or expr.field");
         }
-        return new AST.AssignStmt(lhs, rhs);
     }
 
     private AST.Expr parseBool(Lexer lexer) {

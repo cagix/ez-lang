@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.stream.Collectors;
 
 public class Simple {
-    public static final String PORTS = "com.seaofnodes.simple.node.cpus";
+    public static final String PORTS = "com.compilerprogramming.ezlang.compiler.nodes.cpus";
 
     static final int DUMP_AFTER_PARSE        = 1<<0;
     static final int DUMP_AFTER_OPTO         = 1<<1;
