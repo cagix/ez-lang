@@ -175,20 +175,11 @@ public class CompiledFunction {
     }
 
     private void compileAssign(AST.AssignStmt assignStmt) {
-        boolean indexedLhs = false;
-        if (!(assignStmt.lhs instanceof AST.NameExpr))
-            indexedLhs = compileExpr(assignStmt.lhs);
         boolean indexedRhs = compileExpr(assignStmt.rhs);
         if (indexedRhs)
             codeIndexedLoad();
-        if (indexedLhs)
-            codeIndexedStore();
-        else if (assignStmt.lhs instanceof AST.NameExpr symbolExpr) {
-            Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
-            codeMove(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(varSymbol.regNumber), varSymbol));
-        }
-        else
-            throw new CompilerException("Invalid assignment expression: " + assignStmt.lhs);
+        Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) assignStmt.nameExpr.symbol;
+        codeMove(pop(), new Operand.LocalRegisterOperand(registerPool.getReg(varSymbol.regNumber), varSymbol));
     }
 
     private void compileExprStmt(AST.ExprStmt exprStmt) {

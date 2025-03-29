@@ -712,7 +712,9 @@ public class Compiler {
             case AST.VarStmt letStmt -> {
                 return compileLet(letStmt);
             }
-            case AST.VarDeclStmt varDeclStmt -> {}
+            case AST.VarDeclStmt varDeclStmt -> {
+                return ZERO;
+            }
             case AST.IfElseStmt ifElseStmt -> {
                 return compileIf(ifElseStmt);
             }
@@ -736,7 +738,6 @@ public class Compiler {
             }
             default -> throw new IllegalStateException("Unexpected value: " + statement);
         }
-        throw new CompilerException("Not yet implemented");
     }
 
     private ScopeNode jumpTo(ScopeNode toScope) {
@@ -847,7 +848,6 @@ public class Compiler {
 
         // At exit the false control is the current control, and
         // the scope is the exit scope after the exit test.
-        _xScopes.pop();
         _xScopes.push(exit);
         _scope = exit;
         return ZERO;
@@ -855,8 +855,6 @@ public class Compiler {
 
     private Node compileIf(AST.IfElseStmt ifElseStmt) {
         var pred = compileExpr(ifElseStmt.condition).keep();
-        pred.keep();
-
         // IfNode takes current control and predicate
         Node ifNode = new IfNode(ctrl(), pred).peephole();
         // Setup projection nodes
@@ -914,8 +912,7 @@ public class Compiler {
     }
 
     private Node compileAssign(AST.AssignStmt assignStmt) {
-        if (!(assignStmt.lhs instanceof AST.NameExpr nameExpr))
-            throw new CompilerException("Assignment requires a nameExpr");
+        var nameExpr = assignStmt.nameExpr;
         String name = nameExpr.name;
         if (!(nameExpr.symbol instanceof Symbol.VarSymbol varSymbol))
             throw new CompilerException("Assignment requires a variable name");

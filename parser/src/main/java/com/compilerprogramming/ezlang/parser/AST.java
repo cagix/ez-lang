@@ -731,16 +731,17 @@ public abstract class AST {
         }
     }
 
+    /* name = value */
     public static class AssignStmt extends Stmt {
-        public final Expr lhs;
+        public final NameExpr nameExpr;
         public final Expr rhs;
-        public AssignStmt(Expr lhs, Expr rhs) {
-            this.lhs = lhs;
+        public AssignStmt(NameExpr nameExpr, Expr rhs) {
+            this.nameExpr = nameExpr;
             this.rhs = rhs;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            lhs.toStr(sb);
+            nameExpr.toStr(sb);
             sb.append(" = ");
             rhs.toStr(sb);
             return sb;
@@ -751,7 +752,7 @@ public abstract class AST {
             visitor = visitor.visit(this, true);
             if (visitor == null)
                 return;
-            lhs.accept(visitor);
+            nameExpr.accept(visitor);
             rhs.accept(visitor);
             visitor.visit(this, false);
         }
