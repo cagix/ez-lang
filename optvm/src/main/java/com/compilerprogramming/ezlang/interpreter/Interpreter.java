@@ -108,13 +108,13 @@ public class Interpreter {
                     int reg = baseReg;
                     for (Operand arg: callInst.args()) {
                         if (arg instanceof Operand.RegisterOperand param) {
-                            execStack.stack[base + reg] = execStack.stack[base + param.frameSlot()];
+                            execStack.stack[reg] = execStack.stack[base + param.frameSlot()];
                         }
                         else if (arg instanceof Operand.ConstantOperand constantOperand) {
-                            execStack.stack[base + reg] = new Value.IntegerValue(constantOperand.value);
+                            execStack.stack[reg] = new Value.IntegerValue(constantOperand.value);
                         }
                         else if (arg instanceof Operand.NullConstantOperand) {
-                            execStack.stack[base + reg] = new Value.NullValue();
+                            execStack.stack[reg] = new Value.NullValue();
                         }
                         reg += 1;
                     }
@@ -193,7 +193,7 @@ public class Interpreter {
                             case "<": value = x < y ? 1: 0; break;
                             case ">": value = x > y ? 1 : 0; break;
                             case "<=": value = x <= y ? 1 : 0; break;
-                            case ">=": value = x <= y ? 1 : 0; break;
+                            case ">=": value = x >= y ? 1 : 0; break;
                             default: throw new IllegalStateException();
                         }
                         execStack.stack[base + binaryInst.result().frameSlot()] = new Value.IntegerValue(value);
