@@ -33,10 +33,14 @@ a physical machine. Therefore, all our optimization passes will work on the inst
   each register has a unique integer ID and these ids are allocated in a sequential manner.
 * [Liveness](src/main/java/com/compilerprogramming/ezlang/compiler/Liveness.java) - Liveness calculator, works for both SSA and non-SSA forms. Computes
   liveness data per basic block - mainly live-out. Note that the interference graph builder starts here and computes instruction level liveness as necessary.
-* [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using algorithm by Preston Briggs.
+* [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using [algorithm by Preston Briggs](https://dl.acm.org/doi/10.5555/295545.295551). This is one of available mechanisms to transform the IR into SSA. 
+  The other alternative is to generate SSA IR directly from the AST, using [Braun's method](https://dl.acm.org/doi/10.1007/978-3-642-37051-9_6) - this option is integrated into the
+  [compiler]((src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java)) and enabled using an option.
 * [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form, using algorithm by Preston Briggs.
 * [SparseConditionalConstantPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/SparseConditionalConstantPropagation.java) - Conditional Constant Propagation on SSA form (SCCP)
-* [SSAEdges](src/main/java/com/compilerprogramming/ezlang/compiler/SSAEdges.java) - SSAEdges are def-use chains used by SCCP algorithm 
+* [ConstantComparisonPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/ConstantComparisonPropagation.java) - Detects equals and not equals against constants within conditionals,
+   and inserts variables with appropriately specialized type within the dominated blocks, so that a second pass of SCCP can further optimize code.
+* [SSAEdges](src/main/java/com/compilerprogramming/ezlang/compiler/SSAEdges.java) - SSAEdges are def-use chains used by SCCP algorithm, and also generated during incremental SSA construction using Braun's method.
 * [LoopFinder](src/main/java/com/compilerprogramming/ezlang/compiler/LoopFinder.java) - Discovers loops. (Not used yet)
 * [LoopNest](src/main/java/com/compilerprogramming/ezlang/compiler/LoopNest.java) - Representation of loop nesting. (Not used yet)
 * [InterferenceGraph](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraph.java) - Representation of an Interference Graph

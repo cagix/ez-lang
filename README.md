@@ -26,8 +26,9 @@ The project is under development and subject to change. At this point in time, w
 * [semantic](./semantic/README.md) - semantic analyzer
 * [stackvm](./stackvm/README.md) - a compiler that generates IR for a stack based virtual machine
 * [registervm](./registervm/README.md) - a compiler that generates a so called three-address IR and an interpreter that can execute the IR
-* [optvm](./optvm/README.md) - an optimizing compiler (WIP) that supports SSA.
-* [seaofnodes](./seaofnodes/README.md) - a compiler that will generate Sea of Nodes IR, using SoN backend from [Simple](https://github.com/SeaOfNodes/Simple).
+* [optvm](./optvm/README.md) - WIP optimizing compiler with SSA transformation, constant propagation, graph coloring register allocation 
+  targeting an abstract machine.
+* [seaofnodes](./seaofnodes/README.md) - WIP compiler that generates Sea of Nodes IR, using SoN backend from [Simple](https://github.com/SeaOfNodes/Simple).
 
 ## How can you contribute?
 
