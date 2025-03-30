@@ -45,7 +45,7 @@ public class ChaitinGraphColoringRegisterAllocator {
      * Frame size = max number of registers needed to execute the function
      */
     private int computeFrameSize(Map<Integer, Integer> assignments) {
-        return assignments.values().stream().mapToInt(k->k).max().orElse(0);
+        return assignments.values().stream().mapToInt(k->k).max().orElse(-1)+1;
     }
 
     /**
