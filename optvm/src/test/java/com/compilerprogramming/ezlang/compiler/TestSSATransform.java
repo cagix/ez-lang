@@ -462,10 +462,6 @@ L13:
 L18:
     goto  L4
 L4:
-    l_10 = phi(l_1, l_9)
-    k_5 = phi(k_1, k_4)
-    j_4 = phi(j_1, j_3)
-    i_3 = phi(i_1, i_2)
     goto  L1
 L1:
 L19:
@@ -497,10 +493,6 @@ L0:
     i_1 = i_0
     goto  L2
 L2:
-    l_10 = l_1
-    k_5 = k_1
-    j_4 = j_1
-    i_3 = i_1
     if 1 goto L3 else goto L4
 L3:
     if p_0 goto L5 else goto L6
@@ -549,10 +541,6 @@ L13:
     %t18_0 = !t_0
     if %t18_0 goto L18 else goto L19
 L18:
-    l_10 = l_9
-    k_5 = k_4
-    j_4 = j_3
-    i_3 = i_2
     goto  L4
 L4:
     goto  L1
@@ -803,7 +791,6 @@ L1:
     }
 
     @Test
-    @Ignore
     public void testInit() {
         // see issue #16
         String src = """
@@ -818,7 +805,81 @@ L1:
                 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg x
+    goto  L2
+L2:
+    %t2 = x>0
+    if %t2 goto L3 else goto L4
+L3:
+    z = 5
+    %t3 = x==1
+    if %t3 goto L5 else goto L6
+L5:
+    %t4 = z+1
+    z = %t4
+    goto  L6
+L6:
+    %t5 = x-1
+    x = %t5
+    goto  L2
+L4:
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg x_0
+    goto  L2
+L2:
+    x_1 = phi(x_0, x_2)
+    %t2_0 = x_1>0
+    if %t2_0 goto L3 else goto L4
+L3:
+    z_0 = 5
+    %t3_0 = x_1==1
+    if %t3_0 goto L5 else goto L6
+L5:
+    %t4_0 = z_0+1
+    z_1 = %t4_0
+    goto  L6
+L6:
+    %t5_0 = x_1-1
+    x_2 = %t5_0
+    goto  L2
+L4:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg x_0
+    x_1 = x_0
+    goto  L2
+L2:
+    %t2_0 = x_1>0
+    if %t2_0 goto L3 else goto L4
+L3:
+    z_0 = 5
+    %t3_0 = x_1==1
+    if %t3_0 goto L5 else goto L6
+L5:
+    %t4_0 = z_0+1
+    z_1 = %t4_0
+    goto  L6
+L6:
+    %t5_0 = x_1-1
+    x_2 = %t5_0
+    x_1 = x_2
+    goto  L2
+L4:
+    goto  L1
+L1:
+""", result);
     }
 
     // http://users.csc.calpoly.edu/~akeen/courses/csc431/handouts/references/ssa_example.pdf
@@ -1897,24 +1958,23 @@ L0:
     j_0 = 0
     goto  L2
 L2:
-    j_1 = phi(j_0, j_2)
     i_1 = phi(i_0, i_3)
     b_1 = phi(b_0, b_2)
     a_1 = phi(a_0, a_2)
     %t4_0 = i_1<3
     if %t4_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     goto  L5
 L5:
     i_2 = phi(i_1, i_4)
     a_2 = phi(a_1, a_3)
-    %t5_0 = j_2<2
+    %t5_0 = j_1<2
     if %t5_0 goto L6 else goto L7
 L6:
     %t6_0 = a_2+1
     a_3 = %t6_0
-    %t7_0 = j_2+1
+    %t7_0 = j_1+1
     i_4 = %t7_0
     goto  L5
 L7:
@@ -1935,7 +1995,6 @@ L0:
     b_0 = 0
     i_0 = 0
     j_0 = 0
-    j_1 = j_0
     i_1 = i_0
     b_1 = b_0
     a_1 = a_0
@@ -1944,17 +2003,17 @@ L2:
     %t4_0 = i_1<3
     if %t4_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     i_2 = i_1
     a_2 = a_1
     goto  L5
 L5:
-    %t5_0 = j_2<2
+    %t5_0 = j_1<2
     if %t5_0 goto L6 else goto L7
 L6:
     %t6_0 = a_2+1
     a_3 = %t6_0
-    %t7_0 = j_2+1
+    %t7_0 = j_1+1
     i_4 = %t7_0
     i_2 = i_4
     a_2 = a_3
@@ -1964,7 +2023,6 @@ L7:
     b_2 = %t8_0
     %t9_0 = i_2+1
     i_3 = %t9_0
-    j_1 = j_2
     i_1 = i_3
     b_1 = b_2
     a_1 = a_2
@@ -2043,31 +2101,30 @@ L0:
     j_0 = 0
     goto  L2
 L2:
-    j_1 = phi(j_0, j_3)
     i_1 = phi(i_0, i_2)
     sum_1 = phi(sum_0, sum_2)
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     goto  L5
 L5:
-    j_3 = phi(j_2, j_4)
+    j_2 = phi(j_1, j_3)
     sum_2 = phi(sum_1, sum_4)
-    %t4_0 = j_3<5
+    %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = j_3%2
+    %t5_0 = j_2%2
     %t6_0 = %t5_0==0
     if %t6_0 goto L8 else goto L9
 L8:
-    %t7_0 = sum_2+j_3
+    %t7_0 = sum_2+j_2
     sum_3 = %t7_0
     goto  L9
 L9:
     sum_4 = phi(sum_2, sum_3)
-    %t8_0 = j_3+1
-    j_4 = %t8_0
+    %t8_0 = j_2+1
+    j_3 = %t8_0
     goto  L5
 L7:
     %t9_0 = i_1+1
@@ -2083,7 +2140,6 @@ L0:
     sum_0 = 0
     i_0 = 0
     j_0 = 0
-    j_1 = j_0
     i_1 = i_0
     sum_1 = sum_0
     goto  L2
@@ -2091,33 +2147,32 @@ L2:
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
-    j_3 = j_2
+    j_1 = 0
+    j_2 = j_1
     sum_2 = sum_1
     goto  L5
 L5:
-    %t4_0 = j_3<5
+    %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = j_3%2
+    %t5_0 = j_2%2
     %t6_0 = %t5_0==0
     sum_4 = sum_2
     if %t6_0 goto L8 else goto L9
 L8:
-    %t7_0 = sum_2+j_3
+    %t7_0 = sum_2+j_2
     sum_3 = %t7_0
     sum_4 = sum_3
     goto  L9
 L9:
-    %t8_0 = j_3+1
-    j_4 = %t8_0
-    j_3 = j_4
+    %t8_0 = j_2+1
+    j_3 = %t8_0
+    j_2 = j_3
     sum_2 = sum_4
     goto  L5
 L7:
     %t9_0 = i_1+1
     i_2 = %t9_0
-    j_1 = j_3
     i_1 = i_2
     sum_1 = sum_2
     goto  L2
@@ -2205,34 +2260,33 @@ L0:
     j_0 = 0
     goto  L2
 L2:
-    j_1 = phi(j_0, j_3)
     i_1 = phi(i_0, i_2)
     a_1 = phi(a_0, a_2)
     %t3_0 = i_1<3
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     goto  L5
 L5:
-    j_3 = phi(j_2, j_4)
+    j_2 = phi(j_1, j_3)
     a_2 = phi(a_1, a_6)
-    %t4_0 = j_3<3
+    %t4_0 = j_2<3
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = i_1==j_3
+    %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
     %t6_0 = a_4+i_1
-    %t7_0 = %t6_0+j_3
+    %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     goto  L10
 L10:
     a_6 = phi(a_5, a_4)
-    %t10_0 = j_3+1
-    j_4 = %t10_0
+    %t10_0 = j_2+1
+    j_3 = %t10_0
     goto  L5
 L9:
-    %t8_0 = i_1>j_3
+    %t8_0 = i_1>j_2
     if %t8_0 goto L11 else goto L12
 L11:
     %t9_0 = a_2-1
@@ -2255,7 +2309,6 @@ L0:
     a_0 = 0
     i_0 = 0
     j_0 = 0
-    j_1 = j_0
     i_1 = i_0
     a_1 = a_0
     goto  L2
@@ -2263,30 +2316,30 @@ L2:
     %t3_0 = i_1<3
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
-    j_3 = j_2
+    j_1 = 0
+    j_2 = j_1
     a_2 = a_1
     goto  L5
 L5:
-    %t4_0 = j_3<3
+    %t4_0 = j_2<3
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = i_1==j_3
+    %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
     %t6_0 = a_4+i_1
-    %t7_0 = %t6_0+j_3
+    %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     a_6 = a_5
     goto  L10
 L10:
-    %t10_0 = j_3+1
-    j_4 = %t10_0
-    j_3 = j_4
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    j_2 = j_3
     a_2 = a_6
     goto  L5
 L9:
-    %t8_0 = i_1>j_3
+    %t8_0 = i_1>j_2
     a_4 = a_2
     if %t8_0 goto L11 else goto L12
 L11:
@@ -2300,7 +2353,6 @@ L12:
 L7:
     %t11_0 = i_1+1
     i_2 = %t11_0
-    j_1 = j_3
     i_1 = i_2
     a_1 = a_2
     goto  L2
@@ -2389,21 +2441,20 @@ L0:
     j_0 = 0
     goto  L2
 L2:
-    j_1 = phi(j_0, j_3)
     i_1 = phi(i_0, i_2)
     count_1 = phi(count_0, count_2)
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     goto  L5
 L5:
-    j_3 = phi(j_2, j_5, j_4)
+    j_2 = phi(j_1, j_4, j_3)
     count_2 = phi(count_1, count_2, count_3)
-    %t4_0 = j_3<5
+    %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = i_1+j_3
+    %t5_0 = i_1+j_2
     %t6_0 = %t5_0>5
     if %t6_0 goto L8 else goto L9
 L8:
@@ -2413,17 +2464,17 @@ L7:
     i_2 = %t11_0
     goto  L2
 L9:
-    %t7_0 = i_1==j_3
+    %t7_0 = i_1==j_2
     if %t7_0 goto L10 else goto L11
 L10:
-    %t8_0 = j_3+1
-    j_5 = %t8_0
+    %t8_0 = j_2+1
+    j_4 = %t8_0
     goto  L5
 L11:
     %t9_0 = count_2+1
     count_3 = %t9_0
-    %t10_0 = j_3+1
-    j_4 = %t10_0
+    %t10_0 = j_2+1
+    j_3 = %t10_0
     goto  L5
 L4:
     ret count_1
@@ -2435,7 +2486,6 @@ L0:
     count_0 = 0
     i_0 = 0
     j_0 = 0
-    j_1 = j_0
     i_1 = i_0
     count_1 = count_0
     goto  L2
@@ -2443,16 +2493,16 @@ L2:
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
-    j_2 = 0
-    j_3 = j_2
+    j_1 = 0
+    j_2 = j_1
     count_2 = count_1
     goto  L5
 L5:
-    count_2_35 = count_2
-    %t4_0 = j_3<5
+    count_2_34 = count_2
+    %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
-    %t5_0 = i_1+j_3
+    %t5_0 = i_1+j_2
     %t6_0 = %t5_0>5
     if %t6_0 goto L8 else goto L9
 L8:
@@ -2460,26 +2510,25 @@ L8:
 L7:
     %t11_0 = i_1+1
     i_2 = %t11_0
-    j_1 = j_3
     i_1 = i_2
     count_1 = count_2
     goto  L2
 L9:
-    %t7_0 = i_1==j_3
+    %t7_0 = i_1==j_2
     if %t7_0 goto L10 else goto L11
 L10:
-    %t8_0 = j_3+1
-    j_5 = %t8_0
-    j_3 = j_5
-    count_2_34 = count_2
-    count_2 = count_2_34
+    %t8_0 = j_2+1
+    j_4 = %t8_0
+    j_2 = j_4
+    count_2_33 = count_2
+    count_2 = count_2_33
     goto  L5
 L11:
     %t9_0 = count_2+1
     count_3 = %t9_0
-    %t10_0 = j_3+1
-    j_4 = %t10_0
-    j_3 = j_4
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    j_2 = j_3
     count_2 = count_3
     goto  L5
 L4:
@@ -2562,33 +2611,32 @@ L0:
     j_0 = 0
     goto  L2
 L2:
-    j_1 = phi(j_0, j_3)
     i_1 = phi(i_0, i_2)
     innerSum_1 = phi(innerSum_0, innerSum_2)
     outerSum_1 = phi(outerSum_0, outerSum_2)
     %t4_0 = i_1<4
     if %t4_0 goto L3 else goto L4
 L3:
-    j_2 = 0
+    j_1 = 0
     goto  L5
 L5:
-    j_3 = phi(j_2, j_4)
+    j_2 = phi(j_1, j_3)
     innerSum_2 = phi(innerSum_1, innerSum_4)
-    %t5_0 = j_3<4
+    %t5_0 = j_2<4
     if %t5_0 goto L6 else goto L7
 L6:
-    %t6_0 = i_1+j_3
+    %t6_0 = i_1+j_2
     %t7_0 = %t6_0%2
     %t8_0 = %t7_0==0
     if %t8_0 goto L8 else goto L9
 L8:
-    %t9_0 = innerSum_2+j_3
+    %t9_0 = innerSum_2+j_2
     innerSum_3 = %t9_0
     goto  L9
 L9:
     innerSum_4 = phi(innerSum_2, innerSum_3)
-    %t10_0 = j_3+1
-    j_4 = %t10_0
+    %t10_0 = j_2+1
+    j_3 = %t10_0
     goto  L5
 L7:
     %t11_0 = outerSum_1+innerSum_2
@@ -2607,7 +2655,6 @@ L0:
     innerSum_0 = 0
     i_0 = 0
     j_0 = 0
-    j_1 = j_0
     i_1 = i_0
     innerSum_1 = innerSum_0
     outerSum_1 = outerSum_0
@@ -2616,28 +2663,28 @@ L2:
     %t4_0 = i_1<4
     if %t4_0 goto L3 else goto L4
 L3:
-    j_2 = 0
-    j_3 = j_2
+    j_1 = 0
+    j_2 = j_1
     innerSum_2 = innerSum_1
     goto  L5
 L5:
-    %t5_0 = j_3<4
+    %t5_0 = j_2<4
     if %t5_0 goto L6 else goto L7
 L6:
-    %t6_0 = i_1+j_3
+    %t6_0 = i_1+j_2
     %t7_0 = %t6_0%2
     %t8_0 = %t7_0==0
     innerSum_4 = innerSum_2
     if %t8_0 goto L8 else goto L9
 L8:
-    %t9_0 = innerSum_2+j_3
+    %t9_0 = innerSum_2+j_2
     innerSum_3 = %t9_0
     innerSum_4 = innerSum_3
     goto  L9
 L9:
-    %t10_0 = j_3+1
-    j_4 = %t10_0
-    j_3 = j_4
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    j_2 = j_3
     innerSum_2 = innerSum_4
     goto  L5
 L7:
@@ -2645,7 +2692,6 @@ L7:
     outerSum_2 = %t11_0
     %t12_0 = i_1+1
     i_2 = %t12_0
-    j_1 = j_3
     i_1 = i_2
     innerSum_1 = innerSum_2
     outerSum_1 = outerSum_2
@@ -2807,6 +2853,126 @@ L3:
     %t7_0 = 0
     %t7_2 = %t7_0
     goto  L4
+""", result);
+    }
+
+
+    @Test
+    public void testSSA17() {
+        String src = """
+func merge(begin: Int, middle: Int, end: Int)
+{
+    if (begin < end) {
+        var cond = 0
+        if (begin < middle) {
+            if (begin >= end)          cond = 1;
+        }
+        if (cond)
+        {
+            cond = 0
+        }
+    }
+}
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func merge
+Before SSA
+==========
+L0:
+    arg begin
+    arg middle
+    arg end
+    %t4 = begin<end
+    if %t4 goto L2 else goto L3
+L2:
+    cond = 0
+    %t5 = begin<middle
+    if %t5 goto L4 else goto L5
+L4:
+    %t6 = begin>=end
+    if %t6 goto L6 else goto L7
+L6:
+    cond = 1
+    goto  L7
+L7:
+    goto  L5
+L5:
+    if cond goto L8 else goto L9
+L8:
+    cond = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg begin_0
+    arg middle_0
+    arg end_0
+    %t4_0 = begin_0<end_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    cond_0 = 0
+    %t5_0 = begin_0<middle_0
+    if %t5_0 goto L4 else goto L5
+L4:
+    %t6_0 = begin_0>=end_0
+    if %t6_0 goto L6 else goto L7
+L6:
+    cond_1 = 1
+    goto  L7
+L7:
+    cond_2 = phi(cond_0, cond_1)
+    goto  L5
+L5:
+    cond_3 = phi(cond_0, cond_2)
+    if cond_3 goto L8 else goto L9
+L8:
+    cond_4 = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg begin_0
+    arg middle_0
+    arg end_0
+    %t4_0 = begin_0<end_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    cond_0 = 0
+    %t5_0 = begin_0<middle_0
+    cond_3 = cond_0
+    if %t5_0 goto L4 else goto L5
+L4:
+    %t6_0 = begin_0>=end_0
+    cond_2 = cond_0
+    if %t6_0 goto L6 else goto L7
+L6:
+    cond_1 = 1
+    cond_2 = cond_1
+    goto  L7
+L7:
+    cond_3 = cond_2
+    goto  L5
+L5:
+    if cond_3 goto L8 else goto L9
+L8:
+    cond_4 = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
 """, result);
     }
 }

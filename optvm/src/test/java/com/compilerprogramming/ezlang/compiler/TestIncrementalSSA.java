@@ -520,5 +520,154 @@ L6:
 """, result);
     }
 
+    @Test
+    public void testSSA10() {
+        String src = """
+        func main()->Int {
+            var sum = 0
+            var i = 0
+            var j = 0
+            while (i < 5) {
+                j = 0
+                while (j < 5) {
+                    if (j % 2 == 0) 
+                        sum = sum + j
+                    j = j + 1    
+                }
+                i = i + 1    
+            }
+            return sum
+        }
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func main()->Int
+Reg #0 sum 0
+Reg #1 i 1
+Reg #2 j 2
+Reg #3 %t3 3
+Reg #4 i_1 1
+Reg #5 j_1 2
+Reg #6 %t6 6
+Reg #7 j_2 2
+Reg #8 %t8 8
+Reg #9 %t9 9
+Reg #10 %t10 10
+Reg #11 sum_1 0
+Reg #12 sum_2 0
+Reg #13 %t13 13
+Reg #14 j_3 2
+Reg #15 j_4 2
+Reg #16 sum_3 0
+Reg #17 sum_4 0
+Reg #18 %t18 18
+Reg #19 i_2 1
+Reg #20 i_3 1
+Reg #21 i_4 1
+L0:
+    sum = 0
+    i = 0
+    j = 0
+    goto  L2
+L2:
+    sum_3 = phi(sum, sum_1)
+    i_1 = phi(i, i_4)
+    %t3 = i_1<5
+    if %t3 goto L3 else goto L4
+L3:
+    j_1 = 0
+    goto  L5
+L5:
+    sum_1 = phi(sum_3, sum_4)
+    j_2 = phi(j_1, j_4)
+    %t6 = j_2<5
+    if %t6 goto L6 else goto L7
+L6:
+    %t8 = j_2%2
+    %t9 = %t8==0
+    if %t9 goto L8 else goto L9
+L8:
+    %t10 = sum_1+j_2
+    sum_2 = %t10
+    goto  L9
+L9:
+    sum_4 = phi(sum_1, sum_2)
+    %t13 = j_2+1
+    j_4 = %t13
+    goto  L5
+L7:
+    %t18 = i_1+1
+    i_4 = %t18
+    goto  L2
+L4:
+    ret sum_3
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testSSA17() {
+        String src = """
+func merge(begin: Int, middle: Int, end: Int)
+{
+    if (begin < end) {
+        var cond = 0
+        if (begin < middle) {
+            if (begin >= end)          cond = 1;
+        }
+        if (cond)
+        {
+            cond = 0
+        }
+    }
+}
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func merge(begin: Int,middle: Int,end: Int)
+Reg #0 begin 0
+Reg #1 middle 1
+Reg #2 end 2
+Reg #3 cond 3
+Reg #4 %t4 4
+Reg #5 %t5 5
+Reg #6 %t6 6
+Reg #7 cond_1 3
+Reg #8 cond_2 3
+Reg #9 cond_3 3
+Reg #10 cond_4 3
+L0:
+    arg begin
+    arg middle
+    arg end
+    %t4 = begin<end
+    if %t4 goto L2 else goto L3
+L2:
+    cond = 0
+    %t5 = begin<middle
+    if %t5 goto L4 else goto L5
+L4:
+    %t6 = begin>=end
+    if %t6 goto L6 else goto L7
+L6:
+    cond_1 = 1
+    goto  L7
+L7:
+    cond_3 = phi(cond, cond_1)
+    goto  L5
+L5:
+    cond_2 = phi(cond, cond_3)
+    if cond_2 goto L8 else goto L9
+L8:
+    cond_4 = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
+""", result);
+    }
 
 }
