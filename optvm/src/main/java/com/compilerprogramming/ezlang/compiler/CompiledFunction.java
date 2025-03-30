@@ -17,7 +17,7 @@ public class CompiledFunction {
     public BasicBlock currentBlock;
     private BasicBlock currentBreakTarget;
     private BasicBlock currentContinueTarget;
-    private Type.TypeFunction functionType;
+    public Type.TypeFunction functionType;
     public final RegisterPool registerPool;
     private final TypeDictionary typeDictionary;
 

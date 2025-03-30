@@ -43,6 +43,7 @@ public class EnterSSA {
         }
         this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
+        new Liveness(bytecodeFunction); // EWe require liveness info to construct pruned ssa
         insertPhis();
         renameVars();
         bytecodeFunction.isSSA = true;
@@ -94,12 +95,16 @@ public class EnterSSA {
                 while (b != null) {
                     visited.set(b.bid);
                     for (BasicBlock d: b.dominationFrontier) {
-                        if (d == function.exit) // The exit block does not need any phis as it has no instructions
-                            continue;
-                        // insert phi for x in d
-                        d.insertPhiFor(x);
-                        if (!visited.get(d.bid))
-                            worklist.push(d);
+                        // Perform a liveness check to avoid inserting
+                        // phi when variable is dead
+                        // Inserting dead phis causes problems during renaming
+                        // because there will not be a definition available
+                        if (d.liveIn.contains(x)) {
+                            // insert phi for x in d
+                            d.insertPhiFor(x);
+                            if (!visited.get(d.bid))
+                                worklist.push(d);
+                        }
                     }
                     b = worklist.pop();
                 }
