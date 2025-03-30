@@ -613,7 +613,7 @@ public class TestInterpreter {
         String src = """
 // based on the top-down version from https://en.wikipedia.org/wiki/Merge_sort
 // via https://github.com/SeaOfNodes/Simple
-func merge_sort(a: [Int], b: [int], n: Int) 
+func merge_sort(a: [Int], b: [Int], n: Int) 
 {
     copy_array(a, 0, n, b)
     split_merge(a, 0, n, b)
