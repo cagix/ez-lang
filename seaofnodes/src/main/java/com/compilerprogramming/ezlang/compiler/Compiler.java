@@ -941,7 +941,11 @@ public class Compiler {
     }
 
     private Node compileReturn(AST.ReturnStmt returnStmt) {
-        var expr = compileExpr(returnStmt.expr);
+        Node expr;
+        if (returnStmt.expr != null)
+            expr = compileExpr(returnStmt.expr);
+        else
+            expr = ZERO;
         // Need default memory, since it can be lazy, need to force
         // a non-lazy Phi
         _fun.addReturn(ctrl(), _scope.mem().merge(), expr);
