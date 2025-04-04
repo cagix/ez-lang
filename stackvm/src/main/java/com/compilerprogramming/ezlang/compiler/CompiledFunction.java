@@ -343,7 +343,39 @@ public class CompiledFunction {
         return false;
     }
 
+    private boolean codeBoolean(AST.BinaryExpr binaryExpr) {
+        boolean isAnd = binaryExpr.op.str.equals("&&");
+        BasicBlock l1 = createBlock();
+        BasicBlock l2 = createBlock();
+        BasicBlock l3 = createBlock();
+        boolean indexed = compileExpr(binaryExpr.expr1);
+        if (indexed)
+            codeIndexedLoad();
+        if (isAnd) {
+            code(new Instruction.ConditionalBranch(currentBlock, l1, l2));
+        } else {
+            code(new Instruction.ConditionalBranch(currentBlock, l2, l1));
+        }
+        startBlock(l1);
+        indexed = compileExpr(binaryExpr.expr2);
+        if (indexed)
+            codeIndexedLoad();
+        jumpTo(l3);
+        startBlock(l2);
+        // Below we must write to the same temp
+        code(new Instruction.PushConst(isAnd ? 0 : 1));
+        jumpTo(l3);
+        startBlock(l3);
+        // leaves result on stack
+        return false;
+    }
+
     private boolean compileBinaryExpr(AST.BinaryExpr binaryExpr) {
+        String binOp = binaryExpr.op.str;
+        if (binOp.equals("&&") ||
+                binOp.equals("||")) {
+            return codeBoolean(binaryExpr);
+        }
         int opCode = 0;
         boolean indexed = compileExpr(binaryExpr.expr1);
         if (indexed)
@@ -351,7 +383,7 @@ public class CompiledFunction {
         indexed = compileExpr(binaryExpr.expr2);
         if (indexed)
             codeIndexedLoad();
-        switch (binaryExpr.op.str) {
+        switch (binOp) {
             case "+" -> opCode = Instruction.ADD_I;
             case "-" -> opCode = Instruction.SUB_I;
             case "*" -> opCode = Instruction.MUL_I;

@@ -634,4 +634,34 @@ L0:
 L1:
 """, result);
     }
+
+    @Test
+    public void testFunction104() {
+        String src = """
+                func foo()->Int
+                {
+                    return 1 == 1 && 2 == 2
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+	pushi 1
+	pushi 1
+	eq
+	cbr L2 L3
+L2:
+	pushi 2
+	pushi 2
+	eq
+	jump L4
+L4:
+	jump L1
+L1:
+L3:
+	pushi 0
+	jump L4
+""", result);
+    }
+
 }
