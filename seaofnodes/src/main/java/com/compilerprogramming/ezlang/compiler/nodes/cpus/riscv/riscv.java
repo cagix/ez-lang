@@ -101,22 +101,34 @@ public class riscv extends Machine {
             FA6_MASK,
             FA7_MASK
     };
-    //
+
     // major opcode: OP
-    public static int OP    = 0b01_100_11;
-    public static int OP_FP = 0b10_100_11;
+    public static int OP_LOAD    = 0b00_000_11;
+    public static int OP_LOADFP  = 0b00_001_11;
     public static int OP_CUSTOM0 = 0b00_010_11;
+    public static int OP_IMM     = 0b00_100_11;
+    public static int OP_AUIPC   = 0b00_101_11;
+
+    public static int OP_STORE   = 0b01_000_11;
+    public static int OP_STOREFP = 0b01_001_11;
+    public static int OP_CUSTOM1 = 0b01_010_11;
+    public static int OP         = 0b01_100_11;
+    public static int OP_LUI     = 0b01_101_11;
+
+    public static int OP_CUSTOM2 = 0b10_010_11;
+    public static int OP_FP      = 0b10_100_11;
+
     public static int OP_BRANCH  = 0b11_000_11;
-
-    //I_type opcode: 0010 0011
-    public static int I_TYPE = 0x13;
-
-    // 0110 0111
-    public static int J_JAL = 0b1101111;
+    public static int OP_JALR    = 0b11_001_11;
+    public static int OP_RESERVED= 0b11_010_11;
+    public static int OP_JAL     = 0b11_011_11;
 
 
     // Since riscv instructions are fixed we can just or them togehter
     public static int r_type(int opcode, int rd, int func3, int rs1, int rs2, int func7) {
+        assert 0 <= rs1 && rs1 < 32;
+        assert 0 <= rs2 && rs2 < 32;
+        assert 0 <= rd &&  rd  < 32;
         return (func7 << 25) | (rs2 << 20) | (rs1 << 15) | (func3 << 12) | (rd << 7) | opcode;
     }
     public static void r_type(Encoding enc, Node n, int func3, int func7) {
@@ -126,6 +138,7 @@ public class riscv extends Machine {
         int body = r_type(OP,dst,func3,src1,src2,func7);
         enc.add4(body);
     }
+
     public static void rf_type(Encoding enc, Node n, RM func3, int func7) {
         short dst  = (short)(enc.reg(n      )-F_OFFSET);
         short src1 = (short)(enc.reg(n.in(1))-F_OFFSET);
@@ -136,11 +149,13 @@ public class riscv extends Machine {
 
 
     public static int u_type(int opcode, int rd, int imm20) {
+        assert 0 <= rd && rd < 32;
         return (imm20 << 12) | (rd << 7) | opcode;
     }
 
     public static int j_type(int opcode, int rd, int delta) {
         assert -(1L<<20) <= delta && delta < (1L<<20);
+        assert 0 <= rd && rd < 32;
         // Messy branch offset encoding
         // 31 30-21 20 19-12 11-7  6-0
         // 20 10- 1 11 19-12 rpc   JAL
@@ -149,22 +164,25 @@ public class riscv extends Machine {
         int imm11    = (delta>>11) &     1;
         int imm12_19 = (delta>>12) &  0xFF;
         int imm20    = (delta>>19) &     1;
-        int bits = imm20<<20 | imm12_19 << 12 | imm11 << 11 | imm10_01;
+        int bits = imm20<<19 | imm10_01 << 9 | imm11 << 8 | imm12_19;
         return bits << 12 | rd << 7 | opcode;
     }
 
 
     public static int i_type(int opcode, int rd, int func3, int rs1, int imm12) {
-        assert opcode >= 0 && rd >=0 && func3 >=0 && rs1 >=0 && imm12 >= 0; // Zero-extend by caller
+        assert 0 <= rd  &&  rd  < 32;
+        assert 0 <= rs1 &&  rs1 < 32;
+        assert opcode >= 0 && func3 >=0 && imm12 >= 0; // Zero-extend by caller
         return  (imm12 << 20) | (rs1 << 15) | (func3 << 12) | (rd << 7) | opcode;
     }
 
 
     // S-type instructions(store)
-    public static int s_type(int opcode, int offset1, int func3, int rs1, int rs2, int offset2) {
-        return (offset2 << 25) | (rs2 << 20) | (rs1 << 15) | (func3 << 12) | (offset1 << 7) | opcode;
-    }
     public static int s_type(int opcode, int func3, int rs1, int rs2, int imm12) {
+        assert 0 <= rs1 &&  rs1 < 32;
+        assert 0 <= rs2 &&  rs2 < 32;
+        assert 0 <= func3;
+
         assert imm12 >= 0;      // Masked to high zero bits by caller
         int imm_lo = imm12 & 0x1F;
         int imm_hi = imm12 >> 5;
@@ -173,6 +191,8 @@ public class riscv extends Machine {
 
     // BRANCH
     public static int b_type(int opcode, int func3, short rs1, short rs2, int delta) {
+        assert 0 <= rs1 && rs1 < 32;
+        assert 0 <= rs2 && rs2 < 32;
         assert -4*1024 <= delta && delta < 4*1024;
         assert (delta&1)==0;    // Low bit is always zero, not encoded
         // Messy branch offset encoding
@@ -320,9 +340,7 @@ public class riscv extends Machine {
     @Override  public SplitNode split(String kind, byte round, LRG lrg) { return new SplitRISC(kind,round);  }
 
     // Break an infinite loop
-    @Override public IfNode never( CFGNode ctrl ) {
-        throw Utils.TODO();
-    }
+    @Override public NeverNode never( CFGNode ctrl ) { return new NJmpRISC(ctrl);}
 
     // True if signed 12-bit immediate
     public static boolean imm12(SONTypeInteger ti) {
@@ -433,9 +451,9 @@ public class riscv extends Machine {
         return switch( bool.op() ) {
         case "<" -> bool.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti)
             ? new SetIRISC(bool, (int)ti.value(),false)
-            : new SetRISC(bool);
+            : new SetRISC(bool, false);
         // x <= y - flip and invert; !(y < x); `slt tmp=y,x; xori dst=tmp,#1`
-        case "<=" -> new XorIRISC(new SetRISC(bool.swap12()),1);
+        case "<=" -> new XorIRISC(new SetRISC(bool.swap12(), false),1);
         // x == y - sub and vs0 == `sub tmp=x-y; sltu dst=tmp,#1`
         case "==" -> new SetIRISC(new SubRISC(bool),1,true);
         default -> throw Utils.TODO();
@@ -460,6 +478,7 @@ public class riscv extends Machine {
             // from a constant pool, which does not need an extra register
             throw Utils.TODO();
         }
+        // Load from constant pool
         case SONTypeFloat   tf  -> new FltRISC(con);
         case SONTypeFunPtr  tfp -> new TFPRISC(con);
         case SONTypeMemPtr  tmp -> throw Utils.TODO();

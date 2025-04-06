@@ -32,6 +32,6 @@ public class FRefNode extends ConstantNode {
 
     public CompilerException err() { return Compiler.error("Undefined name '"+_n._name+"'"); }
 
-    @Override boolean eq(Node n) { return this==n; }
+    @Override public boolean eq(Node n) { return this==n; }
     @Override int hash() { return _n._idx; }
 }

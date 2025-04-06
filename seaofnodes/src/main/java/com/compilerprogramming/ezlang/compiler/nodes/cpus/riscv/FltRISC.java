@@ -16,13 +16,15 @@ public class FltRISC extends ConstantNode implements MachNode, RIPRelSize {
     @Override public FltRISC copy() { return new FltRISC(this); }
 
     @Override public void encoding( Encoding enc ) {
-        enc.largeConstant(this,_con);
+        enc.largeConstant(this,_con, 0, -1/*TODO: RISC5 style patching*/);
         short dst = (short)(enc.reg(this) - riscv.F_OFFSET);
+        short tmp = (short)riscv.T6;
         // AUIPC dst,#hi20_constant_pool
-        enc.add4(riscv.u_type(0b0010111, dst, 0));
+        enc.add4(riscv.u_type(riscv.OP_AUIPC, tmp, 0));
         // Load dst,[dst+#low12_constant_pool]
-        enc.add4(riscv.i_type(0x07, dst, 0x03, dst, 0));
+        enc.add4(riscv.i_type(riscv.OP_LOAD, dst, 0b11, tmp, 0));
     }
+    @Override public RegMask killmap() { return new RegMask(riscv.T6); }
 
     // Delta is from opcode start.
     // TODO: always size 8?
@@ -31,10 +33,11 @@ public class FltRISC extends ConstantNode implements MachNode, RIPRelSize {
     // Delta is from opcode start
     @Override public void patch( Encoding enc, int opStart, int opLen, int delta ) {
         short dst = (short)(enc.reg(this) - riscv.F_OFFSET);
+        short tmp = (short)riscv.T6;
         // AUIPC dst,#hi20_constant_pool
-        enc.patch4(opStart  , riscv.u_type(0b0010111, dst, delta));
+        enc.patch4(opStart  , riscv.u_type(riscv.OP_AUIPC, tmp, delta));
         // Load dst,[dst+#low12_constant_pool]
-        enc.patch4(opStart+4, riscv.i_type(0x07, dst, 0x03, dst, delta));
+        enc.patch4(opStart+4, riscv.i_type(riscv.OP_LOAD, dst, 0b11, tmp, delta));
     }
 
     @Override public void asm(CodeGen code, SB sb) {

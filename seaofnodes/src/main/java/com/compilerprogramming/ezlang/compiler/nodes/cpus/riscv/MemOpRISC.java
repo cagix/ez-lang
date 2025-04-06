@@ -9,7 +9,7 @@ import java.util.BitSet;
 
 public abstract class MemOpRISC extends MemOpNode implements MachNode {
     final int _off;             // Limit 12 bits
-    final char _sz = (char)('0'+(1<<_declaredType.log_size()));
+    final char _sz;
     MemOpRISC(MemOpNode mop, Node base, int off, Node val) {
         super(mop,mop);
         assert base._type instanceof SONTypeMemPtr;
@@ -17,6 +17,7 @@ public abstract class MemOpRISC extends MemOpNode implements MachNode {
         _inputs.setX(3, null);  // Never an index
         _inputs.setX(4, val );
         _off = off;
+        _sz = (char)('0'+(1<<_declaredType.log_size()));
     }
 
     @Override public String label() { return op(); }
@@ -30,33 +31,30 @@ public abstract class MemOpRISC extends MemOpNode implements MachNode {
     // func3 is based on load/store size and extend
     int func3() {
         int func3 = -1;
-        if( _declaredType == SONTypeInteger. I8 ) func3=0; // LB   SB
-        if( _declaredType == SONTypeInteger.I16 ) func3=1; // LH   SH
-        if( _declaredType == SONTypeInteger.I32 ) func3=2; // LW   SW
-        if( _declaredType == SONTypeInteger.BOT ) func3=3; // LD   SD
+        // no unsigned flavour for store, so both signed and unsigned trigger the same
+        if(this instanceof StoreRISC) {
+            if( _declaredType == SONTypeInteger. I8 || _declaredType == SONTypeInteger.U8  || _declaredType == SONTypeInteger.BOOL) func3=0; //   SB
+            if( _declaredType == SONTypeInteger.I16 || _declaredType == SONTypeInteger.U16 ) func3=1; // SH
+            if( _declaredType == SONTypeInteger.I32 || _declaredType == SONTypeInteger.U32 || _declaredType instanceof SONTypeMemPtr) func3=2; //  SW
+            if( _declaredType == SONTypeInteger.BOT ) func3=3; //   SD
+            if( func3 == -1 ) throw Utils.TODO();
+            return func3;
+        }
+        if( _declaredType == SONTypeInteger. I8 ) func3=0; // LB
+        if( _declaredType == SONTypeInteger.I16 ) func3=1; // LH
+        if( _declaredType == SONTypeInteger.I32 ) func3=2; // LW
+        if( _declaredType == SONTypeInteger.BOT ) func3=3; // LD
         if( _declaredType == SONTypeInteger. U8 ) func3=4; // LBU
         if( _declaredType == SONTypeInteger.BOOL) func3=4; // LBU
         if( _declaredType == SONTypeInteger.U16 ) func3=5; // LHU
         if( _declaredType == SONTypeInteger.U32 ) func3=6; // LWU
+
         // float
         if(_declaredType == SONTypeFloat.F32) func3 = 2; // fLW   fSW
         if(_declaredType == SONTypeFloat.F64) func3 = 3; // fLD   fSD
         if( _declaredType instanceof SONTypeMemPtr ) func3=6; // 4 byte pointers, assumed unsigned?
         if( func3 == -1 ) throw Utils.TODO();
         return func3;
-    }
-
-    // 7 bits, 00 000 11 or 00 001 11 for FP
-    int opcode(Encoding enc) {
-        if( enc.reg(this) < riscv.F_OFFSET ) return 3;
-        else if( this instanceof StoreRISC )
-            // opcode is the same for 32 bit and 64 bits
-            return 39;
-        return 7;
-    }
-    short xreg(Encoding enc) {
-        short xreg = enc.reg(this );
-        return xreg < riscv.F_OFFSET ? xreg : (short)(xreg-riscv.F_OFFSET);
     }
 
     // Register mask allowed on input i.

@@ -103,6 +103,7 @@ public class SONType {
     // checks with every type compare, only during interning.
 
     // Factory method which interns "this"
+    @SuppressWarnings("unchecked")
     public  <T extends SONType> T intern() {
         T nnn = (T)INTERN.get(this);
         if( nnn==null )
@@ -217,7 +218,7 @@ public class SONType {
     // Sizes are expected to be between 1 and 64 bits.
     // Size 0 means this either takes no space (such as a known-zero field)
     // or isn't a scalar to be stored in memory.
-    public int log_size() { throw Utils.TODO(); }
+    public int log_size() { return 3; }
 
     // ----------------------------------------------------------
     // Useful in the debugger, which calls toString everywhere.

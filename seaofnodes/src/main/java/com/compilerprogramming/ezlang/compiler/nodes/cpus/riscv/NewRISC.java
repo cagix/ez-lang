@@ -16,14 +16,13 @@ public class NewRISC extends NewNode implements MachNode {
     @Override public RegMask outregmap() { return null; }
     @Override public RegMask killmap() { return riscv.riscCallerSave(); }
 
-    // Encoding is appended into the byte array; size is returned
     @Override public void encoding( Encoding enc ) {
         // Generic external encoding; 2 ops.
         enc.external(this,"calloc");
         // A1 is a caller-save, allowed to crush building external address
         // auipc
-        enc.add4(riscv.u_type(0x17, riscv.A1, 0));
-        enc.add4(riscv.i_type(0x67, riscv.RPC, 0, riscv.A1, 0));
+        enc.add4(riscv.u_type(riscv.OP_AUIPC, riscv.A1, 0));
+        enc.add4(riscv.i_type(riscv.OP_JALR, riscv.RPC, 0, riscv.A1, 0));
     }
 
     // General form: "alloc #bytes  PC"

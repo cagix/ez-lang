@@ -22,15 +22,19 @@ public class SplitRISC extends SplitNode {
             if( src >= riscv.MAX_REG ) {
                 throw Utils.TODO(); // Very rare stack-stack move
             }
-
             int off = enc._fun.computeStackSlot(dst - riscv.MAX_REG)*8;
-            // store 64 bit values
-            enc.add4(riscv.s_type(39, 3, riscv.SP, dst, off));
+            int op = srcX ? riscv.OP_STOREFP : riscv.OP_STORE;
+            if( srcX ) src -= riscv.F_OFFSET;
+            enc.add4(riscv.s_type(op, 0b011, riscv.SP, src, off));
+            return;
         }
         if( src >= riscv.MAX_REG ) {
             // Load from SP
             int off = enc._fun.computeStackSlot(src - riscv.MAX_REG)*8;
-            enc.add4(riscv.i_type(7, dst, 3,riscv.SP, off));
+            int op = dstX ? riscv.OP_LOADFP : riscv.OP_LOAD;
+            if( dstX ) dst -= riscv.F_OFFSET;
+            enc.add4(riscv.i_type(op, dst, 0b011, riscv.SP, off));
+            return;
         }
         // pick opcode based on regs
         if( !dstX && !srcX ) {
@@ -38,17 +42,17 @@ public class SplitRISC extends SplitNode {
             enc.add4(riscv.r_type(riscv.OP,dst,0,src,riscv.ZERO,0));
         } else if( dstX && srcX ) {
             // FPR->FPR
-            // Can do: FPR->GPR->FPR
-            enc.add4(riscv.r_type(0b1010011, dst, 0, src, 0, 0b1110001));
-            enc.add4(riscv.r_type(0b1010011, dst, 0, src, 0, 0b0100000));
-        } else if( dstX && !srcX ) {
+            src -= riscv.F_OFFSET;
+            dst -= riscv.F_OFFSET;
+            enc.add4(riscv.r_type(riscv.OP_FP, dst, 0b000, src, src, 0b0010101)); // dst = FMIN(src,src)
+        } else if(!srcX && dstX) {
             //GPR->FPR
             // fmv.d.x
-            enc.add4(riscv.r_type(0b1010011, dst, 0, src, 0, 0b0100000));
-        } else if( !dstX && srcX ) {
+            enc.add4(riscv.r_type(riscv.OP_FP, dst - riscv.F_OFFSET, 0, src, 0, 0b1111001));
+        } else if(srcX && !dstX) {
             //FPR->GPR
             //fmv.x.d
-            enc.add4(riscv.r_type(0b1010011, dst, 0, src, 0, 0b1110001));
+            enc.add4(riscv.r_type(riscv.OP_FP, dst, 0, src - riscv.F_OFFSET, 0, 0b1110001));
         }
 
     }

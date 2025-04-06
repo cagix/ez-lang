@@ -8,7 +8,7 @@ import com.compilerprogramming.ezlang.compiler.nodes.CastNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
 
 public class CastRISC extends CastNode implements MachNode {
-    CastRISC( CastNode cast ) { super(cast); }
+    public CastRISC( CastNode cast ) { super(cast); }
     @Override public String op() { return label(); }
     @Override public RegMask regmap(int i) { assert i==1; return RegMask.FULL; }
     @Override public RegMask outregmap() { return RegMask.FULL; }

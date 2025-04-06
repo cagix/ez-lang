@@ -11,7 +11,9 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 
+@SuppressWarnings("unchecked")
 public class CodeGen {
+    public static final String PORTS = "com.compilerprogramming.ezlang.compiler.nodes.cpus";
     // Last created CodeGen as a global; used all over to avoid passing about a
     // "context".
     public static CodeGen CODE;
@@ -187,7 +189,8 @@ public class CodeGen {
 
     // Convert to target hardware nodes
     public int _tInsSel;
-    public CodeGen instSelect( String base, String cpu, String callingConv ) {
+    public CodeGen instSelect( String cpu, String callingConv ) { return instSelect(cpu,callingConv,PORTS); }
+    public CodeGen instSelect( String cpu, String callingConv, String base ) {
         assert _phase.ordinal() <= Phase.TypeCheck.ordinal();
         _phase = Phase.InstSelect;
 
@@ -313,15 +316,20 @@ public class CodeGen {
     // ---------------------------
     // Encoding
     public int _tEncode;
+    public boolean _JIT;
     public Encoding _encoding;
-    public CodeGen encode() {
+    public CodeGen encode(boolean jit) {
         assert _phase == Phase.RegAlloc;
         _phase = Phase.Encoding;
         long t0 = System.currentTimeMillis();
         _encoding = new Encoding(this);
+        _JIT = jit;
         _encoding.encode();
         _tEncode = (int)(System.currentTimeMillis() - t0);
         return this;
+    }
+    public CodeGen encode() {
+        return encode(false);
     }
     // Encoded binary, no relocation info
     public byte[] binary() { return _encoding.bits(); }
@@ -331,12 +339,13 @@ public class CodeGen {
     public CodeGen exportELF(String fname) throws IOException {
         assert _phase == Phase.Encoding;
         _phase = Phase.Export;
-        ElfFile obj = new ElfFile(this);
-        obj.export(fname);
+        if( fname == null ) new LinkMem(this).link(); // In memory patching
+        else new ElfFile(this).export(fname); // External ELF file
         return this;
     }
 
     // ---------------------------
+    public boolean _asmLittle=true;
     SB asm(SB sb) { return ASMPrinter.print(sb,this); }
     public String asm() { return asm(new SB()).toString(); }
 

@@ -251,7 +251,7 @@ loop:   for (int i = 0; i < args.length; i++) {
         dump(code, dump, DUMP_AFTER_TYPE_CHECK);
 
         if (do_codegen) {
-            code.instSelect(PORTS, cpu, abi);
+            code.instSelect(cpu, abi);
             dump(code, dump, DUMP_AFTER_INSTR_SELECT);
         }
 

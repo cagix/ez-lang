@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 
 public class OrRISC extends MachConcreteNode implements MachNode {
-    OrRISC(Node or) { super(or); }
+    public OrRISC(Node or) { super(or); }
     @Override public String op() { return "or"; }
     @Override public RegMask regmap(int i) { return riscv.RMASK; }
     @Override public RegMask outregmap() { return riscv.WMASK; }

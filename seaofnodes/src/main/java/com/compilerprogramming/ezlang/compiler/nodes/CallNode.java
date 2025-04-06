@@ -48,8 +48,10 @@ public class CallNode extends CFGNode {
     public Node fptr() { return _inputs.last(); }
     // Error if not a TFP
     public SONTypeFunPtr tfp() { return (SONTypeFunPtr)fptr()._type; }
+
     // Call is to an externally supplied code
     public boolean external() { return false; }
+
 
     // Find the Call End from the Call
     public CallEndNode cend() {
