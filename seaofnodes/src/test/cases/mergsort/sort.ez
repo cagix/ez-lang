@@ -1,0 +1,78 @@
+// based on the top-down version from https://en.wikipedia.org/wiki/Merge_sort
+// via https://github.com/SeaOfNodes/Simple
+func merge_sort(a: [Int], b: [Int], n: Int)
+{
+    copy_array(a, 0, n, b)
+    split_merge(a, 0, n, b)
+}
+
+func split_merge(b: [Int], begin: Int, end: Int, a: [Int])
+{
+    if (end - begin <= 1)
+        return;
+    var middle = (end + begin) / 2
+    split_merge(a, begin, middle, b)
+    split_merge(a, middle, end, b)
+    merge(b, begin, middle, end, a)
+}
+
+func merge(b: [Int], begin: Int, middle: Int, end: Int, a: [Int])
+{
+    var i = begin
+    var j = middle
+    var k = begin
+    while (k < end) {
+        // && and ||
+        var cond = 0
+        if (i < middle) {
+            if (j >= end)          cond = 1;
+            else if (a[i] <= a[j]) cond = 1;
+        }
+        if (cond)
+        {
+            b[k] = a[i]
+            i = i + 1
+        }
+        else
+        {
+            b[k] = a[j]
+            j = j + 1
+        }
+        k = k + 1
+    }
+}
+
+func copy_array(a: [Int], begin: Int, end: Int, b: [Int])
+{
+    var k = begin
+    while (k < end)
+    {
+        b[k] = a[k]
+        k = k + 1
+    }
+}
+
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func main()->Int
+{
+    var a = new [Int]{10,9,8,7,6,5,4,3,2,1}
+    var b = new [Int]{ 0,0,0,0,0,0,0,0,0,0}
+    var expect = new [Int]{1,2,3,4,5,6,7,8,9,10}
+    merge_sort(a, b, 10)
+    return eq(a,expect,10)
+}

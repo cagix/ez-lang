@@ -1,6 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import org.junit.Before;
 import org.junit.Test;
 
 import static com.compilerprogramming.ezlang.compiler.Main.PORTS;
@@ -25,7 +26,7 @@ struct T { var i: Int }
     @Test
     public void test2() {
         String src = """
-struct T { var i: S }
+struct T1 { var i: S }
 struct S { var i: Int }
 """;
         compileSrc(src);
@@ -34,7 +35,7 @@ struct S { var i: Int }
     @Test
     public void test3() {
         String src = """
-struct T { var next: T? }
+struct T2 { var next: T2? }
 """;
         compileSrc(src);
     }
@@ -42,7 +43,7 @@ struct T { var next: T? }
     @Test
     public void test4() {
         String src = """
-struct T { var arr: [Int] }
+struct T3 { var arr: [Int] }
 """;
         compileSrc(src);
     }
@@ -131,9 +132,9 @@ func foo()->[Int] {
     @Test
     public void test14() {
         String src = """
-struct T { var i: Int }
-func foo()->T { 
-  return new T{i=1};
+struct T4 { var i: Int }
+func foo()->T4 { 
+  return new T4{i=1};
 }
 """;
         compileSrc(src);
@@ -142,9 +143,9 @@ func foo()->T {
     @Test
     public void test15() {
         String src = """
-struct T { var i: Int; var j: Int }
-func foo()->T { 
-  return new T{i=23, j=32};
+struct T5 { var i: Int; var j: Int }
+func foo()->T5 { 
+  return new T5{i=23, j=32};
 }
 """;
         compileSrc(src);
@@ -163,9 +164,9 @@ func foo()->Int {
     @Test
     public void test17() {
         String src = """
-struct T { var i: Int; var j: Int }
+struct T5 { var i: Int; var j: Int }
 func foo()->Int { 
-  return new T{i=23, j=32}.j;
+  return new T5{i=23, j=32}.j;
 }
 """;
         compileSrc(src);

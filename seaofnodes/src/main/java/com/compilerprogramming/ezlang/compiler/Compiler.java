@@ -90,7 +90,12 @@ public class Compiler {
 
 
     private void populateDefaultTypes(Map<String,SONType> types) {
+        // Pre-create int, [int] and *[int] types
         types.put(typeDictionary.INT.name(), SONTypeInteger.BOT);
+        var intArrayType = SONTypeStruct.makeAry(SONTypeInteger.U32, _code.getALIAS(), SONTypeInteger.BOT, _code.getALIAS());
+        var ptrIntArrayType = SONTypeMemPtr.make(intArrayType);
+        types.put("[" + typeDictionary.INT.name() + "]", ptrIntArrayType);
+        // Also get the types created by default
         for (SONType t: SONType.gather()) {
             types.put(t.str(), t);
         }
@@ -145,18 +150,23 @@ public class Compiler {
             Type type = typeStruct.getField(name); // FIXME
             fs.push(new Field(name,getSONType(structTypes,type),_code.getALIAS(),false));
         }
+        // A Struct type may have been created before because of
+        // reference from itself; in which case we need to update that
         SONType fref = structTypes.get(typeName);
         if (fref != null) {
-            if (fref instanceof SONTypeStruct ts) {
+            if (fref instanceof SONTypeMemPtr ptr &&
+                ptr._obj instanceof SONTypeStruct ts) {
+                assert ts._fields.length == 0;
+                // Add the fields to the existing type
                 ts._fields = fs.asAry();
             }
-            else throw new CompilerException("");
+            else throw new CompilerException("Expected struct type " + typeName + " but got " + fref);
         }
         else {
-            structTypes.put(typeName, new SONTypeStruct(typeName, fs.asAry()));
+            var ts = SONTypeStruct.make(typeName, fs.asAry());
+            var ptr = SONTypeMemPtr.make((byte)2,ts);
+            structTypes.put(typeName,ptr);
         }
-//        SONTypeStruct ts = SONTypeStruct.make(typeName, fs.asAry());
-//        TYPES.put(typeName, SONTypeMemPtr.make(ts));
     }
 
     private String getSONTypeName(Type type) {
@@ -164,7 +174,7 @@ public class Compiler {
             return typeFunction.name;
         }
         else if (type instanceof Type.TypeArray typeArray) {
-            return typeArray.name();
+            return "*[" + getSONTypeName(typeArray.getElementType()) + "]";
         }
         else if (type instanceof Type.TypeStruct typeStruct) {
             return "*" + typeStruct.name;
@@ -183,36 +193,25 @@ public class Compiler {
     }
 
     private SONType getSONType(Map<String, SONType> structTypes, Type type) {
-        String tname = getSONTypeName(type);
-        SONType t = structTypes.get(tname);
+        SONType t = structTypes.get(type.name());
         if (t != null) return t;
         if (type instanceof Type.TypeStruct) {
-            SONType existing = structTypes.get(type.name);
-            SONTypeStruct ts;
-            if (existing instanceof SONTypeStruct tsExisting)
-                ts = tsExisting;
-            else {
-                ts = new SONTypeStruct(type.name, new Field[0]);
-                structTypes.put(ts.str(), ts);
-            }
-            SONTypeMemPtr ptr = new SONTypeMemPtr((byte)2,ts);
-            if (type.name().equals(ts.str())) {
-                structTypes.put(ptr.str(), ptr);
-                return ptr;
-            }
-            else throw new CompilerException("Unexpected error");
+            // For struct types in EeZee language a reference
+            // to T means *T in SoN
+            // Create SON struct type
+            SONTypeStruct ts = SONTypeStruct.make(type.name, new Field[0]);
+            // Now create *T
+            SONTypeMemPtr ptr = SONTypeMemPtr.make((byte)2,ts);
+            // EeZee T maps to SoN *T
+            structTypes.put(type.name(), ptr);
+            return ptr;
         }
         else if (type instanceof Type.TypeArray typeArray) {
+            // A reference to array in EeZee means
+            // *array in SoN
             SONType elementType = getSONType(structTypes,typeArray.getElementType());
-            SONTypeStruct ts = null;
-            SONType existing = structTypes.get(typeArray.name());
-            if (existing instanceof SONTypeStruct tsExisting)
-                ts = tsExisting;
-            else {
-                ts = SONTypeStruct.makeArray(SONTypeInteger.U32, _code.getALIAS(), elementType, _code.getALIAS());
-                structTypes.put(ts.str(), ts);
-            }
-            SONTypeMemPtr ptr = new SONTypeMemPtr((byte)2,ts);
+            SONTypeStruct ts = SONTypeStruct.makeArray(SONTypeInteger.U32, _code.getALIAS(), elementType, _code.getALIAS());
+            SONTypeMemPtr ptr = SONTypeMemPtr.make((byte)2,ts);
             structTypes.put(typeArray.name(), ptr); // Array type name is not same as ptr str()
             return ptr;
         }
@@ -223,11 +222,11 @@ public class Compiler {
                 if (ptr1.nullable())
                     ptr = ptr1;
                 else
-                    ptr = new SONTypeMemPtr((byte)3,ptr1._obj);
+                    ptr = SONTypeMemPtr.make((byte)3,ptr1._obj);
             }
             else
-                ptr = new SONTypeMemPtr((byte)2,(SONTypeStruct) baseType);
-            structTypes.put(ptr.str(), ptr);
+                ptr = SONTypeMemPtr.make((byte)2,(SONTypeStruct) baseType);
+            structTypes.put(typeNullable.name(), ptr);
             return ptr;
         }
         else if (type instanceof Type.TypeVoid) {
@@ -241,13 +240,13 @@ public class Compiler {
 
     // TODO because first two slots are MEM and RPC
     private int REGNUM = 2;
-    private void setVarIds(Scope scope, ScopeNode scopeNode, FunNode fun) {
+    private void defineScopedVars(Scope scope, ScopeNode scopeNode, FunNode fun) {
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
                 varSymbol.regNumber = REGNUM++;
-                String sonTypeName = getSONTypeName(varSymbol.type);
-                SONType sonType = TYPES.get(sonTypeName);
-                if (sonType == null) throw new CompilerException("Unknown SON Type "+sonTypeName);
+                SONType sonType = TYPES.get(varSymbol.type.name());
+                if (sonType == null)
+                    throw new CompilerException("Unknown SON Type "+varSymbol.type.name());
                 Node init = null;
 
                 if (varSymbol instanceof Symbol.ParameterSymbol) {
@@ -255,9 +254,6 @@ public class Compiler {
                 }
                 scopeNode.define(makeVarName(varSymbol), sonType, false, init);
             }
-        }
-        for (Scope childScope: scope.children) {
-            setVarIds(childScope, scopeNode, fun);
         }
     }
 
@@ -338,7 +334,8 @@ public class Compiler {
         _scope.mem(mem);
         // All args, "as-if" called externally
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionTypeSymbol.functionDecl;
-        setVarIds(funcDecl.scope,_scope,fun);
+        REGNUM = 2;
+        defineScopedVars(funcDecl.scope,_scope,fun);
 
         // Parse the body
         Node last = compileStatement(funcDecl.block);
@@ -556,12 +553,12 @@ public class Compiler {
     private Node compileNewExpr(AST.NewExpr newExpr) {
         Type type = newExpr.type;
         if (type instanceof Type.TypeArray typeArray) {
-            SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(getSONTypeName(typeArray));
+            SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(typeArray.name());
             return newArray(tarray._obj,ZERO);
         }
         else if (type instanceof Type.TypeStruct typeStruct) {
-            SONTypeStruct tstruct = (SONTypeStruct) TYPES.get(typeStruct.name());
-            return newStruct(tstruct,con(tstruct.offset(tstruct._fields.length)));
+            SONTypeMemPtr tptr = (SONTypeMemPtr) TYPES.get(typeStruct.name());
+            return newStruct(tptr._obj,con(tptr._obj.offset(tptr._obj._fields.length)));
         }
         else
             throw new CompilerException("Unexpected type: " + type);
@@ -701,7 +698,7 @@ public class Compiler {
     }
 
     private String makeVarName(Symbol.VarSymbol varSymbol) {
-        return varSymbol.name + "$" + varSymbol.regNumber;
+        return varSymbol.name; // + "$" + varSymbol.regNumber;
     }
 
     private Node compileStatement(AST.Stmt statement) {
@@ -955,9 +952,12 @@ public class Compiler {
 
     private Node compileBlock(AST.BlockStmt block) {
         Node last = ZERO;
+        _scope.push(ScopeNode.Kind.Block);
+        defineScopedVars(block.scope, _scope, _fun);
         for (AST.Stmt stmt: block.stmtList) {
             last = compileStatement(stmt);
         }
+        _scope.pop();
         return last;
     }
 

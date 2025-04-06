@@ -41,10 +41,10 @@ public class SONTypeFunPtr extends SONTypeNil {
     public SONTypeFunPtr makeFrom(int fidx ) { return make((byte)2, _sig,_ret,1L<<fidx ); }
 
     public static SONTypeFunPtr BOT   = make((byte)3, SONTypeTuple.BOT, SONType.BOTTOM,-1);
-    public static SONTypeFunPtr TEST  = make((byte)2, SONTypeTuple.TEST, SONTypeInteger.BOT,1);
-    public static SONTypeFunPtr TEST0 = make((byte)3, SONTypeTuple.TEST, SONTypeInteger.BOT,3);
+//    public static SONTypeFunPtr TEST  = make((byte)2, SONTypeTuple.TEST, SONTypeInteger.BOT,1);
+//    public static SONTypeFunPtr TEST0 = make((byte)3, SONTypeTuple.TEST, SONTypeInteger.BOT,3);
     public static SONTypeFunPtr MAIN  = make((byte)3, SONTypeTuple.MAIN, SONTypeInteger.BOT,-1);
-    public static void gather(ArrayList<SONType> ts) { ts.add(TEST); ts.add(TEST0); ts.add(BOT); ts.add(MAIN); }
+    public static void gather(ArrayList<SONType> ts) { /* ts.add(TEST); ts.add(TEST0); */ ts.add(BOT); ts.add(MAIN); }
 
     @Override
     SONType xmeet(SONType t) {
