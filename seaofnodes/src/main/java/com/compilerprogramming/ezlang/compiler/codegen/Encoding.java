@@ -44,6 +44,20 @@ public class Encoding {
     public int [] _opStart;     // Start  of opcodes, by _nid
     public byte[] _opLen;       // Length of opcodes, by _nid
 
+    // Big Constant relocation info.
+    public static class Relo {
+        public final Node _op;
+        public final SONType _t;          // Constant type
+        public final byte _off;        // Offset from start of opcode
+        public final byte _elf;        // ELF relocation type, e.g. 2/PC32
+        public int _target;      // Where constant is finally placede
+        public int _opStart;     // Opcode start
+        Relo( Node op, SONType t, byte off, byte elf ) {
+            _op=op;  _t=t;  _off=off; _elf=elf;
+        }
+    }
+    public final HashMap<Node,Relo> _bigCons = new HashMap<>();
+
     Encoding( CodeGen code ) { _code = code; }
 
     // Shortcut to the defining register
@@ -51,26 +65,17 @@ public class Encoding {
         return _code._regAlloc.regnum(n);
     }
 
-    public Encoding add1( int op ) { _bits.write(op); return this; }
-
-    public void add2( int op ) {
-        _bits.write(op    );
-        _bits.write(op>> 8);
+    public int read1(int idx) {
+        byte[] buf = _bits.buf();
+        return (buf[idx]&0xFF);
     }
-    // Little endian write of a 32b opcode
-    public void add4( int op ) {
-        _bits.write(op    );
-        _bits.write(op>> 8);
-        _bits.write(op>>16);
-        _bits.write(op>>24);
-    }
-    public void add8( long i64 ) {
-        add4((int) i64     );
-        add4((int)(i64>>32));
+    public int read2(int idx) {
+        byte[] buf = _bits.buf();
+        return (buf[idx]&0xFF) | (buf[idx+1]&0xFF) <<8;
     }
     public int read4(int idx) {
         byte[] buf = _bits.buf();
-        return buf[idx] | (buf[idx+1]&0xFF) <<8 | (buf[idx+2]&0xFF)<<16 | (buf[idx+3]&0xFF)<<24;
+        return (buf[idx]&0xFF) | (buf[idx+1]&0xFF) <<8 | (buf[idx+2]&0xFF)<<16 | (buf[idx+3]&0xFF)<<24;
     }
     public long read8(int idx) {
         return (read4(idx) & 0xFFFFFFFFL) | read4(idx+4);
@@ -88,10 +93,31 @@ public class Encoding {
         buf[idx+3] = (byte)(val>>24);
     }
 
-    void pad8() {
-        while( (_bits.size()+7 & -8) > _bits.size() )
-            _bits.write(0);
+    static void padN(int n, BAOS bits) {
+        while( (bits.size()+n-1 & -n) > bits.size() )
+            bits.write(0);
     }
+
+    // Convenience for writing log-N
+    static void addN( int log, SONType t, BAOS bits ) {
+        long x = t instanceof SONTypeInteger ti
+            ? ti.value()
+            : log==3
+            ? Double.doubleToRawLongBits(    ((SONTypeFloat)t).value())
+            : Float.floatToRawIntBits((float)((SONTypeFloat)t).value());
+        addN(log,x,bits);
+    }
+    static void addN( int log, long x, BAOS bits ) {
+        for( int i=0; i < 1<<log; i++ ) {
+            bits.write((int)x);
+            x >>= 8;
+        }
+    }
+
+    public Encoding add1( int op ) { addN(0,op,_bits); return this; }
+    public Encoding add2( int op ) { addN(1,op,_bits); return this; }
+    public Encoding add4( int op ) { addN(2,op,_bits); return this; }
+    public Encoding add8(long op ) { addN(3,op,_bits); return this; }
 
 
     // Nodes need "relocation" patching; things done after code is placed.
@@ -108,9 +134,7 @@ public class Encoding {
         return this;
     }
     public void jump( CFGNode jmp, CFGNode dst ) {
-        while( dst.nOuts() == 1 ) // Skip empty blocks
-            dst = dst.uctrl();
-        _internals.put(jmp,dst);
+        _internals.put(jmp,dst.uctrlSkipEmpty());
     }
 
 
@@ -122,12 +146,11 @@ public class Encoding {
 
     // Store t as a 32/64 bit constant in the code space; generate RIP-relative
     // addressing to load it
-
-    public final HashMap<Node,SONType> _bigCons = new HashMap<>();
-    public final HashMap<Node,Integer> _cpool = new HashMap<>();
-    public void largeConstant( Node relo, SONType t ) {
+    public void largeConstant( Node relo, SONType t, int off, int elf ) {
         assert t.isConstant();
-        _bigCons.put(relo,t);
+        assert (byte)off == off;
+        assert (byte)elf == elf;
+        _bigCons.put(relo,new Relo(relo,t,(byte)off,(byte)elf));
     }
 
     void encode() {
@@ -141,16 +164,13 @@ public class Encoding {
         // Record opcode start and length.
         writeEncodings();
 
-        // Write any large constants into a constant pool; they
-        // are accessed by RIP-relative addressing.
-        writeConstantPool();
-
         // Short-form RIP-relative support: replace long encodings with short
         // encodings and compact the code, changing all the offsets.
         compactShortForm();
 
         // Patch RIP-relative and local encodings now.
         patchLocalRelocations();
+
     }
 
     // Basic block layout: invert branches to keep blocks in-order; insert
@@ -161,8 +181,11 @@ public class Encoding {
         Ary<CFGNode> rpo = new Ary<>(CFGNode.class);
         BitSet visit = _code.visit();
         for( Node n : _code._start._outputs )
-            if( n instanceof FunNode fun )
+            if( n instanceof FunNode fun ) {
+                int x = rpo._len;
                 _rpo_cfg(fun, visit, rpo);
+                assert rpo.at(x) instanceof ReturnNode;
+            }
         rpo.add(_code._start);
 
         // Reverse in-place
@@ -186,9 +209,14 @@ public class Encoding {
             // If the *next* BB has already been visited, we may need an
             // unconditional jump here
             if( visit.get(next._nid) && !(next instanceof StopNode) ) {
-                // If all the blocks, in RPO order, to our target
-                // are empty, we will fall in and not need a jump.
-                if( next instanceof LoopNode || !isEmptyBackwardsScan(rpo,next) ) {
+                boolean needJump = next instanceof LoopNode
+                    // If backwards to a loop, and the block has statements,
+                    // will need a jump.  Empty blocks can just backwards branch.
+                    ? (bb.nOuts()>1)
+                    // Forwards jump.  If all the blocks, in RPO order, to our
+                    // target are empty, we will fall in and not need a jump.
+                    : !isEmptyBackwardsScan(rpo,next);
+                if( needJump ) {
                     CFGNode jmp = _code._mach.jump();
                     jmp.setDefX(0,bb);
                     next.setDef(next._inputs.find(bb),jmp);
@@ -224,15 +252,27 @@ public class Encoding {
                 t.invert();
                 f.invert();
                 CProjNode tmp=f; f=t; t=tmp; // Swap t/f
+                int d=tld; tld=fld; fld=d;   // Swap depth
             }
 
-            // Always visit the False side last (so True side first), so that
+            // Whichever side is visited first becomes last in the RPO.  With
+            // no loops, visit the False side last (so True side first) so that
             // when the False RPO visit returns, the IF is immediately next.
             // When the RPO is reversed, the fall-through path will always be
             // following the IF.
-            _rpo_cfg(t,visit,rpo);
-            _rpo_cfg(f,visit,rpo);
+
+            // If loops are involved, attempt to keep them in a line.  Visit
+            // the exits first, so they follow the loop body when the order gets
+            // reversed.
+            if( fld < tld || (fld==tld && f.nOuts()==1) ) {
+                _rpo_cfg(f,visit,rpo);
+                _rpo_cfg(t,visit,rpo);
+            } else {
+                _rpo_cfg(t,visit,rpo);
+                _rpo_cfg(f,visit,rpo);
+            }
         }
+        assert rpo._len>0 || bb instanceof ReturnNode;
         rpo.add(bb);
     }
 
@@ -253,6 +293,7 @@ public class Encoding {
             if( !(bb instanceof MachNode mach0) )
                 _opStart[bb._nid] = _bits.size();
             else if( bb instanceof FunNode fun ) {
+                padN(16,_bits);
                 _fun = fun;     // Currently encoding function
                 _opStart[bb._nid] = _bits.size();
                 mach0.encoding( this );
@@ -266,44 +307,7 @@ public class Encoding {
                 }
             }
         }
-        pad8();
-    }
-
-    // Write the constant pool
-    private void writeConstantPool() {
-        // TODO: Check for cpool dups
-        HashSet<SONType> ts = new HashSet<>();
-        for( SONType t : _bigCons.values() ) {
-            if( ts.contains(t) )
-                throw Utils.TODO(); // Dup!  Compress!
-            ts.add(t);
-        }
-
-        // Write the 8-byte constants
-        for( Node relo : _bigCons.keySet() ) {
-            SONType t = _bigCons.get(relo);
-            if( t.log_size()==3 ) {
-                // Map from relo to constant start
-                _cpool.put(relo,_bits.size());
-                long x = t instanceof SONTypeInteger ti
-                    ? ti.value()
-                    : Double.doubleToRawLongBits(((SONTypeFloat)t).value());
-                add8(x);
-            }
-        }
-
-        // Write the 4-byte constants
-        for( Node relo : _bigCons.keySet() ) {
-            SONType t = _bigCons.get(relo);
-            if( t.log_size()==2 ) {
-                // Map from relo to constant start
-                _cpool.put(relo,_bits.size());
-                int x = t instanceof SONTypeInteger ti
-                    ? (int)ti.value()
-                    : Float.floatToRawIntBits((float)((SONTypeFloat)t).value());
-                add4(x);
-            }
-        }
+        padN(16,_bits);
     }
 
     // Short-form RIP-relative support: replace short encodings with long
@@ -327,9 +331,14 @@ public class Encoding {
             slide = 0;
             for( int i=0; i<len; i++ ) {
                 CFGNode bb = _code._cfg.at(i);
+                // Functions pad to align 16
+                if( bb instanceof FunNode ) {
+                    int newStart = _opStart[bb._nid]+slide;
+                    slide += (newStart+15 & -16)-newStart;
+                }
                 _opStart[bb._nid] += slide;
                 if( bb instanceof RIPRelSize riprel ) {
-                    CFGNode target = (CFGNode)bb.out(0);
+                    CFGNode target = ((CFGNode)bb.out(0)).uctrlSkipEmpty();
                     // Delta is from opStart to opStart.  X86 at least counts
                     // the delta from the opEnd, but we don't have the end until
                     // we decide the size - so the encSize has to deal
@@ -344,12 +353,6 @@ public class Encoding {
                     }
                 }
             }
-
-            // CPool padding is non-linear; in rare cases padding can force a
-            // larger size...  which will shrink the padding and allow the
-            // short form to work.  Too bad.
-            if( !_cpool.isEmpty() )
-                pad8();
         }
 
 
@@ -370,49 +373,49 @@ public class Encoding {
         }
     }
 
-    // Patch local encodings now
-    private void patchLocalRelocations() {
-        // Walk the local code-address relocations
-        for( Node src : _internals.keySet() ) {
-            Node dst = _internals.get(src);
-            int target = _opStart[dst._nid];
-            int start  = _opStart[src._nid];
-            ((RIPRelSize)src).patch(this, start, _opLen[src._nid], target - start);
-        }
 
-        for( Node src : _cpool.keySet() ) {
-            int target = _cpool.get(src);
-            int start = _opStart[src._nid];
-            ((RIPRelSize)src).patch(this, start, _opLen[src._nid], target - start);
+    // Write the constant pool into the BAOS and optionally patch locally
+    void writeConstantPool( BAOS bits, boolean patch ) {
+        HashSet<Relo> ts = new HashSet<>();
+        for( Relo t : _bigCons.values() ) {
+            if( ts.contains(t) )
+                throw Utils.TODO(); // Dup!  Compress!
+            ts.add(t);
+        }
+        padN(16,bits);
+
+        // By log size
+        for( int log = 3; log >= 0; log-- ) {
+            // Write the 8-byte constants
+            for( Node op : _bigCons.keySet() ) {
+                Relo relo = _bigCons.get(op);
+                if( relo._t.log_size()==log ) {
+                    // Map from relo to constant start and patch
+                    relo._target = bits.size();
+                    relo._opStart= _opStart[op._nid];
+                    // Go ahead and locally patch in-memory
+                    if( patch )
+                        ((RIPRelSize)op).patch(this, relo._opStart, _opLen[op._nid], relo._target - relo._opStart);
+                    // Put constant into code space.
+                    if( relo._t instanceof SONTypeTuple tt ) // Constant tuples put all entries
+                        for( SONType tx : tt._types )
+                            addN(log,tx,bits);
+                    else
+                        addN(log,relo._t,bits);
+                }
+            }
         }
     }
 
 
-    // Actual stack layout is up to each CPU.
-    // X86, with too many args & spills:
-    // | CALLER |
-    // |  argN  | // slot 1, required by callER
-    // +--------+
-    // |  RPC   | // slot 0, required by callER
-    // | callee | // slot 3, callEE
-    // | callee | // slot 2, callEE
-    // |  PAD16 |
-    // +--------+
-
-    // RISC/ARM, with too many args & spills:
-    // | CALLER |
-    // |  argN  | // slot 0, required by callER
-    // +--------+
-    // | callee | // slot 3, callEE: might be RPC
-    // | callee | // slot 2, callEE
-    // | callee | // slot 1, callEE
-    // |  PAD16 |
-    // +--------+
-    private void frameSize() {
-        for( Node n : _code._start.outs() ) {
-            if( n instanceof FunNode fun ) {
-                throw Utils.TODO();
-            }
+    // Patch local encodings now
+    void patchLocalRelocations() {
+        // Walk the local code-address relocations
+        for( Node src : _internals.keySet() ) {
+            Node dst =  _internals.get(src);
+            int target = _opStart[dst._nid];
+            int start  = _opStart[src._nid];
+            ((RIPRelSize)src).patch(this, start, _opLen[src._nid], target - start);
         }
     }
 }

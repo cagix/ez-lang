@@ -55,6 +55,21 @@ public class SONTypeTuple extends SONType {
         return make(ts);
     }
 
+    @Override public boolean isConstant() {
+        for( SONType t : _types )
+            if( !t.isConstant() )
+                return false;
+        return true;
+    }
+
+    @Override public int log_size() {
+        assert isConstant();
+        int log_size = 0;
+        for( SONType t : _types )
+            log_size = Math.max(log_size,t.log_size());
+        return log_size;
+    }
+
     public SONType ret() { assert _types.length==3; return _types[2]; }
 
     @Override public String str() { return print(new SB()).toString(); }

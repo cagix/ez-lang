@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 
 // Compare with immediate.
-// Conditional compare (immediate)? e.g CCMP(immediate)
+// CMP (immediate) - SUBS
 public class CmpIARM extends MachConcreteNode implements MachNode {
     final int _imm;
     final String _bop;
@@ -27,8 +27,8 @@ public class CmpIARM extends MachConcreteNode implements MachNode {
     @Override public RegMask outregmap() { return arm.FLAGS_MASK; }
     @Override public boolean isClone() { return true; }
     @Override public Node copy() { return new CmpIARM(this); }
-    // Encoding is appended into the byte array; size is returned
-    @Override public void encoding( Encoding enc ) { arm.imm_inst(enc,this,964,_imm); }
+
+    @Override public void encoding( Encoding enc ) { arm.imm_inst(enc,in(1),in(1), arm.OPI_CMP,_imm); }
 
     // General form: "cmp  rs1, 1"
     @Override public void asm(CodeGen code, SB sb) {

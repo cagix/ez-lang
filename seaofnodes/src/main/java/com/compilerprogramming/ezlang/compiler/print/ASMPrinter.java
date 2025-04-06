@@ -4,10 +4,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMem;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeRPC;
+import com.compilerprogramming.ezlang.compiler.sontypes.*;
 
 public abstract class ASMPrinter {
 
@@ -29,20 +26,34 @@ public abstract class ASMPrinter {
         Encoding enc = code._encoding;
         if(  enc!=null && !enc._bigCons.isEmpty() ) {
             sb.p("--- Constant Pool ------").nl();
-            for( Node relo : enc._bigCons.keySet() ) {
-                SONType t = enc._bigCons.get(relo);
-                if( t.log_size()==3 ) {
-                    sb.hex2(iadr).p("  ").hex8(enc.read8(iadr)).p(" ");
-                    t.print(sb).nl();
-                    iadr += 8;
-                }
-            }
-            for( Node relo : enc._bigCons.keySet() ) {
-                SONType t = enc._bigCons.get(relo);
-                if( t.log_size()==2 ) {
-                    sb.hex2(iadr).p("  ").hex4(enc.read4(iadr)).fix(9,"");
-                    t.print(sb).nl();
-                    iadr += 4;
+            // By log size
+            for( int log = 3; log >= 0; log-- ) {
+                for( Node op : enc._bigCons.keySet() ) {
+                    Encoding.Relo relo = enc._bigCons.get(op);
+                    if( relo._t.log_size()==log ) {
+                        sb.hex2(iadr).p("  ");
+                        if( relo._t instanceof SONTypeTuple tt ) {
+                            for( SONType tx : tt._types ) {
+                                switch( log ) {
+                                case 0: sb.hex1(enc.read1(iadr)); break;
+                                case 1: sb.hex2(enc.read2(iadr)); break;
+                                case 2: sb.hex4(enc.read4(iadr)); break;
+                                case 3: sb.hex8(enc.read8(iadr)); break;
+                                }
+                                iadr += (1<<log);
+                                sb.p(" ");
+                            }
+                        } else {
+                            switch( log ) {
+                            case 0: sb.hex1(enc.read1(iadr)).fix(9-1,""); break;
+                            case 1: sb.hex2(enc.read2(iadr)).fix(9-2,""); break;
+                            case 2: sb.hex4(enc.read4(iadr)).fix(9-4,""); break;
+                            case 3: sb.hex8(enc.read8(iadr)).p(" "); break;
+                            }
+                            iadr += (1<<log);
+                        }
+                        relo._t.print(sb).nl();
+                    }
                 }
             }
         }
@@ -73,7 +84,7 @@ public abstract class ASMPrinter {
     static private final int opWidth = 5;
     static private final int argWidth = 30;
     static int doBlock(int iadr, SB sb, CodeGen code, FunNode fun, int cfgidx) {
-        final int encWidth = code._mach.defaultOpSize()*2;
+        final int encWidth = code._mach==null ? 2 : code._mach.defaultOpSize()*2;
         CFGNode bb = code._cfg.at(cfgidx);
         if( bb != fun && !(bb instanceof IfNode) && !(bb instanceof CallEndNode) && !(bb instanceof CallNode)  && !(bb instanceof CProjNode && bb.in(0) instanceof CallEndNode ))
             sb.p(label(bb)).p(":").nl();
@@ -112,11 +123,12 @@ public abstract class ASMPrinter {
     }
 
     static int doInst( int iadr, SB sb, CodeGen code, int cfgidx, Node n, boolean postAlloc, boolean postEncode ) {
-        if( n instanceof CProjNode ) return iadr;
+        if( n==null || n instanceof CProjNode ) return iadr;
         if( postAlloc && n instanceof CalleeSaveNode ) return iadr;
         if( postEncode && n instanceof ProjNode ) return iadr;
         if( n instanceof MemMergeNode ) return iadr;
-        final int dopz = code._mach.defaultOpSize();
+        if( n.getClass() == ConstantNode.class ) return iadr; // Default placeholders
+        final int dopz = code._mach==null ? 2 : code._mach.defaultOpSize();
         final int encWidth = dopz*2;
 
         // All blocks ending in a Region will need to either fall into or jump
@@ -151,8 +163,14 @@ public abstract class ASMPrinter {
         int fatEncoding = 0;
         if( code._encoding != null ) {
             int size = code._encoding._opLen[n._nid];
-            for( int i=0; i<Math.min(size,encWidth>>1); i++ )
-                sb.hex1(code._encoding._bits.buf()[iadr++]);
+            if( code._asmLittle )
+                for( int i=0; i<Math.min(size,dopz); i++ )
+                    sb.hex1(code._encoding._bits.buf()[iadr++]);
+            else {
+                iadr += Math.min(size,dopz);
+                for( int i=0; i<Math.min(size,dopz); i++ )
+                    sb.hex1(code._encoding._bits.buf()[iadr-i-1]);
+            }
             for( int i=size*2; i<encWidth; i++ )
                 sb.p(" ");
             fatEncoding = size - (encWidth>>1); // Not-printed parts of encoding

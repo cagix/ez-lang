@@ -4,14 +4,12 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 
-import java.util.Map;
-import java.util.HashMap;
+import java.io.*;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.io.IOException;
-import java.io.FileOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.BufferedOutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ElfFile {
 
@@ -69,6 +67,10 @@ public class ElfFile {
         // top 4bits are the "bind", bottom 4 are "type"
         int _info;
 
+        // bind 1011
+        // 00001111
+        // 10110000
+
         Symbol(String name, int parent, int bind, int type) {
             _name = name;
             _parent = parent;
@@ -78,6 +80,7 @@ public class ElfFile {
         void writeHeader(ByteBuffer out) {
             out.putInt(_name_pos);         // name
             out.put((byte) _info);         // info
+            // default visibility
             out.put((byte) 0);             // other
             out.putShort((short) _parent); // shndx
             out.putLong(_value);           // value
@@ -117,7 +120,7 @@ public class ElfFile {
             out.putLong(size());       // size
             out.putInt(_link);         // link
             out.putInt(_info);         // info
-            out.putLong(1);            // addralign
+            out.putLong(16);           // addralign
             if (_type == 2) {
                 out.putLong(SYMBOL_SIZE);// entsize
             } else if (_type == 4) {
@@ -140,7 +143,7 @@ public class ElfFile {
         }
 
         @Override
-            void writeHeader(ByteBuffer out) {
+        void writeHeader(ByteBuffer out) {
             // points to string table section
             _link = 1;
 
@@ -159,23 +162,22 @@ public class ElfFile {
         }
 
         @Override
-            void write(ByteBuffer out) {
+        void write(ByteBuffer out) {
+            // Index 0 both designates the first entry in the table and serves as the undefined symbol index
             for( int i = 0; i < SYMBOL_SIZE/4; i++ ) {
                 out.putInt(0);
             }
-            int num=1;
+            // index is already set
             for( Symbol s : _loc ) {
-                s._index = num++;
                 s.writeHeader(out);
             }
             for( Symbol s : _symbols ) {
-                s._index = num++;
                 s.writeHeader(out);
             }
         }
 
         @Override
-            int size() {
+        int size() {
             return (1 + _symbols.len() + _loc.len()) * SYMBOL_SIZE;
         }
     }
@@ -210,54 +212,21 @@ public class ElfFile {
         s._index = _sections._len;
     }
 
+    /* creates function and stores where it starts*/
     private final HashMap<SONTypeFunPtr,Symbol> _funcs = new HashMap<>();
     private void encodeFunctions(SymbolSection symbols, DataSection text) {
-        int func_start = 0;
         for( int i=0; i<_code._cfg._len; i++ ) {
-            Node bb = _code._cfg.at(i);
-            if( bb instanceof FunNode f ) {
-                // skip until the function ends
-                while( !(_code._cfg.at(i) instanceof ReturnNode) ) {
-                    i++;
-                }
+            if( !(_code._cfg.at(i) instanceof FunNode fun) ) continue;
+            // skip until the function ends
+            while( !(_code._cfg.at(i) instanceof ReturnNode ret) )
+                i++;
+            int end = _code._encoding._opStart[ret._nid] + _code._encoding._opLen[ret._nid];
 
-                Node r = _code._cfg.at(i);
-                int end = _code._encoding._opStart[r._nid] + _code._encoding._opLen[r._nid];
-
-                Symbol func = new Symbol(f._name, text._index, SYM_BIND_GLOBAL, SYM_TYPE_FUNC);
-                func._size = end - func_start;
-                func._value = func_start;
-                symbols.push(func);
-                _funcs.put(f.sig(), func);
-
-                // next function starts where the last one ends
-                func_start = end;
-            }
-        }
-    }
-
-    public final HashMap<SONType,Symbol> _bigCons = new HashMap<>();
-    private void encodeConstants(SymbolSection symbols, DataSection rdata) {
-        int cnt = 0;
-        for (Map.Entry<Node,SONType> e : _code._encoding._bigCons.entrySet()) {
-            if (_bigCons.get(e.getValue()) != null) {
-                continue;
-            }
-
-            Symbol glob = new Symbol("GLOB$"+cnt, rdata._index, SYM_BIND_GLOBAL, SYM_TYPE_FUNC);
-            glob._value = rdata._contents.size();
-            symbols.push(glob);
-
-            SONType t = e.getValue();
-            if ( t instanceof SONTypeFloat tf ) {
-                write8(rdata._contents, Double.doubleToLongBits(tf._con));
-            } else {
-                throw Utils.TODO();
-            }
-
-            glob._size = rdata._contents.size() - glob._value;
-            _bigCons.put(e.getValue(), glob);
-            cnt++;
+            Symbol func = new Symbol(fun._name, text._index, SYM_BIND_GLOBAL, SYM_TYPE_FUNC);
+            func._value = _code._encoding._opStart[fun._nid];
+            func._size = end - func._value;
+            symbols.push(func);
+            _funcs.put(fun.sig(), func);
         }
     }
 
@@ -271,57 +240,22 @@ public class ElfFile {
         SymbolSection symbols = new SymbolSection(".symtab", 2 /* SHT_STRTAB */);
         pushSection(symbols);
 
+        // zero flag by default
         // we've already constructed this entire section in the encoding phase
         DataSection text = new DataSection(".text", 1 /* SHT_PROGBITS */, _code._encoding._bits);
         text._flags = SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR;
         pushSection(text);
 
-        DataSection rdata = new DataSection(".rodata", 1 /* SHT_PROGBITS */);
+        // Build and write constant pool
+        Encoding.BAOS cpool = new Encoding.BAOS();
+        Encoding enc = _code._encoding;
+        enc.writeConstantPool(cpool,false);
+        DataSection rdata = new DataSection(".rodata", 1 /* SHT_PROGBITS */, cpool);
         rdata._flags = SHF_ALLOC;
         pushSection(rdata);
 
         // populate function symbols
         encodeFunctions(symbols, text);
-        // populate big constants
-        // encodeConstants(symbols, rdata);
-
-        // create .text relocations
-        DataSection text_rela = new DataSection(".rela.text", 4 /* SHT_RELA */);
-        for( Node n : _code._encoding._externals.keySet()) {
-            int nid    = n._nid;
-            String extern = _code._encoding._externals.get(n);
-            int sym_id = _funcs.get(extern)._index;
-            int offset = _code._encoding._opStart[nid] + _code._encoding._opLen[nid] - 4;
-
-            // u64 offset
-            write8(text_rela._contents, offset);
-            // u64 info
-            write8(text_rela._contents, ((long)sym_id << 32L) | 4L /* PLT32 */);
-            // i64 addend
-            write8(text_rela._contents, -4);
-        }
-        // relocations to constants
-        if (false) for (Map.Entry<Node,SONType> e : _code._encoding._bigCons.entrySet()) {
-            int nid    = e.getKey()._nid;
-            int sym_id = _bigCons.get(e.getValue())._index;
-            int offset = _code._encoding._opStart[nid] + _code._encoding._opLen[nid] - 4;
-
-            // u64 offset
-            write8(text_rela._contents, offset);
-            // u64 info
-            write8(text_rela._contents, ((long)sym_id << 32L) | 1L /* PC32 */);
-            // i64 addend
-            write8(text_rela._contents, -4);
-        }
-        text_rela._flags = SHF_INFO_LINK;
-        text_rela._link = 2;
-        text_rela._info = text._index;
-        pushSection(text_rela);
-
-        // populate string table
-        for( Section s : _sections ) { s._name_pos = writeCString(strtab, s._name); }
-        for( Symbol s : symbols._symbols ) { s._name_pos = writeCString(strtab, s._name); }
-        for( Symbol s : symbols._loc ) { s._name_pos = writeCString(strtab, s._name); }
 
         int idx = 1;
         for( Section s : _sections ) {
@@ -331,6 +265,64 @@ public class ElfFile {
             sym._size = s.size();
             symbols.push(sym);
         }
+
+        // calculate local index
+        int num = 1;
+        for( Symbol s : symbols._loc )
+            s._index = num++;
+        // extra space for .rela.text
+        int start_global = num+1; // Add one to skip the final .rela.text local symbol
+        for( Symbol a: symbols._symbols )
+            a._index = start_global++;
+        int bigConIdx = start_global;
+        start_global += enc._bigCons.size();
+
+        // create .text relocations
+        DataSection text_rela = new DataSection(".rela.text", 4 /* SHT_RELA */);
+        for( Node n : enc._externals.keySet()) {
+            int nid    = n._nid;
+            String extern = enc._externals.get(n);
+
+            Symbol sym = new Symbol(extern, 0, SYM_BIND_GLOBAL, SYM_TYPE_NOTYPE);
+            sym._index = start_global++;
+            symbols.push(sym);
+
+            int offset = enc._opStart[nid] + enc._opLen[nid] - 4;
+
+            // u64 offset
+            write8(text_rela._contents, offset);
+            // u64 info
+            write8(text_rela._contents, ((long)sym._index << 32L) | 4L /* PLT32 */);
+            // i64 addend
+            write8(text_rela._contents, -4);
+        }
+
+        // Write relocations for the constant pool
+        for( Encoding.Relo relo : enc._bigCons.values() ) {
+            Symbol glob = new Symbol("GLOB$"+bigConIdx, rdata._index, SYM_BIND_GLOBAL, SYM_TYPE_FUNC);
+            glob._value = relo._target;
+            glob._size = 1 << relo._t.log_size();
+            glob._index = bigConIdx++;
+            symbols.push(glob);
+            write8(text_rela._contents, relo._opStart+relo._off);
+            write8(text_rela._contents, ((long)glob._index << 32L) | relo._elf );
+            write8(text_rela._contents, -4);
+        }
+
+        text_rela._flags = SHF_INFO_LINK;
+        text_rela._link = 2;
+        text_rela._info = text._index;
+        pushSection(text_rela);
+
+        Symbol sym = new Symbol(text_rela._name, num++, SYM_BIND_LOCAL, SYM_TYPE_SECTION);
+        sym._name_pos = text_rela._name_pos;
+        sym._size = text_rela.size();
+        symbols.push(sym);
+
+        // populate string table
+        for( Section s : _sections ) { s._name_pos = writeCString(strtab, s._name); }
+        for( Symbol s : symbols._symbols ) { s._name_pos = writeCString(strtab, s._name); }
+        for( Symbol s : symbols._loc ) { s._name_pos = writeCString(strtab, s._name); }
 
         int size = 64; // ELF header
         // size of all section data
@@ -379,7 +371,10 @@ public class ElfFile {
         }
         assert out.position() == size;
 
-        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(fname));
+        File file = new File(fname);
+        if( file.getParentFile()!=null )
+          file.getParentFile().mkdirs();
+        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
         bos.write(out.array());
         bos.close();
     }

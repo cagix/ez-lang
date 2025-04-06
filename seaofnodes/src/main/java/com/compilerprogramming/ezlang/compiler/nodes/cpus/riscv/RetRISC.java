@@ -27,9 +27,9 @@ public class RetRISC extends ReturnNode implements MachNode {
     @Override public void encoding( Encoding enc ) {
         int frameAdjust = fun()._frameAdjust;
         if( frameAdjust > 0 )
-            enc.add4(riscv.i_type(riscv.I_TYPE, riscv.SP, 0, riscv.SP, (frameAdjust*-8) & 0xFFF));
+            enc.add4(riscv.i_type(riscv.OP_IMM, riscv.SP, 0, riscv.SP, (frameAdjust*-8) & 0xFFF));
         short rpc = enc.reg(rpc());
-        enc.add4(riscv.i_type(0x67, riscv.ZERO, 0, rpc, 0));
+        enc.add4(riscv.i_type(riscv.OP_JALR, riscv.ZERO, 0, rpc, 0));
     }
 
     @Override public void asm(CodeGen code, SB sb) {
@@ -41,7 +41,7 @@ public class RetRISC extends ReturnNode implements MachNode {
             // Prints return reg (either A0 or FA0), RPC (always R1) and then
             // the callee-save registers.
             for( int i=2; i<nIns(); i++ )
-                sb.p(code.reg(in(i))).p("  ");
+                sb.p(in(i)==null ? "---" : code.reg(in(i))).p("  ");
 
         // Post-allocation, if we did not get the expected return register, print what we got
         else if( code._regAlloc.regnum(rpc()) != riscv.RPC )

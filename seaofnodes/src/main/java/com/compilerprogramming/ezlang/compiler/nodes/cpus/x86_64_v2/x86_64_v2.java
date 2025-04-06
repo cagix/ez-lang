@@ -85,13 +85,18 @@ public class x86_64_v2 extends Machine {
     }
 
     public static int modrm(MOD mod, int reg, int m_r) {
+        if( reg == -1 ) reg=0;  // Missing reg in this flavor
         // combine all the bits
+        assert 0 <= reg  &&  reg < 16;
+        assert 0 <= m_r  &&  m_r < 16;
         return (mod.ordinal() << 6) | ((reg & 0x07) << 3) | m_r & 0x07;
     }
 
     // 00 000 000
     // same bit-layout as modrm
     public static int sib(int scale, int index, int base) {
+        assert 0 <= base  &&  base < 16;
+        assert 0 <= index && index < 16;
         return (scale << 6) | ((index & 0x07) << 3) | base & 0x07;
     }
 
@@ -103,19 +108,17 @@ public class x86_64_v2 extends Machine {
     // 0 denotes no direct register
     public static int rex(int reg, int ptr, int idx, boolean wide) {
         // assuming 64 bit by default so: 0100 1000
+        assert -1 <= reg && reg < 16;
+        assert -1 <= ptr && ptr < 16;
+        assert -1 <= idx && idx < 16;
+
         int rex = wide ? REX_W : REX;
-        if( 8 <= reg && reg <= 15 ) rex |= 0b00000100; // REX.R
-        if( 8 <= ptr && ptr <= 15 ) rex |= 0b00000001; // REX.B
-        if( 8 <= idx && idx <= 15 ) rex |= 0b00000010; // REX.X
+        if( 8 <= reg ) rex |= 0b00000100; // REX.R
+        if( 8 <= ptr ) rex |= 0b00000001; // REX.B
+        if( 8 <= idx ) rex |= 0b00000010; // REX.X
         return rex;
     }
-    // return opcode for optimised immediate store
-    public static int selectOpcodeForImmStore(long imm) {
-        if(imm8(imm)) return 0xC6;
-        if(imm16(imm)) return 0xC7;
-        if(imm32(imm)) return 0xC7;
-        return -1;
-    }
+
     // return the size of the immediate
     public static int imm_size(long imm) {
         if(imm8(imm)) return 8;
@@ -143,26 +146,25 @@ public class x86_64_v2 extends Machine {
     public static void indirectAdr( int scale, short index, short base, int offset, int reg, Encoding enc ) {
         // Assume indirect
         assert 0 <= base && base < 16;
-        assert index != RSP;
+        assert -1 <= index && index < 16 && index != RSP;
 
         MOD mod = MOD.INDIRECT;
         // is 1 byte enough or need more?
         if( offset != 0 )
             mod = imm8(offset)
-                ? MOD.INDIRECT_disp8
-                : MOD.INDIRECT_disp32;
+                    ? MOD.INDIRECT_disp8
+                    : MOD.INDIRECT_disp32;
 
-        // needs to pick optimal displacement mod if we want to encode base
-        if( mod == MOD.INDIRECT && (base == RBP || base == R13) )
+        if( mod == MOD.INDIRECT && (base == RBP || base == R13) ) {
             mod = MOD.INDIRECT_disp8;
+        } else if( index == -1 && (base == RSP || base == R12) ) {
+            index = RSP;
+        }
 
-        // special encoding for [base +offset]
         if( index == -1 ) {
-            // Case for mov reg, [disp] (load)
-            enc.add1(modrm(mod, reg == -1 ? 0 : reg, base));
+            enc.add1(modrm(mod, reg, base));
         } else {
-            // rsp is hard-coded here(0x04)
-            enc.add1(modrm(mod, reg, 0x04));
+            enc.add1(modrm(mod, reg, x86_64_v2.RSP));
             enc.add1(sib(scale, index, base));
         }
 
@@ -372,8 +374,7 @@ public class x86_64_v2 extends Machine {
     }
 
     // Break an infinite loop
-    @Override
-    public IfNode never(CFGNode ctrl) {
+    @Override public NeverNode never(CFGNode ctrl) {
         throw Utils.TODO();
     }
 
@@ -381,45 +382,45 @@ public class x86_64_v2 extends Machine {
     @Override
     public Node instSelect(Node n) {
         return switch (n) {
-            case AddFNode addf -> addf(addf);
-            case AddNode add -> add(add);
-            case AndNode and -> and(and);
-            case BoolNode bool -> cmp(bool);
-            case CallEndNode cend -> new CallEndX86(cend);
-            case CallNode call -> call(call);
-            case CastNode cast -> new CastX86(cast);
-            case CProjNode c -> new CProjNode(c);
-            case ConstantNode con -> con(con);
-            case DivFNode divf -> new DivFX86(divf);
-            case DivNode div -> new DivX86(div);
-            case FunNode fun -> new FunX86(fun);
-            case IfNode iff -> jmp(iff);
-            case LoadNode ld -> ld(ld);
-            case MemMergeNode mem -> new MemMergeNode(mem);
-            case MulFNode mulf -> new MulFX86(mulf);
-            case MulNode mul -> mul(mul);
-            case NewNode nnn -> new NewX86(nnn);
-            case NotNode not -> new NotX86(not);
-            case OrNode or -> or(or);
-            case ParmNode parm -> new ParmX86(parm);
-            case PhiNode phi -> new PhiNode(phi);
-            case ProjNode prj -> prj(prj);
-            case ReadOnlyNode read -> new ReadOnlyNode(read);
-            case ReturnNode ret -> new RetX86(ret, ret.fun());
-            case SarNode sar -> sar(sar);
-            case ShlNode shl -> shl(shl);
-            case ShrNode shr -> shr(shr);
-            case StartNode start -> new StartNode(start);
-            case StopNode stop -> new StopNode(stop);
-            case StoreNode st -> st(st);
-            case SubFNode subf -> new SubFX86(subf);
-            case SubNode sub -> sub(sub);
-            case ToFloatNode tfn -> i2f8(tfn);
-            case XorNode xor -> xor(xor);
+        case AddFNode addf -> addf(addf);
+        case AddNode add -> add(add);
+        case AndNode and -> and(and);
+        case BoolNode bool -> cmp(bool);
+        case CallEndNode cend -> new CallEndX86(cend);
+        case CallNode call -> call(call);
+        case CastNode cast -> new CastX86(cast);
+        case CProjNode c -> new CProjNode(c);
+        case ConstantNode con -> con(con);
+        case DivFNode divf -> new DivFX86(divf);
+        case DivNode div -> new DivX86(div);
+        case FunNode fun -> new FunX86(fun);
+        case IfNode iff -> jmp(iff);
+        case LoadNode ld -> ld(ld);
+        case MemMergeNode mem -> new MemMergeNode(mem);
+        case MulFNode mulf -> new MulFX86(mulf);
+        case MulNode mul -> mul(mul);
+        case NewNode nnn -> new NewX86(nnn);
+        case NotNode not -> new NotX86(not);
+        case OrNode or -> or(or);
+        case ParmNode parm -> new ParmX86(parm);
+        case PhiNode phi -> new PhiNode(phi);
+        case ProjNode prj -> prj(prj);
+        case ReadOnlyNode read -> new ReadOnlyNode(read);
+        case ReturnNode ret -> new RetX86(ret, ret.fun());
+        case SarNode sar -> sar(sar);
+        case ShlNode shl -> shl(shl);
+        case ShrNode shr -> shr(shr);
+        case StartNode start -> new StartNode(start);
+        case StopNode stop -> new StopNode(stop);
+        case StoreNode st -> st(st);
+        case SubFNode subf -> new SubFX86(subf);
+        case SubNode sub -> sub(sub);
+        case ToFloatNode tfn -> i2f8(tfn);
+        case XorNode xor -> xor(xor);
 
-            case LoopNode loop -> new LoopNode(loop);
-            case RegionNode region -> new RegionNode(region);
-            default -> throw Utils.TODO();
+        case LoopNode loop -> new LoopNode(loop);
+        case RegionNode region -> new RegionNode(region);
+        default -> throw Utils.TODO();
         };
     }
 
@@ -501,17 +502,19 @@ public class x86_64_v2 extends Machine {
 
     // Because X86 flags, a normal ideal Bool is 2 X86 ops: a "cmp" and at "setz".
     // Ideal If reading from a setz will skip it and use the "cmp" instead.
-    private static boolean invert;
+    private static boolean swap, unsigned;
     private Node cmp( BoolNode bool ) {
-        invert = false;
+        swap = unsigned = false;
         Node cmp = _cmp(bool);
-        return new SetX86(cmp, invert ? IfNode.invert(bool.op()) : bool.op());
+        return new SetX86(cmp, swap ? IfNode.swap(bool.op()) : bool.op(), unsigned);
     }
 
     private Node _cmp(BoolNode bool) {
         // Float variant
-        if( bool.isFloat() )
+        if( bool.isFloat() ) {
+            unsigned = true;
             return new CmpFX86(bool);
+        }
         Node lhs = bool.in(1);
         Node rhs = bool.in(2);
 
@@ -520,14 +523,14 @@ public class x86_64_v2 extends Machine {
             return new CmpMemX86(bool, address(ld), ld.ptr(), idx, off, scale, imm(rhs), val, false);
 
         if( rhs instanceof LoadNode ld && ld.nOuts() == 1 )
-            return new CmpMemX86(bool, address(ld), ld.ptr(), idx, off, scale, imm(lhs), val, true);
+            return new CmpMemX86(bool, address(ld), ld.ptr(), idx, off, scale, imm(lhs), val, true );
 
         // Vs immediate
         if( rhs instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm32(ti.value()) )
             return new CmpIX86(bool, (int)ti.value());
 
         if( lhs instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm32(ti.value()) ) {
-            invert = true;
+            swap = true;
             return new CmpIX86(bool, (int)ti.value(), 0.5);
         }
 
@@ -559,7 +562,7 @@ public class x86_64_v2 extends Machine {
         // Loads do not set the flags, and will need an explicit TEST
         BoolNode bool;
         if( iff.in(1) instanceof BoolNode bool0 ) bool = bool0;
-        else iff.setDef(1, bool=new BoolNode.EQ(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
+        else iff.setDef(1, bool=new BoolNode.NE(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
         return new JmpX86(iff, bool.op());
     }
 
@@ -584,20 +587,20 @@ public class x86_64_v2 extends Machine {
     }
 
     private Node sar(SarNode sar) {
-        if( sar.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti )
-            return new SarIX86(sar, (int)(ti.value() & 0x03f) );
+        if( sar.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm8(ti.value()))
+            return new SarIX86(sar, (int)(ti.value() & 0xff) );
         return new SarX86(sar);
     }
 
     private Node shl(ShlNode shl) {
-        if( shl.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti )
-            return new ShlIX86(shl, (int)(ti.value() & 0x03f) );
+        if( shl.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm8(ti.value()))
+            return new ShlIX86(shl, (int)(ti.value() & 0xff) );
         return new ShlX86(shl);
     }
 
     private Node shr( ShrNode shr ) {
-        if( shr.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti )
-            return new ShrIX86(shr, (int)(ti.value() & 0x03f) );
+        if( shr.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm8(ti.value()) )
+            return new ShrIX86(shr, (int)(ti.value() & 0xff) );
         return new ShrX86(shr);
     }
 
@@ -610,9 +613,7 @@ public class x86_64_v2 extends Machine {
                ld.mem() == st.mem() &&
                ld.ptr() == st.ptr() &&
                ld.off() == st.off()) {
-                if( op instanceof AddNode )
-                    return new MemAddX86(address(st), st.ptr(), idx, off, scale, imm(op.in(2)), val);
-                throw Utils.TODO();
+               return new MemAddX86(address(st), st.ptr(), idx, off, scale, imm(op.in(2)), val);
             }
         }
 

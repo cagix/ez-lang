@@ -51,6 +51,13 @@ public abstract class CFGNode extends Node {
         return c;
     }
 
+    // Used by the encoding / final BB layout
+    public CFGNode uctrlSkipEmpty() {
+        CFGNode x = this, y=null;
+        while( x.nOuts() == 1 && (y=x.uctrl())!=null ) // Skip empty blocks
+            x = y;
+        return x;
+    }
 
     // ------------------------------------------------------------------------
     /**
@@ -97,7 +104,7 @@ public abstract class CFGNode extends Node {
 
     LoopTree _ltree;
     public int _pre;            // Pre-order numbers for loop tree finding
-    private static class LoopTree {
+    static class LoopTree {
         LoopTree _par;
         final LoopNode _head;
         int _depth;

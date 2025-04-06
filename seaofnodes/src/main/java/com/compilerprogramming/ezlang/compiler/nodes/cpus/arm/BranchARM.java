@@ -28,13 +28,12 @@ public class BranchARM extends IfNode implements MachNode, RIPRelSize {
     @Override public RegMask outregmap() { return null; }
     @Override public void invert() { _bop = invert(_bop);  }
 
-    // Encoding is appended into the byte array; size is returned
     @Override public void encoding( Encoding enc ) {
         // Assuming that condition flags are already set.  These flags are set
         // by comparison (or sub).  No need for regs because it uses flags
         enc.jump(this,cproj(0));
         // B.cond
-        enc.add4( arm.b_cond(0b01010100, 0, arm.make_condition(_bop)) );
+        enc.add4( arm.b_cond(arm.OP_BRANCH, 0, arm.make_condition(_bop)) );
     }
 
     // Delta is from opcode start
@@ -47,7 +46,7 @@ public class BranchARM extends IfNode implements MachNode, RIPRelSize {
     // Delta is from opcode start
     @Override public void patch( Encoding enc, int opStart, int opLen, int delta ) {
         if( opLen==4 ) {
-            enc.patch4(opStart,arm.b_cond(0b01010100, delta, arm.make_condition(_bop)));
+            enc.patch4(opStart,arm.b_cond(arm.OP_BRANCH, delta, arm.make_condition(_bop)));
         } else {
             throw Utils.TODO();
         }
@@ -56,9 +55,8 @@ public class BranchARM extends IfNode implements MachNode, RIPRelSize {
     @Override public void asm(CodeGen code, SB sb) {
         String src = code.reg(in(1));
         if( src!="flags" ) sb.p(src).p(" ");
-        CFGNode prj = cproj(0);
-        while( prj.nOuts() == 1 )
-            prj = prj.uctrl();  // Skip empty blocks
+        CFGNode prj = cproj(0).uctrlSkipEmpty();
+        if( !prj.blockHead() ) prj = prj.cfg0();
         sb.p(label(prj));
     }
     @Override public String comment() { return "L"+cproj(1)._nid; }

@@ -227,6 +227,7 @@ public abstract class Node {
     }
 
     // Breaks the edge invariants, used temporarily
+    @SuppressWarnings("unchecked")
     protected <N extends Node> N addUse(Node n) { _outputs.add(n); return (N)this; }
 
     // Remove node 'use' from 'def's (i.e. our) output list, by compressing the list in-place.
@@ -268,6 +269,15 @@ public abstract class Node {
         assert isDead();        // Really dead now
     }
 
+    // Preserve CFG use-ordering when killing
+    public void killOrdered() {
+        CFGNode cfg = cfg0();
+        cfg._outputs.remove(cfg._outputs.find(this));
+        _inputs.set(0,null);
+        kill();
+    }
+
+
     // Mostly used for asserts and printing.
     public boolean isDead() { return isUnused() && nIns()==0 && _type==null; }
 
@@ -275,6 +285,7 @@ public abstract class Node {
     // Add bogus null use to keep node alive
     public <N extends Node> N keep() { return addUse(null); }
     // Remove bogus null.
+    @SuppressWarnings("unchecked")
     public <N extends Node> N unkeep() {
         delUse(null);
         return (N)this;
@@ -301,9 +312,8 @@ public abstract class Node {
         kill();
     }
 
-    // Replace uses of `def` with `this`, and insert `this` immediately after
-    // `def` in the basic block.
-    public void insertAfter( Node def, boolean must ) {
+    // insert `this` immediately after `def` in the same basic block.
+    public void insertAfter( Node def ) {
         CFGNode cfg = def.cfg0();
         int i = cfg._outputs.find(def)+1;
         if( cfg instanceof CallEndNode ) {
@@ -316,19 +326,6 @@ public abstract class Node {
         while( cfg.out(i) instanceof PhiNode || cfg.out(i) instanceof CalleeSaveNode )  i++;
         cfg._outputs.insert(this,i);
         _inputs.set(0,cfg);
-        for( int j=def.nOuts()-1; j>=0; j-- ) {
-            // Can we avoid a split of a split?  'this' split is used by
-            // another split in the same block.
-            if( !must && def.out(j) instanceof SplitNode split && def.out(j).cfg0()==cfg &&
-                !split._kind.contains("self") )
-                continue;
-            Node use = def._outputs.del(j);
-            use.unlock();
-            int idx = use._inputs.find(def);
-            use._inputs.set(idx,this);
-            addUse(use);
-        }
-        if( nIns()>1 ) setDef(1,def);
     }
 
     // Insert this in front of use.in(uidx) with this, and insert this
@@ -338,6 +335,8 @@ public abstract class Node {
         int i;
         if( use instanceof PhiNode phi ) {
             cfg = phi.region().cfg(uidx);
+            if( cfg instanceof CProjNode && cfg.in(0) instanceof NeverNode nvr )
+                cfg = nvr.cfg0();
             i = cfg.nOuts()-1;
         } else {
             i = cfg._outputs.find(use);
@@ -349,7 +348,7 @@ public abstract class Node {
         use.setDefOrdered(uidx,this);
     }
 
-    public void setDefOrdered(int idx, Node def) {
+    public void setDefOrdered( int idx, Node def) {
         // If old is dying, remove from CFG ordered
         Node old = in(idx);
         if( old!=null && old.nOuts()==1 ) {
@@ -488,6 +487,7 @@ public abstract class Node {
         return old;
     }
 
+    @SuppressWarnings("unchecked")
     public <N extends Node> N init() { _type = compute(); return (N)this; }
 
     /**

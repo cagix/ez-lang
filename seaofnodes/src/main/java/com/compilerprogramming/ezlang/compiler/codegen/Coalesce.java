@@ -10,20 +10,6 @@ import java.util.IdentityHashMap;
 abstract public class Coalesce {
 
     public static boolean coalesce( int round, RegAlloc alloc ) {
-        // Convert the 2-D array of bits (a 1-D array of BitSets) into an
-        // adjacency matrix.
-        int maxlrg = alloc._LRGS.length;
-        for( int i=1; i<maxlrg; i++ ) {
-            BitSet ifg = IFG.IFG.atX(i);
-            if( ifg != null ) {
-                LRG lrg0 = alloc._LRGS[i];
-                for( int lrg = ifg.nextSetBit(0); lrg>=0; lrg=ifg.nextSetBit(lrg+1) ) {
-                    LRG lrg1 = alloc._LRGS[lrg];
-                    lrg0.addNeighbor(lrg1);
-                    lrg1.addNeighbor(lrg0);
-                }
-            }
-        }
 
         // Walk all the splits, looking for coalesce chances
         boolean progress = false;
@@ -37,7 +23,7 @@ abstract public class Coalesce {
                 if( v1 != v2 ) {
                     LRG ov1 = v1, ov2 = v2;
                     // Get the smaller neighbor count in v1
-                    if( (v1._adj==null ? 0 : v1._adj._len) > (v2._adj==null ? 0 : v2._adj._len) )
+                    if( v1.nadj() > v2.nadj() )
                         { v1 = v2; v2 = alloc.lrg(n); }
                     int v2len = v2._adj==null ? 0 : v2._adj._len;
                     // See that they do not conflict (coalescing would make a self-conflict)
@@ -58,9 +44,9 @@ abstract public class Coalesce {
                     // Most constrained mask
                     RegMask mask = v1._mask==v2._mask ? v1._mask : v1._mask.copy().and(v2._mask);
                     // Check for capacity
-                    if( (v2._adj==null ? 0 : v2._adj._len) >= mask.size() ) {
+                    if( v2.nadj() >= mask.size() ) {
                         // Fails capacity, will not be trivial colorable
-                        v2._adj.setLen(v2len);
+                        if( v2._adj!=null ) v2._adj.setLen(v2len);
                         continue;
                     }
 
