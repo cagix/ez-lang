@@ -13,7 +13,7 @@ public class SONTypeTuple extends SONType {
     public static final SONTypeTuple BOT = new SONTypeTuple(new SONType[0]).intern();
     public static final SONTypeTuple TOP = new SONTypeTuple(null).intern();
 
-    public static final SONTypeTuple TEST = make(SONTypeInteger.BOT, SONTypeMemPtr.TEST);
+    //public static final SONTypeTuple TEST = make(SONTypeInteger.BOT, SONTypeMemPtr.TEST);
     public static final SONTypeTuple START= make(SONType.CONTROL, SONTypeMem.TOP, SONTypeInteger.BOT);
     public static final SONTypeTuple MAIN = make(SONTypeInteger.BOT);
     public static final SONTypeTuple RET  = make(SONType.CONTROL, SONTypeMem.BOT, SONType.BOTTOM);
@@ -23,7 +23,7 @@ public class SONTypeTuple extends SONType {
     public static final SONTypeTuple IF_TRUE    = make(new SONType[]{SONType. CONTROL, SONType.XCONTROL});
     public static final SONTypeTuple IF_FALSE   = make(new SONType[]{SONType.XCONTROL, SONType. CONTROL});
 
-    public  static void gather(ArrayList<SONType> ts) { ts.add(BOT); ts.add(TEST); ts.add(START); ts.add(MAIN); ts.add(IF_TRUE); }
+    public  static void gather(ArrayList<SONType> ts) { ts.add(BOT); /* ts.add(TEST); */ ts.add(START); ts.add(MAIN); ts.add(IF_TRUE); }
 
     @Override
     SONType xmeet(SONType other) {

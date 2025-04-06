@@ -1,0 +1,18 @@
+func fib(n: Int)->Int {
+    var i: Int;
+    var temp=0;
+    var f1=1;
+    var f2=1;
+    i=n;
+    while( i>1 ){
+        temp = f1+f2;
+        f1=f2;
+        f2=temp;
+        i=i-1;
+    }
+    return f2;
+}
+
+func foo()->Int {
+    return fib(10);
+}

@@ -35,7 +35,7 @@ public class SONTypeStruct extends SONType {
     public static SONTypeStruct make(String name, Field... fields) { return new SONTypeStruct(name, fields).intern(); }
     public static final SONTypeStruct TOP = make("$TOP",new Field[0]);
     public static final SONTypeStruct BOT = make("$BOT",new Field[0]);
-    public static final SONTypeStruct TEST = make("test",new Field[]{Field.TEST});
+    //public static final SONTypeStruct TEST = make("test",new Field[]{Field.TEST});
     // Forward-ref version
     public static SONTypeStruct makeFRef(String name) { return make(name, (Field[])null); }
     // Make a read-only version
@@ -66,14 +66,14 @@ public class SONTypeStruct extends SONType {
     }
 
     // A pair of self-cyclic types
-    private static final SONTypeStruct S1F = makeFRef("S1");
-    private static final SONTypeStruct S2F = makeFRef("S2");
-    public  static final SONTypeStruct S1  = make("S1", Field.make("a", SONTypeInteger.BOT, -1, false), Field.make("s2", SONTypeMemPtr.make((byte)2,S2F),-2, false) );
-    private static final SONTypeStruct S2  = make("S2", Field.make("b", SONTypeFloat.F64, -3, false), Field.make("s1", SONTypeMemPtr.make((byte)2,S1F),-4, false) );
+//    private static final SONTypeStruct S1F = makeFRef("S1");
+//    private static final SONTypeStruct S2F = makeFRef("S2");
+//    public  static final SONTypeStruct S1  = make("S1", Field.make("a", SONTypeInteger.BOT, -1, false), Field.make("s2", SONTypeMemPtr.make((byte)2,S2F),-2, false) );
+//    private static final SONTypeStruct S2  = make("S2", Field.make("b", SONTypeFloat.F64, -3, false), Field.make("s1", SONTypeMemPtr.make((byte)2,S1F),-4, false) );
+//
+//    private static final SONTypeStruct ARY = makeAry(SONTypeInteger.U32,-1, SONTypeInteger.BOT,-2);
 
-    private static final SONTypeStruct ARY = makeAry(SONTypeInteger.U32,-1, SONTypeInteger.BOT,-2);
-
-    public static void gather(ArrayList<SONType> ts) { ts.add(TEST); ts.add(BOT); ts.add(S1); ts.add(S2); ts.add(ARY); }
+    public static void gather(ArrayList<SONType> ts) { /* ts.add(TEST); ts.add(BOT); ts.add(S1); ts.add(S2); ts.add(ARY); */ }
 
     // Find field index by name
     public int find(String fname) {

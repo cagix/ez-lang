@@ -31,7 +31,7 @@ public class SONTypeMemPtr extends SONTypeNil {
         assert obj!=null;
         _obj = obj;
     }
-    static SONTypeMemPtr make(byte nil, SONTypeStruct obj) { return new SONTypeMemPtr(nil, obj).intern(); }
+    public static SONTypeMemPtr make(byte nil, SONTypeStruct obj) { return new SONTypeMemPtr(nil, obj).intern(); }
     public static SONTypeMemPtr makeNullable(SONTypeStruct obj) { return make((byte)3, obj); }
     public static SONTypeMemPtr make(SONTypeStruct obj) { return new SONTypeMemPtr((byte)2, obj).intern(); }
     public SONTypeMemPtr makeFrom(SONTypeStruct obj) { return obj==_obj ? this : make(_nil, obj); }
@@ -47,8 +47,8 @@ public class SONTypeMemPtr extends SONTypeNil {
     public static SONTypeMemPtr TOP = BOT.dual();
     public static SONTypeMemPtr NOTBOT = make((byte)2, SONTypeStruct.BOT);
 
-    public static SONTypeMemPtr TEST= make((byte)2, SONTypeStruct.TEST);
-    public static void gather(ArrayList<SONType> ts) { ts.add(NOTBOT); ts.add(BOT); ts.add(TEST); }
+    //public static SONTypeMemPtr TEST= make((byte)2, SONTypeStruct.TEST);
+    public static void gather(ArrayList<SONType> ts) { ts.add(NOTBOT); ts.add(BOT); /* ts.add(TEST); */ }
 
     @Override
     public SONTypeNil xmeet(SONType t) {
