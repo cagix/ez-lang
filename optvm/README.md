@@ -9,6 +9,7 @@ This module implements various compiler optimization techniques such as:
 Our goal here is to perform optimizations on the Intermediate Representation targeting an abstract machine, rather than
 a physical machine. Therefore, all our optimization passes will work on the instruction set of this abstract machine.
 
+A VM / Interpreter is provided that can run the generated code.
 
 ## Guide
 
