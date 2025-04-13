@@ -59,3 +59,10 @@ A VM / Interpreter is provided that can run the generated code.
 * [Compiler](src/main/java/com/compilerprogramming/ezlang/compiler/Compiler.java) - simple orchestrator of compilation tasks.
 * [Optimizer](src/main/java/com/compilerprogramming/ezlang/compiler/Optimizer.java) - simple orchestrator of optimization steps. Currently
   does not have optimization passes, but translates to SSA and out and then runs the graph coloring register allocator.
+
+## VM/Interpreter
+
+A simple VM / Interpreter is provided that can run the IR, both pre and post optimizations.
+The SSA form is not executable, it must be transformed out of SSA for execuation.
+
+* [VM/Interpreter](src/main/java/com/compilerprogramming/ezlang/interpreter)
