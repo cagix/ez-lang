@@ -1,19 +1,19 @@
-# EZ Programming Language
+# EeZee Programming Language
 
 This project is part of the https://compilerprogramming.github.io/ project.
 
-The EZ (pronounced EeZee) programming language is designed to allow us to learn various compiler techniques.
+The EeZee programming language is designed to allow us to learn various compiler techniques.
 
-## The EZ Language
+## The EeZee Language
 
-The EZ programming language is a tiny statically typed language with syntax inspired by Swift.
+The EeZee programming language is a tiny statically typed language with syntax inspired by Swift.
 The language has the following features:
 
 * Integer, Struct and 1-Dimensional Array types
 * If and While statements
 * Functions
 
-The EeZee language specifiaction is [available](https://compilerprogramming.github.io/ez-lang.html).
+The EeZee language specification is [available](https://compilerprogramming.github.io/ez-lang.html).
 The language is intentionally very simple and is meant to have just enough functionality to experiment with compiler implementation techniques.
 
 ## Modules
