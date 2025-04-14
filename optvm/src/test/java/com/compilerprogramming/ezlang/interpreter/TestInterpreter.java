@@ -173,22 +173,19 @@ public class TestInterpreter {
     public void testFunction9() {
         String src = """
                 func fib(n: Int)->Int {
-                    var i: Int;
-                    var temp: Int;
-                    var f1=1;
-                    var f2=1;
-                    i=n;
+                    var f1=1
+                    var f2=1
+                    var i=n
                     while( i>1 ){
-                        temp = f1+f2;
-                        f1=f2;
-                        f2=temp;
-                        i=i-1;
+                        var temp = f1+f2
+                        f1=f2
+                        f2=temp
+                        i=i-1
                     }
-                    return f2;
+                    return f2
                 }
-
                 func foo()->Int {
-                    return fib(10);
+                    return fib(10)
                 }
                 """;
         var value = compileAndRun(src, "foo", Options.OPT);
