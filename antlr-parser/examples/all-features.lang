@@ -19,12 +19,32 @@ func foo(a: Int, b: [Int]) {
     }
 }
 func bar() -> Test {
-    var v = new Test { intArray = new [Tree] {} }
+    var v = new Test { intArray = new [Tree] { new Tree{left=null,right=null} } }
     return v
 }
 func main() {
     var m = 42
+    var j: Int
     var t: Tree
-    var b = true
-    var c: Bool
+    var array = new [Int] {size=10,1,2,3}
+    array[1] = 42
+    t.left = null
+    if (m < 1)
+       print(1)
+    else if (m == 5)
+       print(2)
+    else
+       print(3)
+}
+func fib(n: Int)->Int {
+    var f1=1
+    var f2=1
+    var i=n
+    while( i>1 ){
+        var temp = f1+f2
+        f1=f2
+        f2=temp
+        i=i-1
+    }
+    return f2
 }

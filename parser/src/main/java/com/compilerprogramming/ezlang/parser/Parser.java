@@ -334,13 +334,10 @@ public class Parser {
         AST.TypeExpr resultType = parseTypeExpr(lexer);
         var newExpr = new AST.NewExpr(resultType);
         List<AST.Expr> initExpr = new ArrayList<>();
-        int initType = 0;
         int index = 0;
         if (testPunctuation(lexer, "{")) {
             while (!isToken(currentToken, "}")) {
                 if (currentToken.kind == Token.Kind.IDENT && lexer.peekChar() == '=') {
-                    if (initType == 0) initType = 1;
-                    else if (initType != 1) throw new CompilerException("Cannot mix initializer expressions");
                     String fieldname = currentToken.str;
                     nextToken(lexer);
                     matchPunctuation(lexer, "=");
@@ -348,8 +345,6 @@ public class Parser {
                     initExpr.add(new AST.InitFieldExpr(newExpr, fieldname, value));
                 }
                 else {
-                    if (initType == 0) initType = 2;
-                    else if (initType != 2) throw new CompilerException("Cannot mix initializer expressions");
                     var indexLit = Integer.valueOf(index++);
                     var indexExpr = new AST.LiteralExpr(Token.newNum(indexLit,indexLit.toString(),0));
                     initExpr.add(new AST.ArrayInitExpr(newExpr, indexExpr, parseBool(lexer)));

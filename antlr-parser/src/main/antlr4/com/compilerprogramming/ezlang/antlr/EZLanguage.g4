@@ -22,16 +22,17 @@ varDeclaration
     ;
 
 typeName
-    : simpleType
+    : nominalType
     | arrayType
     ;
 
-simpleType
-    : IDENTIFIER ('?')?
+nominalType
+    : 'Int'
+    | IDENTIFIER ('?')?
     ;
 
 arrayType
-    : '[' simpleType ']' ('?')?
+    : '[' nominalType ']' ('?')?
     ;
 
 functionDeclaration
