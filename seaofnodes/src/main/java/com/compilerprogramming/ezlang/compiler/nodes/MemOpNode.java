@@ -20,27 +20,56 @@ import java.util.BitSet;
  */
 public abstract class MemOpNode extends Node {
 
-    public final String _name;
+    // The equivalence alias class
     public final int _alias;
+
+    // True if load-like, false if store-like.
+    //
+    // Stores produce memory (maybe as part of a tuple with other things),
+    // loads do not.
+    //
+    // Loads might pick up anti-dependences on prior Stores, and never cause an
+    // anti-dependence themselves.
+    //
+    // Stores must maximally sink to the least dominator use.  Loads can be
+    // opportunistically hoisted.
+    public final boolean _isLoad;
+
     // Declared type; not final because it might be a forward-reference
     // which will be lazily improved when the reference is declared.
     public SONType _declaredType;
 
-    public MemOpNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off) {
+    // A debug name, no semantic meaning
+    public final String _name;
+    public MemOpNode(String name, int alias, boolean isLoad, SONType glb, Node mem, Node ptr, Node off) {
         super(null, mem, ptr, off);
         _name  = name;
         _alias = alias;
         _declaredType = glb;
+        _isLoad = isLoad;
     }
-    public MemOpNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off, Node value) {
-        this(name, alias, glb, mem, ptr, off);
+    public MemOpNode(String name, int alias, boolean isLoad, SONType glb, Node mem, Node ptr, Node off, Node value) {
+        this(name, alias, isLoad, glb, mem, ptr, off);
         addDef(value);
     }
     public MemOpNode( Node mach, MemOpNode mop ) {
         super(mach);
         _name  = mop==null ? null : mop._name;
         _alias = mop==null ? 0    : mop._alias;
+        _isLoad= mop==null ? true : mop._isLoad;
         _declaredType = mop==null ? SONType.BOTTOM : mop._declaredType;
+        if( mop==null )
+            throw Utils.TODO("Load or not");
+    }
+
+    // Used by M2 when translating graph to Simple
+    public MemOpNode( boolean isLoad ) {
+        super((Node)null);
+        _name         = null;
+        _alias        = 0;
+
+        _isLoad       = isLoad;
+        _declaredType = SONType.BOTTOM;
     }
 
     //
@@ -56,7 +85,7 @@ public abstract class MemOpNode extends Node {
 
 
     @Override
-    boolean eq(Node n) {
+    public boolean eq(Node n) {
         MemOpNode mem = (MemOpNode)n; // Invariant
         return _alias==mem._alias;    // When comparing types error to use "equals"; always use "=="
     }

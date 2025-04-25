@@ -129,11 +129,18 @@ public class RegAlloc {
     }
 
     // Printable register number for node n
-    String reg( Node n ) {
+    String reg( Node n ) { return reg(n,null); }
+    String reg( Node n, FunNode fun ) {
         LRG lrg = lrg(n);
         if( lrg==null ) return null;
+        // No register yet, use LRG
         if( lrg._reg == -1 ) return "V"+lrg._lrg;
-        return _code._mach.reg(lrg._reg);
+        // Chosen machine register unless stack-slot and past RA
+        String[] regs = _code._mach.regs();
+        if( lrg._reg < regs.length || _code._phase.ordinal() <= CodeGen.Phase.RegAlloc.ordinal() || fun==null )
+            return RegMask.reg(regs,lrg._reg);
+        // Stack-slot past RA uses the frame layout logic
+        return "[rsp+"+fun.computeStackOffset(_code,lrg._reg)+"]";
     }
 
     // -----------------------
@@ -141,13 +148,23 @@ public class RegAlloc {
 
     public void regAlloc() {
         // Insert callee-save registers
-        FunNode lastFun=null;
+        String[] regs = _code._mach.regs();
+        long neverSave= _code._mach.neverSave();
+        for( CFGNode bb : _code._cfg )
+            if( bb instanceof FunNode fun ) {
+                ReturnNode ret = fun.ret();
+                int len = Math.min(regs.length,64);
+                for( int reg=0; reg<len; reg++ )
+                    if( !_code._callerSave.test(reg) && ((1L<<reg)&neverSave)==0 ) {
+                        ret.addDef(new CalleeSaveNode(fun,reg,regs[reg]));
+                        assert ret.regmap(ret.nIns()-1).firstReg()==reg;
+                    }
+            }
+        // Cache reg masks for New and Call
         for( CFGNode bb : _code._cfg ) {
-            if( bb instanceof FunNode fun )
-                insertCalleeSave(lastFun=fun);
-            // Leaf routine, or not?
-            // X86 requires 16b RSP aligned if NOT leaf
-            if( bb instanceof CallNode ) lastFun._hasCalls = true;
+            if( bb instanceof CallEndNode cend ) cend.cacheRegs(_code);
+            for( Node n : bb._outputs )
+                if( n instanceof NewNode nnn ) nnn.cacheRegs(_code);
         }
 
         // Top driver: repeated rounds of coloring and splitting.
@@ -177,20 +194,6 @@ public class RegAlloc {
             // Color attempt
             IFG.color(round,this);      // If colorable
     }
-
-    // Insert callee-save registers.  Walk the callee-save RegMask ignoring any
-    // Parms, then insert a Parm and an edge from the Ret to the Parm with the
-    // callee-save register.
-    private void insertCalleeSave( FunNode fun ) {
-        RegMask saves = _code._mach.calleeSave();
-        ReturnNode ret = fun.ret();
-
-        for( short reg = saves.firstReg(); reg != -1; reg = saves.nextReg(reg) ) {
-            ret.addDef(new CalleeSaveNode(fun,reg,_code._mach.reg(reg)));
-            assert ((MachNode)ret).regmap(ret.nIns()-1).firstReg()==reg;
-        }
-    }
-
 
     // -----------------------
     // Split conflicted live ranges.
@@ -539,20 +542,26 @@ public class RegAlloc {
     // -----------------------
     // POST PASS: Remove empty spills that biased-coloring made
     private void postColor() {
-        int maxSlot = -1;
+        int maxReg = -1;
         for( CFGNode bb : _code._cfg ) { // For all ops
-            if( bb instanceof FunNode )
-                maxSlot = -1;
+            if( bb instanceof FunNode fun )
+                maxReg = -1;   // Reset for new function
+            // Compute frame size, based on arguments and largest reg seen
             if( bb instanceof ReturnNode ret )
-                ret.fun()._maxSlot = (short)maxSlot;
+                ret.fun().computeFrameAdjust(_code,maxReg);
+            // Raise frame size by max stack args passed, even if ignored
+            if( bb instanceof CallEndNode cend )
+                maxReg = Math.max(maxReg,cend._xslot);
+
             for( int j=0; j<bb.nOuts(); j++ ) {
                 Node n = bb.out(j);
-                if( lrg(n)!=null ) {
-                    int slot = _code._mach.stackSlot(lrg(n)._reg);
-                    maxSlot = Math.max(maxSlot,slot);
-                }
+                if( lrg(n)!=null )
+                    maxReg = Math.max(maxReg,lrg(n)._reg+1);
+                // Raise frame size by max stack args passed to New
+                if( n instanceof NewNode nnn )
+                    maxReg = Math.max(maxReg,nnn._xslot);
 
-                if( !(n instanceof SplitNode lo) ) continue;
+                if( !(n instanceof SplitNode ) ) continue;
                 int defreg = lrg(n     )._reg;
                 int usereg = lrg(n.in(1))._reg;
                 // Attempt to bypass split

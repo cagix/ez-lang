@@ -5,8 +5,6 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 
-import java.io.ByteArrayOutputStream;
-
 public class x86_64_v2 extends Machine {
     public x86_64_v2( CodeGen code ) {}
     // X86-64 V2.  Includes e.g. SSE4.2 and POPCNT.
@@ -22,6 +20,17 @@ public class x86_64_v2 extends Machine {
     public static final int MAX_REG = 33;
     public static final int RPC = 33;
 
+    // Human-readable name for a register number, e.g. "RAX".
+    public static final String[] REGS = new String[]{
+            "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
+            "r8" , "r9" , "r10", "r11", "r12", "r13", "r14", "r15",
+            "xmm0", "xmm1", "xmm2" , "xmm3" , "xmm4" , "xmm5" , "xmm6" , "xmm7" ,
+            "xmm8", "xmm9", "xmm10", "xmm11", "xmm12", "xmm13", "xmm14", "xmm15",
+            "flags",
+    };
+    // Hard crash for bad register number, fix yer bugs!
+    @Override public String[] regs() { return REGS; }
+
     public static int XMM_OFFSET = 16;
     // General purpose register mask: pointers and ints, not floats
     static final long RD_BITS = 0b1111111111111111L; // All the GPRs
@@ -36,7 +45,7 @@ public class x86_64_v2 extends Machine {
     static RegMask RPC_MASK = new RegMask(RPC);
 
     static final long SPILLS = -(1L << MAX_REG);
-    static final RegMask SPLIT_MASK = new RegMask(WR_BITS | FP_BITS | (1L<<FLAGS) | SPILLS, -1L );
+    static final RegMask SPLIT_MASK = new RegMask(WR_BITS | FP_BITS /* | (1L<<FLAGS)*/ | SPILLS, -1L );
 
     // Load/store mask; both GPR and FPR
     static RegMask MEM_MASK = new RegMask(WR_BITS | FP_BITS);
@@ -59,10 +68,10 @@ public class x86_64_v2 extends Machine {
     public static int REX_WB = 0x49;
 
     public enum MOD {
-        INDIRECT, //  [mem]
-        INDIRECT_disp8, // [mem + 0x12]
-        INDIRECT_disp32,// [mem + 0x12345678]
-        DIRECT,          // mem
+        INDIRECT,               //  [mem]
+        INDIRECT_disp8,         // [mem + 0x12]
+        INDIRECT_disp32,        // [mem + 0x12345678]
+        DIRECT,                 // mem
     };
 
     // opcode included here
@@ -79,7 +88,7 @@ public class x86_64_v2 extends Machine {
         case ">"  -> 0x8F;
         case "<"  -> 0x8C;
         case "<=" -> 0x8E;
-        case ">=" -> 0X8D;
+        case ">=" -> 0x8D;
         default -> throw new IllegalArgumentException("Too many arguments");
         };
     }
@@ -117,14 +126,6 @@ public class x86_64_v2 extends Machine {
         if( 8 <= ptr ) rex |= 0b00000001; // REX.B
         if( 8 <= idx ) rex |= 0b00000010; // REX.X
         return rex;
-    }
-
-    // return the size of the immediate
-    public static int imm_size(long imm) {
-        if(imm8(imm)) return 8;
-        if(imm16(imm)) return 16;
-        if(imm32(imm)) return 32;
-        return 64;
     }
 
     public static int rex(int reg, int ptr, int idx) {
@@ -175,41 +176,93 @@ public class x86_64_v2 extends Machine {
         }
     }
 
-    // Calling conv metadata
-    public int GPR_COUNT_CONV_WIN64 = 4; // RCX, RDX, R9, R9
-    public int XMM_COUNT_CONV_WIN64 = 4; // XMM0L, XMM1L, XMM2L, XMM3L
 
-    public int GPR_COUNT_CONV_SYSTEM_V = 6; // RDI, RSI, RDX, RCX, R8, R9
-    public int XMM_COUNT_CONV_SYSTEM_V = 4; // XMM0, XMM1, XMM2, XMM3 ....
-    // Human-readable name for a register number, e.g. "RAX".
-    // Hard crash for bad register number, fix yer bugs!
-    public static final String[] REGS = new String[]{
-            "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
-            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
-            "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7",
-            "xmm8", "xmm9", "xmm10", "xmm11", "xmm12", "xmm13", "xmm14", "xmm15",
-            "flags",
+    // Limit of float args passed in registers
+    static RegMask[] XMMS8 = new RegMask[]{
+        new RegMask(XMM0), new RegMask(XMM1), new RegMask(XMM2), new RegMask(XMM3),
+        new RegMask(XMM4), new RegMask(XMM5), new RegMask(XMM6), new RegMask(XMM7),
     };
-    @Override public String reg( int reg ) {
-        return reg < REGS.length ? REGS[reg] : "[rsp+"+(reg-REGS.length)*8+"]";
+
+    // Map from function signature and argument index to register.
+    // Used to set input registers to CallNodes, and ParmNode outputs.
+    @Override public RegMask callArgMask( SONTypeFunPtr tfp, int idx ) { return callInMask(tfp,idx); }
+    static RegMask callInMask( SONTypeFunPtr tfp, int idx ) {
+        if( idx==0 ) return RPC_MASK;
+        if( idx==1 ) return null;
+        return switch( CodeGen.CODE._callingConv ) {
+        case "SystemV" -> callSys5 (tfp,idx);
+        case "Win64"   -> callWin64(tfp,idx);
+        default -> throw Utils.TODO();
+        };
     }
 
-    // Stack slots, in units of 8 bytes.
-    @Override public int stackSlot( int reg ) {
-        return reg < REGS.length ? -1 : reg-REGS.length;
+    // Maximum stack args used by this signature
+    @Override public short maxArgSlot( SONTypeFunPtr tfp ) {
+        return switch( CodeGen.CODE._callingConv ) {
+        case "SystemV" -> maxArgSlotSys5 (tfp);
+        case "Win64"   -> maxArgSlotWin64(tfp);
+        default -> throw Utils.TODO();
+        };
     }
 
-
-    // WIN64(param passing)
-    static RegMask[] CALLINMASK_WIN64 = new RegMask[] {
+    // Win64 - max *4* args in registers of all kinds; after that on stack.
+    // Stack args land in increasing memory order with empty/mirror slots for
+    // every register.
+    //
+    // foo( int i0, flt f1, int i2, flt f3, int i4, flt f5, int i6, ... )
+    //
+    // -- Prior Frame --
+    // i6
+    // f5
+    // i4
+    // empty mirror, XMM3= f3
+    // empty mirror, R08 = i2
+    // empty mirror, XMM1= f1
+    // empty mirror, RCX = i0
+    // -- Caller Frame; 16b align --
+    // RPC
+    // PAD/ALIGN
+    // -- Callee Frame; 16b align --
+    static RegMask[] WIN64_CALL = new RegMask[] {
         RCX_MASK,
         RDX_MASK,
         R08_MASK,
         R09_MASK,
     };
 
+    static RegMask callWin64(SONTypeFunPtr tfp, int idx ) {
+        // idx 2,3,4,5 passed in registers, with stack slot mirrors.
+        // idx >= 6 passed on stack, starting at slot#1 (#0 reserved for RPC).
+        if( idx >= 6 )
+            return new RegMask(MAX_REG+1/*RPC*/+(idx-2));
+        return tfp.arg(idx-2) instanceof SONTypeFloat
+            ? XMMS8     [idx-2]
+            : WIN64_CALL[idx-2];
+    }
+    static short maxArgSlotWin64(SONTypeFunPtr tfp) {
+        return (short)tfp.nargs();
+    }
+
+    // Sys5: max 6 GPRs and 8 FPRS filled first.  Extra args land in increasing
+    // memory order as needed - no mirror space.
+    //
+    // foo( int i0, flt f1, int i2, flt f3, int i4, flt f5, int i6, ... )
+    // RDI =i0, RSI =i2, RDX =i4, RCX =i6, R08 =i8, R09 =i10
+    // XMM0=f1, XMM1=f3, XMM2=f5, XMM3=f7, XMM4=f9, XMM5=f11, XMM6=f13, XMM7=f15
+    //
+    // -- Prior Frame --
+    // f18
+    // i18
+    // f17
+    // i16
+    // i14
+    // i12
+    // -- Caller Frame; 16b align --
+    // RPC
+    // PAD/ALIGN
+    // -- Callee Frame; 16b align --
     // SystemV(param passing)
-    static RegMask[] CALLINMASK_SYSTEMV = new RegMask[] {
+    static RegMask[] SYS5_CALL = new RegMask[] {
         RDI_MASK,
         RSI_MASK,
         RDX_MASK,
@@ -218,63 +271,29 @@ public class x86_64_v2 extends Machine {
         R09_MASK,
     };
 
-    // Limit of float args passed in registers
-    static RegMask[] XMMS4 = new RegMask[]{
-        new RegMask(XMM0), new RegMask(XMM1), new RegMask(XMM2), new RegMask(XMM3),
-    };
-
-    // Map from function signature and argument index to register.
-    // Used to set input registers to CallNodes, and ParmNode outputs.
-    static RegMask callInMask( SONTypeFunPtr tfp, int idx ) {
-        if( idx==0 ) return RPC_MASK;
-        if( idx==1 ) return null;
-        // Count floats in signature up to index
-        int fcnt=0;
-        for( int i=2; i<idx; i++ )
-            if( tfp.arg(i-2) instanceof SONTypeFloat )
-                fcnt++;
-        // Floats up to XMMS in XMM registers
-        if( tfp.arg(idx-2) instanceof SONTypeFloat ) {
-            if( fcnt < XMMS4.length )
-                return XMMS4[fcnt];
-        } else {
-            RegMask[] cargs = switch( CodeGen.CODE._callingConv ) {
-            case "SystemV" -> CALLINMASK_SYSTEMV;
-            case "Win64"   -> CALLINMASK_WIN64;
-            default        -> throw new IllegalArgumentException("Unknown calling convention: "+CodeGen.CODE._callingConv);
-            };
-            if( idx-2-fcnt < cargs.length )
-                return cargs[idx-2-fcnt];
+    static RegMask callSys5(SONTypeFunPtr tfp, int idx ) {
+        // First 6 integers passed in registers: rdi,rsi,rdx,rcx,r08,r09
+        // First 8 floats passed in registers: xmm0-xmm7
+        int icnt=0, fcnt=0;     // Count of ints, floats
+        for( int i=2; i<idx; i++ ) {
+            if( tfp.arg(i-2) instanceof SONTypeFloat ) fcnt++;
+            else icnt++;
         }
-        throw Utils.TODO(); // Pass on stack slot
+        int nstk = Math.max(icnt-6,0)+Math.max(fcnt-8,0);
+        return tfp.arg(idx-2) instanceof SONTypeFloat
+            ? fcnt<8 ? XMMS8    [fcnt] : new RegMask(MAX_REG+1/*RPC*/+nstk)
+            : icnt<6 ? SYS5_CALL[icnt] : new RegMask(MAX_REG+1/*RPC*/+nstk);
+    }
+    static short maxArgSlotSys5(SONTypeFunPtr tfp) {
+        int icnt=0, fcnt=0;     // Count of ints, floats
+        for( int i=0; i<tfp.nargs(); i++ ) {
+            if( tfp.arg(i) instanceof SONTypeFloat ) fcnt++;
+            else icnt++;
+        }
+        int nstk = Math.max(icnt-6,0)+Math.max(fcnt-8,0);
+        return (short)nstk;
     }
 
-    // Return the max stack slot used by this signature, or 0
-    static short maxSlot( SONTypeFunPtr tfp ) {
-        // Count floats in signature up to index
-        int fcnt=0;
-        for( int i=0; i<tfp.nargs(); i++ )
-            if( tfp.arg(i) instanceof SONTypeFloat )
-                fcnt++;
-        if( fcnt >= XMMS4.length )
-            throw Utils.TODO();
-        RegMask[] cargs = switch( CodeGen.CODE._callingConv ) {
-        case "SystemV" -> CALLINMASK_SYSTEMV;
-        case "Win64"   -> CALLINMASK_WIN64;
-        default        -> throw new IllegalArgumentException("Unknown calling convention: "+CodeGen.CODE._callingConv);
-        };
-        if( tfp.nargs()-fcnt >= cargs.length )
-            throw Utils.TODO();
-        return 0;               // No stack args
-    }
-
-    // Return single int/ptr register.  Used by CallEnd output and Return input.
-    static RegMask retMask( SONTypeFunPtr tfp ) {
-        return tfp.ret() instanceof SONTypeFloat ? XMM0_MASK : RAX_MASK;
-    }
-
-
-    // caller saved(systemv)
     static final long SYSTEM5_CALLER_SAVE =
         (1L << RAX) | (1L << RCX) | (1L << RDX) |
         (1L << RDI) | (1L << RSI) |
@@ -282,86 +301,28 @@ public class x86_64_v2 extends Machine {
         (1L << FLAGS) |           // Flags are killed
         // All FP regs are killed
         FP_BITS;
-    static final RegMask SYSTEM5_CALLER_SAVE_MASK = new RegMask(SYSTEM5_CALLER_SAVE);
 
-    // caller saved(win64)
     static final long WIN64_CALLER_SAVE =
         (1L<< RAX) | (1L<< RCX) | (1L<< RDX) |
         (1L<< R08) | (1L<< R09) | (1L<< R10) | (1L<< R11) |
         (1L<<FLAGS)|           // Flags are killed
         // Only XMM0-XMM5 are killed; XMM6-XMM15 are preserved
         (1L<<XMM0) | (1L<<XMM1) | (1L<<XMM2) | (1L<<XMM3) |
-        (1L<<XMM4) | (1L<<XMM5);
-    static final RegMask WIN64_CALLER_SAVE_MASK = new RegMask(WIN64_CALLER_SAVE);
+        (1L<<XMM4) | (1L<<XMM5) ;
 
-    static RegMask x86CallerSave() {
+    @Override public long callerSave() {
         return switch (CodeGen.CODE._callingConv) {
-        case "SystemV" -> SYSTEM5_CALLER_SAVE_MASK;
-        case "Win64"   ->   WIN64_CALLER_SAVE_MASK;
+        case "SystemV" -> SYSTEM5_CALLER_SAVE;
+        case "Win64"   ->   WIN64_CALLER_SAVE;
         default -> throw new IllegalArgumentException("Unknown calling convention: " + CodeGen.CODE._callingConv);
         };
     }
-
-    @Override public RegMask callerSave() { return x86CallerSave(); }
-
-    static final RegMask SYSTEM5_CALLEE_SAVE_MASK;
-    static final RegMask   WIN64_CALLEE_SAVE_MASK;
-
-    static {
-        long callee = ~SYSTEM5_CALLER_SAVE;
-        // Remove the spills
-        callee &= (1L<<MAX_REG)-1;
-        callee &= ~(1L<<FLAGS);
-        callee &= ~(1L<<RSP);
-        SYSTEM5_CALLEE_SAVE_MASK = new RegMask(callee);
-
-        callee = ~WIN64_CALLER_SAVE;
-        // Remove the spills
-        callee &= (1L<<MAX_REG)-1;
-        callee &= ~(1L<<FLAGS);
-        callee &= ~(1L<<RSP);
-        WIN64_CALLEE_SAVE_MASK = new RegMask(callee);
+    @Override public long neverSave() { return 1L<<RSP; }
+    @Override public RegMask retMask( SONTypeFunPtr tfp ) {
+        return tfp.ret() instanceof SONTypeFloat ? XMM0_MASK : RAX_MASK;
     }
-    static RegMask x86CalleeSave() {
-        return switch( CodeGen.CODE._callingConv ) {
-        case "SystemV" -> SYSTEM5_CALLEE_SAVE_MASK;
-        case "Win64"   ->   WIN64_CALLEE_SAVE_MASK;
-        default        -> throw new IllegalArgumentException("Unknown calling convention: "+CodeGen.CODE._callingConv);
-        };
-    }
-    @Override public RegMask calleeSave() { return x86CalleeSave(); }
+    @Override public int rpc() { return RPC; }
 
-    static final RegMask[] WIN64_RET_MASKS, SYS5_RET_MASKS;
-    static {
-        WIN64_RET_MASKS = makeRetMasks(  WIN64_CALLEE_SAVE_MASK);
-         SYS5_RET_MASKS = makeRetMasks(SYSTEM5_CALLEE_SAVE_MASK);
-    }
-    private static RegMask[] makeRetMasks(RegMask mask) {
-        int nSaves = mask.size();
-        RegMask[] masks = new RegMask[4 + nSaves];
-        masks[0] = null;
-        masks[1] = null;     // Memory
-        masks[2] = null;     // Varies, either XMM0 or RAX
-        masks[3] = RPC_MASK;
-        short reg = mask.firstReg();
-        for( int i=0; i<nSaves; i++ ) {
-            masks[i+4] = new RegMask(reg);
-            reg = mask.nextReg(reg);
-        }
-        return masks;
-    }
-
-    // Return single int/ptr register.  Used by CallEnd output and Return input.
-    static RegMask retMask( SONTypeFunPtr tfp, int i ) {
-        if( i==2 )
-            return tfp.ret() instanceof SONTypeFloat ? XMM0_MASK : RAX_MASK;
-        RegMask[] masks = switch (CodeGen.CODE._callingConv) {
-        case "SystemV" ->  SYS5_RET_MASKS;
-        case "Win64"   -> WIN64_RET_MASKS;
-        default        -> throw new IllegalArgumentException("Unknown calling convention: "+CodeGen.CODE._callingConv);
-        };
-        return masks[i];
-    }
 
     // Create a split op; any register to any register, including stack slots
     @Override public SplitNode split(String kind, byte round, LRG lrg) {
@@ -373,50 +334,47 @@ public class x86_64_v2 extends Machine {
         return new UJmpX86();
     }
 
-    // Break an infinite loop
-    @Override public NeverNode never(CFGNode ctrl) {
-        throw Utils.TODO();
-    }
-
     // Instruction selection
     @Override
     public Node instSelect(Node n) {
         return switch (n) {
-        case AddFNode addf -> addf(addf);
-        case AddNode add -> add(add);
-        case AndNode and -> and(and);
-        case BoolNode bool -> cmp(bool);
+        case AddFNode    addf -> addf(addf);
+        case AddNode      add -> add(add);
+        case AndNode      and -> and(and);
+        case BoolNode    bool -> cmp(bool);
+        case CProjNode      c -> new CProjNode(c);
         case CallEndNode cend -> new CallEndX86(cend);
-        case CallNode call -> call(call);
-        case CastNode cast -> new CastX86(cast);
-        case CProjNode c -> new CProjNode(c);
+        case CallNode    call -> call(call);
+        case CastNode    cast -> new CastX86(cast);
         case ConstantNode con -> con(con);
-        case DivFNode divf -> new DivFX86(divf);
-        case DivNode div -> new DivX86(div);
-        case FunNode fun -> new FunX86(fun);
-        case IfNode iff -> jmp(iff);
-        case LoadNode ld -> ld(ld);
+        case DivFNode    divf -> new DivFX86(divf);
+        case DivNode      div -> new DivX86(div);
+        case FunNode      fun -> new FunX86(fun);
+        case IfNode       iff -> jmp(iff);
+        case LoadNode      ld -> ld(ld);
         case MemMergeNode mem -> new MemMergeNode(mem);
-        case MulFNode mulf -> new MulFX86(mulf);
-        case MulNode mul -> mul(mul);
-        case NewNode nnn -> new NewX86(nnn);
-        case NotNode not -> new NotX86(not);
-        case OrNode or -> or(or);
-        case ParmNode parm -> new ParmX86(parm);
-        case PhiNode phi -> new PhiNode(phi);
-        case ProjNode prj -> prj(prj);
-        case ReadOnlyNode read -> new ReadOnlyNode(read);
-        case ReturnNode ret -> new RetX86(ret, ret.fun());
-        case SarNode sar -> sar(sar);
-        case ShlNode shl -> shl(shl);
-        case ShrNode shr -> shr(shr);
-        case StartNode start -> new StartNode(start);
-        case StopNode stop -> new StopNode(stop);
-        case StoreNode st -> st(st);
-        case SubFNode subf -> new SubFX86(subf);
-        case SubNode sub -> sub(sub);
-        case ToFloatNode tfn -> i2f8(tfn);
-        case XorNode xor -> xor(xor);
+        case MinusNode    neg -> new NegX86(neg);
+        case MulFNode    mulf -> new MulFX86(mulf);
+        case MulNode      mul -> mul(mul);
+        case NewNode      nnn -> new NewX86(nnn);
+        case NotNode      not -> new NotX86(not);
+        case OrNode        or -> or(or);
+        case ParmNode    parm -> new ParmX86(parm);
+        case PhiNode      phi -> new PhiNode(phi);
+        case ProjNode     prj -> prj(prj);
+        case ReadOnlyNode read-> new ReadOnlyNode(read);
+        case ReturnNode   ret -> new RetX86(ret, ret.fun());
+        case SarNode      sar -> sar(sar);
+        case ShlNode      shl -> shl(shl);
+        case ShrNode      shr -> shr(shr);
+        case StartNode  start -> new StartNode(start);
+        case StopNode    stop -> new StopNode(stop);
+        case StoreNode     st -> st(st);
+        case SubFNode    subf -> new SubFX86(subf);
+        case SubNode      sub -> sub(sub);
+        case ToFloatNode  tfn -> i2f8(tfn);
+        case XCtrlNode      x -> new ConstantNode(SONType.XCONTROL);
+        case XorNode      xor -> xor(xor);
 
         case LoopNode loop -> new LoopNode(loop);
         case RegionNode region -> new RegionNode(region);
@@ -425,7 +383,7 @@ public class x86_64_v2 extends Machine {
     }
 
     public static boolean imm8( long imm ) { return -128 <= imm && imm <= 127; }
-    public static boolean imm16(long imm) {return -32768 <= imm && imm <= 32767; }
+
     public static boolean imm32( long imm ) { return (int)imm==imm; }
 
     // Attempt a full LEA-style break down.
@@ -433,7 +391,7 @@ public class x86_64_v2 extends Machine {
         Node lhs = add.in(1);
         Node rhs = add.in(2);
         if( lhs instanceof LoadNode ld && ld.nOuts() == 1 && ld._declaredType.log_size() >= 3)
-            return new AddMemX86(add, address(ld), ld.ptr(), idx, off, scale, imm(rhs), val);
+            return new AddMemX86(add, address(ld), ld.ptr(), idx, off, scale, 0, rhs);
 
 //        if(rhs instanceof LoadNode ld && ld.nOuts() == 1 && ld._declaredType.log_size() >= 3) {
 //            throw Utils.TODO(); // Swap load sides
@@ -441,7 +399,7 @@ public class x86_64_v2 extends Machine {
 
         // Attempt a full LEA-style break down.
         // Returns one of AddX86, AddIX86, LeaX86, or LHS
-        if( rhs instanceof ConstantNode off && off._con instanceof SONTypeInteger toff ) {
+        if( rhs instanceof ConstantNode off2 && off2._con instanceof SONTypeInteger toff ) {
             long imm = toff.value();
             assert imm!=0;        // Folded in peeps
             if( (int)imm != imm ) // Full 64bit immediate
@@ -518,27 +476,29 @@ public class x86_64_v2 extends Machine {
         Node lhs = bool.in(1);
         Node rhs = bool.in(2);
 
+        // Since cmp does not record a BOP, SetX/Jmp need to know if the CMP is swapped.
+
         // Vs memory
-        if( lhs instanceof LoadNode ld && ld.nOuts() == 1 )
+        if( lhs instanceof LoadNode ld && ld.nOuts() == 1 && rhs._type.isa(ld._declaredType) )
             return new CmpMemX86(bool, address(ld), ld.ptr(), idx, off, scale, imm(rhs), val, false);
 
-        if( rhs instanceof LoadNode ld && ld.nOuts() == 1 )
+        // Operands swap in the encoding directly, no need for Set/Jmp to swap `bop`
+        if( rhs instanceof LoadNode ld && ld.nOuts() == 1 && lhs._type.isa(ld._declaredType))
             return new CmpMemX86(bool, address(ld), ld.ptr(), idx, off, scale, imm(lhs), val, true );
 
         // Vs immediate
         if( rhs instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm32(ti.value()) )
-            return new CmpIX86(bool, (int)ti.value());
+            return new CmpIX86(bool, (int)ti.value(), false);
 
-        if( lhs instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm32(ti.value()) ) {
-            swap = true;
-            return new CmpIX86(bool, (int)ti.value(), 0.5);
-        }
+        // Operand swap compare; Set and Jmp need to swap `bop`
+        if( lhs instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm32(ti.value()) )
+            return new CmpIX86(bool, (int)ti.value(), swap=true);
 
         // x vs y
         return new CmpX86(bool);
     }
 
-    private Node con(ConstantNode con) {
+    private Node con( ConstantNode con ) {
         if(!con._con.isConstant()) return new ConstantNode(con); // Default unknown caller inputs
         return switch (con._con) {
             case SONTypeInteger ti -> new IntX86(con);
@@ -560,10 +520,11 @@ public class x86_64_v2 extends Machine {
         // If/Bool combos will match to a Cmp/Set which sets flags.
         // Most general arith ops will also set flags, which the Jmp needs directly.
         // Loads do not set the flags, and will need an explicit TEST
-        BoolNode bool;
-        if( iff.in(1) instanceof BoolNode bool0 ) bool = bool0;
-        else iff.setDef(1, bool=new BoolNode.NE(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
-        return new JmpX86(iff, bool.op());
+        String op = "!=";
+        if( iff.in(1) instanceof BoolNode bool ) op = swap ? IfNode.swap(bool.op()) : bool.op();
+        else if( iff.in(1)==null ) op = "=="; // Never-node cutout
+        else iff.setDef(1, new BoolNode.NE(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
+        return new JmpX86(iff, op);
     }
 
     private Node ld(LoadNode ld) {
@@ -604,21 +565,25 @@ public class x86_64_v2 extends Machine {
         return new ShrX86(shr);
     }
 
-    private Node st (StoreNode st ){
+    private Node st( StoreNode st ) {
         // Look for "*ptr op= val"
         Node op = st.val();
-        if(op instanceof AddNode) {
-            if(op.in(1) instanceof LoadNode ld &&
-               ld.in(0) == st.in(0) &&
-               ld.mem() == st.mem() &&
-               ld.ptr() == st.ptr() &&
-               ld.off() == st.off()) {
-               return new MemAddX86(address(st), st.ptr(), idx, off, scale, imm(op.in(2)), val);
-            }
+        if( op instanceof AddNode ) {
+            if( op.in(1) instanceof LoadNode ld && stld_match(st,ld) )
+                return new MemAddX86(address(st), st.ptr(), idx, off, scale, imm(op.in(2)), val);
+            if( op.in(2) instanceof LoadNode ld && stld_match(st,ld) )
+                return new MemAddX86(address(st), st.ptr(), idx, off, scale, imm(op.in(1)), val);
         }
-
         return new StoreX86(address(st), st.ptr(), idx, off, scale, imm(st.val()), val);
     }
+    private static boolean stld_match(StoreNode st, LoadNode ld ) {
+        return
+            ld.in(0) == st.in(0) &&
+            ld.mem() == st.mem() &&
+            ld.ptr() == st.ptr() &&
+            ld.off() == st.off();
+    }
+
 
     private Node sub (SubNode sub ){
         return sub.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti
@@ -664,7 +629,7 @@ public class x86_64_v2 extends Machine {
         return mop;
     }
 
-    private int imm (Node xval ){
+    private int imm( Node xval ) {
         assert val == null && imm == 0;
         if( xval instanceof ConstantNode con && con._con instanceof SONTypeInteger ti) {
             val = null;

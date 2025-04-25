@@ -2,6 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMem;
 
 public class LoopNode extends RegionNode {
     public LoopNode( Node entry ) { super(null,entry,null); }
@@ -40,19 +41,23 @@ public class LoopNode extends RegionNode {
             x = x.idom();
         }
         // Found a no-exit loop.  Insert an exit
-        NeverNode iff = CodeGen.CODE._mach == null
-            ? new NeverNode(back()) // Ideal never-branch
-            : CodeGen.CODE._mach.never(back()); // Machine never-branch
+        NeverNode iff = new NeverNode(back()); // Ideal never-branch
         CProjNode t = new CProjNode(iff,0,"True" ).init();
         CProjNode f = new CProjNode(iff,1,"False").init();
-        setDef(2,t);
-        iff._ltree = t._ltree = _ltree;
+        setDef(2,t);            // True continues loop, False (never) exits loop
         ReturnNode ret = fun.ret();
-        f._ltree = ret._ltree;
+        iff._ltree = t._ltree = _ltree;
+        ret._ltree = f._ltree = stop._ltree;
 
         // Now fold control into the exit.  Might have 1 valid exit, or an
         // XCtrl or a bunch of prior NeverNode exits.
         Node top = new ConstantNode(SONType.TOP).peephole();
+        Node memout = new MemMergeNode(false);
+        memout.addDef(f); // placeholder for control
+        for( Node u : _outputs )
+            if( u instanceof PhiNode phi && phi._type.isa(SONTypeMem.BOT) )
+                memout.addDef(phi);
+
         Node ctrl = ret.ctrl(), mem = ret.mem(), expr = ret.expr();
         if( ctrl!=null && ctrl._type != SONType.XCONTROL ) {
             // Perfect aligned exit?
@@ -61,17 +66,17 @@ public class LoopNode extends RegionNode {
                   expr instanceof PhiNode prez && prez.region()==r ) ) {
                 // Nope, insert an aligned exit layer
                 RegionNode r = new RegionNode((Node)null,ctrl).init();
-                ctrl = r;  r._ltree = _ltree;
+                ctrl = r;  r._ltree = stop._ltree;
                 mem  = new PhiNode(r,mem ).init();
                 expr = new PhiNode(r,expr).init();
             }
             // Append new Never exit
             ctrl.addDef(f  );
-            mem .addDef(top);
+            mem .addDef(memout);
             expr.addDef(top);
         } else {
             ctrl = f;
-            mem  = top;
+            mem  = memout;
             expr = top;
         }
         ret.setDef(0,ctrl);

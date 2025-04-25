@@ -4,6 +4,7 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
+import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
 import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
 
 // 12-bit integer constant.  Larger constants are made up in the instruction
@@ -17,10 +18,10 @@ public class IntRISC extends ConstantNode implements MachNode {
     @Override public IntRISC copy() { return new IntRISC(this); }
     @Override public void encoding( Encoding enc ) {
         short dst  = enc.reg(this);
-        SONTypeInteger ti = (SONTypeInteger)_con;
+        int val = _con==SONType.NIL ? 0 : (int)(((SONTypeInteger)_con).value() & 0xFFF);
         // Explicit truncation of larger immediates; this will sign-extend on
         // load and this is handled during instruction selection.
-        enc.add4(riscv.i_type(riscv.OP_IMM, dst, 0, riscv.ZERO, (int)(ti.value() & 0xFFF)));
+        enc.add4(riscv.i_type(riscv.OP_IMM, dst, 0, riscv.ZERO, val));
     }
     @Override public void asm(CodeGen code, SB sb) {
         String reg = code.reg(this);

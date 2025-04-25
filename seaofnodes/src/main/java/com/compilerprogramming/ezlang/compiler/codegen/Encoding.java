@@ -21,7 +21,7 @@ import java.util.*;
 public class Encoding {
 
     // Top-level program graph structure
-    final CodeGen _code;
+    public final CodeGen _code;
 
     // Instruction bytes.  The registers are encoded already.  Relocatable data
     // is in a fixed format depending on the kind of relocation.
@@ -153,11 +153,13 @@ public class Encoding {
         _bigCons.put(relo,new Relo(relo,t,(byte)off,(byte)elf));
     }
 
+    // --------------------------------------------------
     void encode() {
-        // Basic block layout: invert branches to keep blocks in-order; insert
+        // Basic block layout: negate branches to keep blocks in-order; insert
         // unconditional jumps.  Attempt to keep backwards branches taken,
         // forwards not-taken (this is the default prediction on most
-        // hardware).  Layout is still RPO but with more restrictions.
+        // hardware).  Layout is still Reverse Post Order but with more
+        // restrictions.
         basicBlockLayout();
 
         // Write encoding bits in order into a big byte array.
@@ -170,20 +172,25 @@ public class Encoding {
 
         // Patch RIP-relative and local encodings now.
         patchLocalRelocations();
-
     }
 
-    // Basic block layout: invert branches to keep blocks in-order; insert
-    // unconditional jumps.  Attempt to keep backwards branches taken,
-    // forwards not-taken (this is the default prediction on most
-    // hardware).  Layout is still RPO but with more restrictions.
+    // --------------------------------------------------
+    // Basic block layout: negate branches to keep blocks in-order; insert
+    // unconditional jumps.  Attempt to keep backwards branches taken, forwards
+    // not-taken (this is the default prediction on most hardware).  Layout is
+    // still Reverse Post Order but with more restrictions.
     private void basicBlockLayout() {
+        IdentityHashMap<LoopNode,Ary<CFGNode>> rpos = new IdentityHashMap<>();
         Ary<CFGNode> rpo = new Ary<>(CFGNode.class);
+        rpos.put(_code._start.loop(),rpo);
         BitSet visit = _code.visit();
+        //IdentityHashMap<CFGNode,LoopNode> looptail = new IdentityHashMap<>();
+        rpo.add(_code._stop);
         for( Node n : _code._start._outputs )
             if( n instanceof FunNode fun ) {
                 int x = rpo._len;
-                _rpo_cfg(fun, visit, rpo);
+                //_rpo_cfg2(fun, visit, rpo, looptail);
+                _rpo_cfg(fun, visit, rpos );
                 assert rpo.at(x) instanceof ReturnNode;
             }
         rpo.add(_code._start);
@@ -195,64 +202,37 @@ public class Encoding {
         _code._cfg = rpo;       // Save the new ordering
     }
 
-    // Basic block layout.  Now that RegAlloc is finished, no more spill code
-    // will appear.  We can change our BB layout from RPO to something that
-    // minimizes actual branches, takes advantage of fall-through edges, and
-    // tries to help simple branch predictions: back branches are predicted
-    // taken, forward not-taken.
-    private void _rpo_cfg(CFGNode bb, BitSet visit, Ary<CFGNode> rpo) {
-        if( visit.get(bb._nid) ) return;
+
+    private void _rpo_cfg(CFGNode bb, BitSet visit, IdentityHashMap<LoopNode,Ary<CFGNode>> rpos ) {
+        if( bb==null || visit.get(bb._nid) ) return;
         visit.set(bb._nid);
-        if( bb.nOuts()==0 ) return; // StopNode
-        if( !(bb instanceof IfNode iff) ) {
-            CFGNode next = bb instanceof ReturnNode ? (CFGNode)bb.out(bb.nOuts()-1) : bb.uctrl();
-            // If the *next* BB has already been visited, we may need an
-            // unconditional jump here
-            if( visit.get(next._nid) && !(next instanceof StopNode) ) {
-                boolean needJump = next instanceof LoopNode
-                    // If backwards to a loop, and the block has statements,
-                    // will need a jump.  Empty blocks can just backwards branch.
-                    ? (bb.nOuts()>1)
-                    // Forwards jump.  If all the blocks, in RPO order, to our
-                    // target are empty, we will fall in and not need a jump.
-                    : !isEmptyBackwardsScan(rpo,next);
-                if( needJump ) {
-                    CFGNode jmp = _code._mach.jump();
-                    jmp.setDefX(0,bb);
-                    next.setDef(next._inputs.find(bb),jmp);
-                    rpo.add(jmp);
-                }
-            }
-            _rpo_cfg(next,visit,rpo);
-        } else {
-            boolean invert = false;
+        CFGNode next = bb.uctrl();
+
+        // Loops run an inner "rpo_cfg", then append the entire loop body in
+        // place.  This keeps loop bodies completely contained, although if
+        // Some Day Later we have real profile data we ought to arrange the
+        // branch orderings based on frequency.
+        if( bb instanceof LoopNode loop ) {
+            Ary<CFGNode> body = new Ary<>(CFGNode.class); // Private RPO for the loop
+            rpos.put(loop.loop(),body);                   // Find it via loop tree
+            _rpo_cfg(next,visit,rpos);                    // RPO the loop
+            body.add(loop);                               // Include loop last (first in RPO)
+            Ary<CFGNode> outer = rpos.get(loop.cfg(1).loop());
+            outer.addAll(body); // Append to original CFG
+            return;
+        }
+
+        // IfNodes visit 2 sides, and may choose to reorder them in the RPO
+        if( bb instanceof IfNode iff ) {
             // Pick out the T/F projections
             CProjNode t = iff.cproj(0);
             CProjNode f = iff.cproj(1);
-            int tld = t.loopDepth(), fld = f.loopDepth(), bld = bb.loopDepth();
-            // Decide entering or exiting a loop
-            if( tld==bld ) {
-                // if T is empty, keep
-                if( t.nOuts()>1 &&
-                    // Else swap so T is forward and exits, while F falls into next loop block
-                    ((fld<bld && t.out(0)!=t.loop()) ||
-                     // Jump to an empty block and fall into a busy block
-                     (fld==bld && f.nOuts()==1)) ) {
-                    invert = true;
-                } // Else nothing
-            } else if( tld > bld ) { // True enters a deeper loop
-                throw Utils.TODO();
-            } else if( fld == bld && f.out(0) instanceof LoopNode ) { // Else True exits a loop
-                // if false is the loop backedge, make sure its true/taken
-                invert = true;
-            } // always forward and good
-            // Invert test and Proj fields
-            if( invert ) {
-                iff.invert();
+            // Invert the branch or not
+            if( shouldInvert(t,f,iff.loopDepth()) ) {
+                iff.negate();
                 t.invert();
                 f.invert();
                 CProjNode tmp=f; f=t; t=tmp; // Swap t/f
-                int d=tld; tld=fld; fld=d;   // Swap depth
             }
 
             // Whichever side is visited first becomes last in the RPO.  With
@@ -260,29 +240,79 @@ public class Encoding {
             // when the False RPO visit returns, the IF is immediately next.
             // When the RPO is reversed, the fall-through path will always be
             // following the IF.
+            _rpo_cfg(t,visit,rpos); // True side first
+            next = f;               // False side last
+        }
 
-            // If loops are involved, attempt to keep them in a line.  Visit
-            // the exits first, so they follow the loop body when the order gets
-            // reversed.
-            if( fld < tld || (fld==tld && f.nOuts()==1) ) {
-                _rpo_cfg(f,visit,rpo);
-                _rpo_cfg(t,visit,rpo);
-            } else {
-                _rpo_cfg(t,visit,rpo);
-                _rpo_cfg(f,visit,rpo);
+        // If the *next* BB has already been visited, and we are not already a
+        // jump, we may need an unconditional forwards jump here
+        Ary<CFGNode> rpo = rpos.get(bb.loop());
+        if( next!=null && visit.get(next._nid) && !(bb instanceof IfNode) ) {
+            boolean needJump = next instanceof LoopNode
+                // Empty blocks from an IF will invert the IF and backwards
+                // branch to the loop head.  If not empty, or not an IF
+                // will need a jump.
+                ? (bb.nOuts()>1 || !(bb.cfg0() instanceof IfNode) )
+                // Forwards jump.  If all the blocks, in RPO order, to our
+                // target are empty, we will fall in and not need a jump.
+                : !backwardsEmptyScan(rpo,next);
+            if( needJump ) {
+                CFGNode jmp = _code._mach.jump();
+                jmp._ltree = bb._ltree;
+                jmp.setDefX(0,bb);
+                next.setDef(next._inputs.find(bb),jmp);
+                rpo.add(jmp);
             }
         }
-        assert rpo._len>0 || bb instanceof ReturnNode;
+
+        _rpo_cfg(next,visit,rpos);
         rpo.add(bb);
     }
 
-    private static boolean isEmptyBackwardsScan(Ary<CFGNode> rpo, CFGNode next) {
+    // Should this test be inverted?
+    private static boolean shouldInvert(CFGNode t, CFGNode f, int bld) {
+        int tld = t.loopDepth(), fld = f.loopDepth();
+        // These next two are symmetric and can happen in any order; if `tld <
+        // bld` is true, the `fld < bld` must be false, or else both directions
+        // exit the loop... and the IF test would not be in the loop.
+
+        // true to exit a loop usually (and false falls into Yet Another Loop
+        // Block), invert if false is taking an empty backwards branch.
+        if( tld < bld ) return  forwardsEmptyScan(f,bld);
+        // false to exit a loop, normally invert to true (except empty back)
+        if( fld < bld ) return !forwardsEmptyScan(t,bld);
+
+        // Not exiting the loop; staying at this depth (or going deeper loop).
+
+        // Jump/true to an empty backwards block
+        if( forwardsEmptyScan(t,bld) ) return false;
+        if( forwardsEmptyScan(f,bld) ) return true ;
+
+        // Fall/false into a full block, Jump/true to an empty block.
+        if( f.nOuts()>1 && t.nOuts()==1 ) return false;
+        if( t.nOuts()>1 && f.nOuts()==1 ) return true ;
+        // Everything else equal, use pre-order
+        return t._pre > f._pre;
+    }
+
+    // Do we continue forwards from 'c' to the Loop back edge, without doing
+    // anything else?  Then this branch can directly jump to the loop head.
+    private static boolean forwardsEmptyScan( CFGNode c, int bld ) {
+        if( c.nOuts()!=1 || c.loopDepth()!=bld ) return false;
+        return c.uctrl() instanceof RegionNode cfg &&
+            (cfg instanceof LoopNode || forwardsEmptyScan(cfg,bld));
+    }
+
+    // Is the CFG from "next" to the end empty?  This means jumping to "next"
+    // will naturally fall into the end.
+    private static boolean backwardsEmptyScan(Ary<CFGNode> rpo, CFGNode next) {
         for( int i=rpo._len-1; rpo.at(i)!=next; i-- )
             if( rpo.at(i).nOuts()!=1 )
                 return false;
         return true;
     }
 
+    // --------------------------------------------------
     // Write encoding bits in order into a big byte array.
     // Record opcode start and length.
     public FunNode _fun;        // Currently encoding function
@@ -310,6 +340,7 @@ public class Encoding {
         padN(16,_bits);
     }
 
+    // --------------------------------------------------
     // Short-form RIP-relative support: replace short encodings with long
     // encodings and expand the code, changing all the offsets.
     private void compactShortForm() {
@@ -337,12 +368,15 @@ public class Encoding {
                     slide += (newStart+15 & -16)-newStart;
                 }
                 _opStart[bb._nid] += slide;
+                // Slide down all other (non-CFG) ops in the block
+                for( Node n : bb._outputs )
+                    if( n instanceof MachNode && !(n instanceof CFGNode) )
+                        _opStart[n._nid] += slide;
                 if( bb instanceof RIPRelSize riprel ) {
-                    CFGNode target = ((CFGNode)bb.out(0)).uctrlSkipEmpty();
+                    CFGNode target = (bb instanceof IfNode iff ? iff.cproj(0) : (CFGNode)bb.out(0)).uctrlSkipEmpty();
                     // Delta is from opStart to opStart.  X86 at least counts
                     // the delta from the opEnd, but we don't have the end until
                     // we decide the size - so the encSize has to deal
-                    assert _opStart[target._nid] > 0;
                     int delta = _opStart[target._nid] - _opStart[bb._nid];
                     byte opLen = riprel.encSize(delta);
                     // Recorded size is smaller than the current size?
@@ -374,15 +408,24 @@ public class Encoding {
     }
 
 
+    // --------------------------------------------------
+    // Patch local encodings now
+    void patchLocalRelocations() {
+        // Walk the local code-address relocations
+        for( Node src : _internals.keySet() ) {
+            int start  = _opStart[src._nid];
+            Node dst =  _internals.get(src);
+            int target = _opStart[dst._nid];
+            ((RIPRelSize)src).patch(this, start, _opLen[src._nid], target - start);
+        }
+    }
+
+    // --------------------------------------------------
     // Write the constant pool into the BAOS and optionally patch locally
     void writeConstantPool( BAOS bits, boolean patch ) {
-        HashSet<Relo> ts = new HashSet<>();
-        for( Relo t : _bigCons.values() ) {
-            if( ts.contains(t) )
-                throw Utils.TODO(); // Dup!  Compress!
-            ts.add(t);
-        }
         padN(16,bits);
+
+        HashMap<SONType,Integer> targets = new HashMap<>();
 
         // By log size
         for( int log = 3; log >= 0; log-- ) {
@@ -391,30 +434,40 @@ public class Encoding {
                 Relo relo = _bigCons.get(op);
                 if( relo._t.log_size()==log ) {
                     // Map from relo to constant start and patch
-                    relo._target = bits.size();
+                    Integer target = targets.get(relo._t);
+                    if( target==null ) {
+                        targets.put(relo._t,target = bits.size());
+                        // Put constant into code space.
+                        if( relo._t instanceof SONTypeTuple tt ) // Constant tuples put all entries
+                            for( SONType tx : tt._types )
+                                addN(log,tx,bits);
+                        else
+                            addN(log,relo._t,bits);
+                    }
+                    relo._target = target;
                     relo._opStart= _opStart[op._nid];
                     // Go ahead and locally patch in-memory
                     if( patch )
                         ((RIPRelSize)op).patch(this, relo._opStart, _opLen[op._nid], relo._target - relo._opStart);
-                    // Put constant into code space.
-                    if( relo._t instanceof SONTypeTuple tt ) // Constant tuples put all entries
-                        for( SONType tx : tt._types )
-                            addN(log,tx,bits);
-                    else
-                        addN(log,relo._t,bits);
                 }
             }
         }
     }
 
 
-    // Patch local encodings now
-    void patchLocalRelocations() {
-        // Walk the local code-address relocations
-        for( Node src : _internals.keySet() ) {
-            Node dst =  _internals.get(src);
-            int target = _opStart[dst._nid];
+    // A series of libc/external calls that Simple can link against in a JIT.
+    // Since no runtime in the JVM process, using magic numbers for the CPU
+    // emulators to pick up on.
+    public static int SENTINAL_CALLOC = -4;
+
+    void patchGlobalRelocations() {
+        for( Node src : _externals.keySet() ) {
             int start  = _opStart[src._nid];
+            String dst =  _externals.get(src);
+            int target = switch( dst ) {
+            case "calloc" -> SENTINAL_CALLOC;
+            default -> throw Utils.TODO();
+            };
             ((RIPRelSize)src).patch(this, start, _opLen[src._nid], target - start);
         }
     }

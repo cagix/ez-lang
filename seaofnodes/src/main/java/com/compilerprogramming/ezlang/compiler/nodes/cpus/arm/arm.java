@@ -4,7 +4,6 @@ import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
-import java.io.ByteArrayOutputStream;
 
 public class arm extends Machine {
     public arm( CodeGen code ) {
@@ -16,39 +15,33 @@ public class arm extends Machine {
     @Override public String name() { return "arm"; }
 
     // GPR(S)
-    static final int X0  =  0,  X1  =  1,  X2  =  2,  X3  =  3,  X4  =  4,  X5  =  5,  X6  =  6,  X7  =  7;
-    static final int X8  =  8,  X9  =  9,  X10 = 10,  X11 = 11,  X12 = 12,  X13 = 13,  X14 = 14,  X15 = 15;
-    static final int X16 = 16,  X17 = 17,  X18 = 18,  X19 = 19,  X20 = 20,  X21 = 21,  X22 = 22,  X23 = 23;
-    static final int X24 = 24,  X25 = 25,  X26 = 26,  X27 = 27,  X28 = 28,  X29 = 29,  X30 = 30,  RSP = 31;
+    public static final int X0  =  0,  X1  =  1,  X2  =  2,  X3  =  3,  X4  =  4,  X5  =  5,  X6  =  6,  X7  =  7;
+    public static final int X8  =  8,  X9  =  9,  X10 = 10,  X11 = 11,  X12 = 12,  X13 = 13,  X14 = 14,  X15 = 15;
+    public static final int X16 = 16,  X17 = 17,  X18 = 18,  X19 = 19,  X20 = 20,  X21 = 21,  X22 = 22,  X23 = 23;
+    public static final int X24 = 24,  X25 = 25,  X26 = 26,  X27 = 27,  X28 = 28,  X29 = 29,  X30 = 30,  RSP = 31;
 
     // Floating point registers
-    static final int D0  = 32,  D1  = 33,  D2  = 34,  D3  = 35,  D4  = 36,  D5  = 37,  D6  = 38,  D7  = 39;
-    static final int D8  = 40,  D9  = 41,  D10 = 42,  D11 = 43,  D12 = 44,  D13 = 45,  D14 = 46,  D15 = 47;
-    static final int D16 = 48,  D17 = 49,  D18 = 50,  D19 = 51,  D20 = 52,  D21 = 53,  D22 = 54,  D23 = 55;
-    static final int D24 = 56,  D25 = 57,  D26 = 58,  D27 = 59,  D28 = 60,  D29 = 61,  D30 = 62,  D31 = 63;
+    public static final int D0  = 32,  D1  = 33,  D2  = 34,  D3  = 35,  D4  = 36,  D5  = 37,  D6  = 38,  D7  = 39;
+    public static final int D8  = 40,  D9  = 41,  D10 = 42,  D11 = 43,  D12 = 44,  D13 = 45,  D14 = 46,  D15 = 47;
+    public static final int D16 = 48,  D17 = 49,  D18 = 50,  D19 = 51,  D20 = 52,  D21 = 53,  D22 = 54,  D23 = 55;
+    public static final int D24 = 56,  D25 = 57,  D26 = 58,  D27 = 59,  D28 = 60,  D29 = 61,  D30 = 62,  D31 = 63;
 
-    static final int MAX_REG = 64;
-    static final int D_OFFSET = 31;
     static final int FLAGS = 64;
+    static final int MAX_REG = 65;
+    public static final int D_OFFSET = 32;
 
     static final String[] REGS = new String[] {
-            "X0",  "X1",  "X2",  "X3",  "X4",  "X5",  "X6",  "X7",
-            "X8",  "X9",  "X10", "X11", "X12", "X13", "X14", "X15",
-            "X16", "X17", "X18", "X19", "X20", "X21", "X22", "X23",
-            "X24", "X25", "X26", "X27", "X28", "X29", "RPC", "RSP",
-            "D0",  "D1",  "D2",  "D3",  "D4",  "D5",  "D6",  "D7",
-            "D8",  "D9",  "D10", "D11", "D12", "D13", "D14", "D15",
-            "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23",
-            "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31",
-            "flags"
+        "X0",  "X1",  "X2",  "X3",  "X4",  "X5",  "X6",  "X7",
+        "X8",  "X9",  "X10", "X11", "X12", "X13", "X14", "X15",
+        "X16", "X17", "X18", "X19", "X20", "X21", "X22", "X23",
+        "X24", "X25", "X26", "X27", "X28", "X29", "RPC", "RSP",
+        "D0",  "D1",  "D2",  "D3",  "D4",  "D5",  "D6",  "D7",
+        "D8",  "D9",  "D10", "D11", "D12", "D13", "D14", "D15",
+        "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23",
+        "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31",
+        "flags"
     };
-    @Override public String reg( int reg ) {
-        return reg < REGS.length ? REGS[reg] : "[rsp+"+(reg-REGS.length)*8+"]";
-    }
-    // Stack slots, in units of 8 bytes.
-    @Override public int stackSlot( int reg ) {
-        return reg < REGS.length ? -1 : reg-REGS.length;
-    }
+    @Override public String[] regs() { return REGS; }
 
     // from (x0-x30)
     // General purpose register mask: pointers and ints, not floats
@@ -64,11 +57,9 @@ public class arm extends Machine {
     // Load/store mask; both GPR and FPR
     static final RegMask MEM_MASK = new RegMask(WR_BITS | FP_BITS);
 
-    static final RegMask SPLIT_MASK = new RegMask(WR_BITS | FP_BITS, -1L);
+    static final RegMask SPLIT_MASK = new RegMask(WR_BITS | FP_BITS, -2L/*skip flags*/);
 
     static final RegMask FLAGS_MASK = new RegMask(FLAGS);
-    //  x30 (LR): Procedure link register, used to return from subroutines.
-    static final RegMask RPC_MASK = new RegMask(1L << X30);
 
     // Arguments masks
     static final RegMask X0_MASK = new RegMask(X0);
@@ -93,9 +84,11 @@ public class arm extends Machine {
     // major opcode: OP
     public static int OP_ADD       = 0b10_001_011;
     public static int OPF_ADD      = 0b00_011_110;
+    public static int OPF_OP_ADD   = 0b00_101_0;
     public static int OPI_ADD      = 0b10_010_00100;
 
-    public static int OP_UJMP      = 0b01010100;
+    public static int OPI_SUB      = 0b11_010_00100;
+    public static int OP_UJMP      = 0b000101;
 
     public static int OP_ADRP      = 0b10000;
 
@@ -104,7 +97,6 @@ public class arm extends Machine {
 
     public static int OP_LSL       = 0b1000;
     public static int OPI_LSL       =0b1101001101;
-
 
     public static int OP_LSR        = 0b1001;
     public static int OPI_LSR       = 0b1101001101;
@@ -147,17 +139,39 @@ public class arm extends Machine {
 
     public static int OP_RET       = 0b1101011001011111000000;
     // Store/load opcodes
-    public static int OP_LOAD_R    = 0b11111000011;
-    public static int OP_LOAD_IMM  = 0b1111100101;
+    public static int OP_LOAD_R_64    = 0b11111000011;
+    public static int OP_LOAD_R_32    = 0b10111000011;
+    public static int OP_LOAD_R_16    = 0b01111000010;
+    public static int OP_LOAD_R_8     = 0b00111000011;
 
-    public static int OPF_LOAD_R    = 0b11111100011;
-    public static int OPF_LOAD_IMM  = 0b1111110101;
+    public static int OP_LOAD_IMM_64  = 0b1111100101;
+    public static int OP_LOAD_IMM_32  = 0b1011100101;
+    public static int OP_LOAD_IMM_16  = 0b0111100101;
+    public static int OP_LOAD_IMM_8   = 0b0011100101;
 
-    public static int OP_STORE_R    = 0b11111000001;
-    public static int OP_STORE_IMM  = 0b1111100100;
+    // load
+    public static int OPF_LOAD_R_64    = 0b11111100011;
+    public static int OPF_LOAD_R_32    = 0b10111100011;
 
-    public static int OPF_STORE_R    = 0b11111100001;
-    public static int OPF_STORE_IMM  = 0b1111110100;
+    public static int OPF_LOAD_IMM_64  = 0b1111110101;
+    public static int OPF_LOAD_IMM_32  = 0b1011110101;
+
+    public static int OP_STORE_R_64    = 0b11111000001;
+    public static int OP_STORE_R_32    = 0b10111000001;
+    public static int OP_STORE_R_16    = 0b01111000001;
+    public static int OP_STORE_R_8     = 0b00111000001;
+
+    public static int OP_STORE_IMM_64  = 0b1111100100;
+    public static int OP_STORE_IMM_32  = 0b1011100100;
+    public static int OP_STORE_IMM_16  = 0b0111100100;
+    public static int OP_STORE_IMM_8   = 0b0011100100;
+
+    public static int OPF_STORE_R_64    = 0b11111100001;
+    public static int OPF_STORE_R_32    = 0b10111100001;
+
+    public static int OPF_STORE_IMM_32  = 0b1111110100;
+    public static int OPF_STORE_IMM_64  = 0b1111110100;
+
 
     public static int OP_FMOV        = 0b10011110;
     public static int OP_FMOV_REG    = 0b00011110;
@@ -167,24 +181,24 @@ public class arm extends Machine {
     // for incoming argument idx.
     // index 0 for control, 1 for memory, real args start at index 2
     static final RegMask[] CALLINMASK = new RegMask[] {
-            X0_MASK,
-            X1_MASK,
-            X2_MASK,
-            X3_MASK,
-            X4_MASK,
-            X5_MASK,
-            X6_MASK,
-            X7_MASK,
+        X0_MASK,
+        X1_MASK,
+        X2_MASK,
+        X3_MASK,
+        X4_MASK,
+        X5_MASK,
+        X6_MASK,
+        X7_MASK,
     };
     static final RegMask[] XMMS = new RegMask[] {
-            D0_MASK,
-            D1_MASK,
-            D2_MASK,
-            D3_MASK,
-            D4_MASK,
-            D5_MASK,
-            D6_MASK,
-            D7_MASK,
+        D0_MASK,
+        D1_MASK,
+        D2_MASK,
+        D3_MASK,
+        D4_MASK,
+        D5_MASK,
+        D6_MASK,
+        D7_MASK,
     };
 
     // ARM ENCODING
@@ -218,17 +232,6 @@ public class arm extends Machine {
         SXTX,  // base+ s64 index [<< logsize]
     }
 
-    static public String invert(String op) {
-        return switch (op) {
-            case "==" -> "!=";
-            case "!=" -> "==";
-            case ">" -> "<=";
-            case "<" -> ">=";
-            case ">=" -> "<";
-            case "<=" -> ">";
-            default -> throw new IllegalStateException("Unexpected value: " + op);
-        };
-    }
     public enum COND {
         EQ,
         NE,
@@ -269,10 +272,16 @@ public class arm extends Machine {
         if (val == 0 || val == -1) return -1; // Special cases are not allowed
         int immr = 0;
         // Rotate until we have 0[...]1
+
+        // Rotate until:
+        // The number is negative (MSB is 1)
+        // Or the LSB is not 1
         while (val < 0 || (val & 1)==0) {
+            // circular rotation
             val = (val >>> 63) | (val << 1);
             immr++;
         }
+        // Start by assuming that val might be made of two 32-bit chunks that repeat.
         int size = 32;
         long pattern = val;
         // Is upper half of pattern the same as the lower?
@@ -290,7 +299,7 @@ public class arm extends Machine {
         return (32-size)<<1 | immr << 6 | imms;
     }
 
-    // sh is encoded in opcdoe
+    // sh is encoded in opcode
     public static int imm_inst(int opcode, int imm12, int rn, int rd) {
         assert 0 <= rn && rn < 32;
         assert 0 <= rd && rd < 32;
@@ -307,7 +316,15 @@ public class arm extends Machine {
     public static void imm_inst(Encoding enc, Node n,Node n2,  int opcode, int imm12) {
         short self = enc.reg(n);
         short reg1 = enc.reg(n2);
+
         int body = imm_inst(opcode, imm12&0xFFF, reg1, self);
+        enc.add4(body);
+    }
+
+    public static void imm_inst_subs(Encoding enc, Node n,Node n2,  int opcode, int imm12) {
+        short reg1 = enc.reg(n2);
+        // 31 = 11111
+        int body = imm_inst(opcode, imm12&0xFFF, reg1, 31);
         enc.add4(body);
     }
 
@@ -320,7 +337,6 @@ public class arm extends Machine {
     public static void imm_inst_n(Encoding enc, Node n, Node n2, int opcode, int imm13) {
         short self = enc.reg(n);
         short reg1 = enc.reg(n2);
-
         int body = imm_inst_n(opcode, imm13, reg1, self);
         enc.add4(body);
     }
@@ -336,7 +352,7 @@ public class arm extends Machine {
     public static int imm_inst_l(int opcode, int imm12, int self) {
         int body = imm_inst(opcode, imm12&0xFFF, self, self);
         return body;
-   }
+    }
 
     // for cases where rs1 and dst are the same, eg add x0, x0, 1
     public static int imm_inst_l(Encoding enc, Node n, int opcode, int imm12) {
@@ -352,14 +368,22 @@ public class arm extends Machine {
         assert 0 <= rm && rm < 32;
         assert 0 <= rn && rn < 32;
         assert 0 <= rd && rd < 32;
-        return (opcode << 24) | (shift << 21) | (rm << 16) | (imm6 << 10) << (rn << 5) | rd;
-   }
-   public static void r_reg(Encoding enc, Node n, int opcode) {
-       short self = enc.reg(n);
-       short reg1 = enc.reg(n.in(1));
-       short reg2 = enc.reg(n.in(2));
-       int body = r_reg(opcode, 0, reg2, 0,  reg1, self >= 32 ? reg1: self);
-       enc.add4(body);
+        return (opcode << 24) | (shift << 21) | (rm << 16) | (imm6 << 10) | (rn << 5) | rd;
+    }
+    public static void r_reg(Encoding enc, Node n, int opcode) {
+        short self = enc.reg(n);
+        short reg1 = enc.reg(n.in(1));
+        short reg2 = enc.reg(n.in(2));
+        int body = r_reg(opcode, 0, reg2, 0,  reg1, self >= 32 ? reg1: self);
+        enc.add4(body);
+    }
+
+    public static void r_reg_subs(Encoding enc, Node n, int opcode) {
+        short reg1 = enc.reg(n.in(1));
+        short reg2 = enc.reg(n.in(2));
+        // 31 = 11111
+        int body = r_reg(opcode, 0, reg2, 0,  reg1, 31);
+        enc.add4(body);
     }
 
     public static int shift_reg(int opcode, int rm, int op2, int rn, int rd) {
@@ -434,6 +458,7 @@ public class arm extends Machine {
 
     // share same encoding with LDR (literal, SIMD&FP) flavour
     public static int load_pc(int opcode, int offset, int rt) {
+        offset>>=2;
         return (opcode << 24) | (offset << 5) | rt;
     }
     // int l
@@ -449,10 +474,15 @@ public class arm extends Machine {
         return (opcode << 21) | (off << 16) | (option.ordinal() << 13) | (s << 12) | (2 << 10) | (ptr << 5) | rt;
     }
     // [Rptr+imm9]
-    public static int load_str_imm(int opcode, int imm12, int ptr, int rt) {
+    public static int load_str_imm(int opcode, int imm12, int ptr, int rt, int size) {
         assert 0 <= ptr && ptr < 32;
         assert 0 <= rt &&  rt  < 32;
-        return (opcode << 22) | (imm12 << 10)  |(ptr << 5) | rt;
+
+        if(size == 8) imm12 = imm12 >> 3;
+        if(size == 4) imm12 = imm12 >> 2;
+        if(size == 2) imm12 = imm12 >> 1;
+        // size == 1  imm12 = imm12
+        return (opcode << 22) | ((imm12) << 10)  | (ptr << 5) | rt;
     }
 
     // encoding for vcvt, size is encoded in operand
@@ -476,7 +506,8 @@ public class arm extends Machine {
     public static int f_cmp(int opcode, int ftype, int rm, int rn) {
         assert 0 <= rn && rn  < 32;
         assert 0 <= rm && rm  < 32;
-        return (opcode  << 24) | (ftype << 21) | (rm << 16) | (8 << 10) | (rn << 5) | 8;
+        // Todo: |8 is not needed
+        return (opcode  << 24) | (ftype << 21) | (rm << 16) | (8 << 10) | (rn << 5);
     }
     public static void f_cmp(Encoding enc, Node n) {
         short reg1 = (short)(enc.reg(n.in(1))-D_OFFSET);
@@ -489,19 +520,21 @@ public class arm extends Machine {
         return switch (bop) {
         case "==" -> COND.EQ;
         case "!=" -> COND.NE;
-        case "<"  -> COND.LE;
-        case "<=" -> COND.LT;
-        case ">=" -> COND.GT;
-        case ">"  -> COND.GE;
+        case "<"  -> COND.LT;
+        case "<=" -> COND.LE;
+        case ">=" -> COND.GE;
+        case ">"  -> COND.GT;
         default   -> throw Utils.TODO();
         };
     }
-    // Todo: maybe missing zero here after delta << 5
+
     public static int b_cond(int opcode, int delta, COND cond) {
         // 24-5 == 19bits offset range
         assert -(1<<19) <= delta && delta < (1<<19);
+        assert (delta&3)==0;
+        delta>>=2;
         delta &= (1L<<19)-1;    // Zero extend
-        return (opcode << 24) | (delta << 5) | cond.ordinal();
+        return (opcode << 24) | ((delta)<< 5) | cond.ordinal();
     }
 
     public static int cond_set(int opcode, int rm, COND cond, int rn, int rd) {
@@ -517,12 +550,22 @@ public class arm extends Machine {
     }
     public static int b(int opcode, int delta) {
         assert -(1<<26) <= delta && delta < (1<<26);
+        assert (delta&3)==0;
+        delta>>=2;
+        delta &= (1L<<26)-1;    // Zero extend
+        return (opcode << 26) | delta;
+    }
+    // no aligned assert(assert (delta&3)==0;)
+    public static int b_calloc(int opcode, int delta) {
+        assert -(1<<26) <= delta && delta < (1<<26);
+        delta>>=2;
         delta &= (1L<<26)-1;    // Zero extend
         return (opcode << 26) | delta;
     }
 
+    @Override public RegMask callArgMask(SONTypeFunPtr tfp, int idx ) { return callInMask(tfp,idx); }
     static RegMask callInMask(SONTypeFunPtr tfp, int idx ) {
-        if( idx==0 ) return RPC_MASK;
+        if( idx==0 ) return CodeGen.CODE._rpcMask;
         if( idx==1 ) return null;
         // Count floats in signature up to index
         int fcnt=0;
@@ -540,63 +583,55 @@ public class arm extends Machine {
         }
         throw Utils.TODO(); // Pass on stack slot
     }
-    // Return the max stack slot used by this signature, or 0
-    static short maxSlot( SONTypeFunPtr tfp ) {
-        // Count floats in signature up to index
-        int fcnt=0;
-        for( int i=0; i<tfp.nargs(); i++ )
-            if( tfp.arg(i) instanceof SONTypeFloat )
-                fcnt++;
-        if( fcnt >= XMMS.length )
-            throw Utils.TODO();
-        RegMask[] cargs = CALLINMASK;
-        if( tfp.nargs()-fcnt >= cargs.length )
-            throw Utils.TODO();
-        return 0;               // No stack args
-    }
 
-    static final long CALLEE_SAVE =
-            1L<<X19 |
-                    1L<<X20 | 1L<<X21 | 1L<<X22 | 1L<<X23 |
-                    1L<<X24 | 1L<<X25 | 1L<<X26 | 1L<<X27 |
-                    1L<<X28 |
-                    1L<<D9  | 1L<<D10 | 1L<<D11 |
-                    1L<<D12 | 1L<<D13 | 1L<<D14 | 1L<<D15;
-
-    static final RegMask CALLER_SAVE_MASK;
-    static {
-        long caller = ~CALLEE_SAVE;
-        caller &= ~(1L<<RSP);
-        CALLER_SAVE_MASK = new RegMask(caller,1L<<(FLAGS-64));
-    }
-    static RegMask armCallerSave() { return CALLER_SAVE_MASK; }
-    @Override public RegMask callerSave() { return armCallerSave(); }
-
-    static final RegMask CALLEE_SAVE_MASK = new RegMask(CALLEE_SAVE);
-    static RegMask armCalleeSave() { return CALLEE_SAVE_MASK; }
-    @Override public RegMask calleeSave() { return armCalleeSave(); }
-
-
-    // Return single int/ptr register.  Used by CallEnd output and Return input.
-    static final RegMask[] RET_MASKS;
-    static {
-        int nSaves = CALLEE_SAVE_MASK.size();
-        RET_MASKS = new RegMask[4 + nSaves];
-        RET_MASKS[0] = null;
-        RET_MASKS[1] = null;     // Memory
-        RET_MASKS[2] = null;     // Varies, either XMM0 or RAX
-        RET_MASKS[3] = RMASK;    // Expected R30 but could be any register
-        short reg = CALLEE_SAVE_MASK.firstReg();
-        for( int i=0; i<nSaves; i++ ) {
-            RET_MASKS[i+4] = new RegMask(reg);
-            reg = CALLEE_SAVE_MASK.nextReg(reg);
+    public static long decodeImm12(int imm12) {
+        int immr = (imm12 >> 6) & 0x3F;
+        int imms = imm12 & 0x3F;
+        int size;
+        if ((imm12 & 0x1000) != 0) {
+            size = 64;
+        } else {
+            size = 31-(imms >> 1);
+            size |= size >> 1;
+            size |= size >> 2;
+            size |= size >> 4;
+            size++;
+            imms &= ~((32-size) << 1);
         }
+        long val = (2L << imms)-1;
+        while (size < 64) {
+            val |= val << size;
+            size <<= 1;
+        }
+        val = (val >>> immr) | val << (64-immr);
+        return val;
     }
-    static RegMask retMask( SONTypeFunPtr tfp, int i ) {
-        return i==2
-                ? (tfp.ret() instanceof SONTypeFloat ? D0_MASK : X0_MASK)
-                : RET_MASKS[i];
+
+    // Return the max stack slot used by this signature, or 0
+    @Override public short maxArgSlot( SONTypeFunPtr tfp ) {
+        int icnt=0, fcnt=0;     // Count of ints, floats
+        for( int i=0; i<tfp.nargs(); i++ ) {
+            if( tfp.arg(i) instanceof SONTypeFloat ) fcnt++;
+            else icnt++;
+        }
+        int nstk = Math.max(icnt-8,0)+Math.max(fcnt-8,0);
+        return (short)nstk;
     }
+
+    private static final long CALLEE_SAVE =
+        1L<<X19 |
+        1L<<X20 | 1L<<X21 | 1L<<X22 | 1L<<X23 |
+        1L<<X24 | 1L<<X25 | 1L<<X26 | 1L<<X27 |
+        1L<<X28 |
+        1L<<D9  | 1L<<D10 | 1L<<D11 |
+        1L<<D12 | 1L<<D13 | 1L<<D14 | 1L<<D15;
+    static final long CALLER_SAVE = ~CALLEE_SAVE & ~(1L<<RSP);
+    @Override public long callerSave() { return CALLER_SAVE; }
+    @Override public long neverSave() { return 1L<<RSP; }
+    @Override public RegMask retMask( SONTypeFunPtr tfp ) {
+        return tfp.ret() instanceof SONTypeFloat ? D0_MASK : X0_MASK;
+    }
+    @Override public int rpc() { return X30; }
 
     // Create a split op; any register to any register, including stack slots
     @Override public SplitNode split(String kind, byte round, LRG lrg) {  return new SplitARM(kind,round);  }
@@ -604,11 +639,6 @@ public class arm extends Machine {
     // Return a MachNode unconditional branch
     @Override public CFGNode jump() {
         return new UJmpARM();
-    }
-
-    // Break an infinite loop
-    @Override public NeverNode never(CFGNode ctrl ) {
-        throw Utils.TODO();
     }
 
     // Instruction selection
@@ -619,7 +649,7 @@ public class arm extends Machine {
         case AndNode and    -> and(and);
         case BoolNode bool  -> cmp(bool);
         case CallNode call  -> call(call);
-        case CastNode cast  -> new CastNode(cast);
+        case CastNode cast  -> new CastARM(cast);
         case CallEndNode cend -> new CallEndARM(cend);
         case CProjNode c    -> new CProjNode(c);
         case ConstantNode con -> con(con);
@@ -629,6 +659,7 @@ public class arm extends Machine {
         case IfNode iff     -> jmp(iff);
         case LoadNode ld    -> ld(ld);
         case MemMergeNode mem -> new MemMergeNode(mem);
+        case MinusNode neg  -> new NegARM(neg);
         case MulFNode mulf  -> new MulFARM(mulf);
         case MulNode mul    -> new MulARM(mul);
         case NewNode nnn    -> new NewARM(nnn);
@@ -658,16 +689,14 @@ public class arm extends Machine {
 
     private Node cmp(BoolNode bool){
         Node cmp = _cmp(bool);
-        return new SetARM(cmp, invert(bool.op()));
+        return new SetARM(cmp, IfNode.negate(bool.op()));
     }
     private Node _cmp(BoolNode bool) {
-        if( bool instanceof BoolNode.EQF ||
-            bool instanceof BoolNode.LTF ||
-            bool instanceof BoolNode.LEF )
+        if( bool.isFloat() )
             return new CmpFARM(bool);
         return bool.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti
-            ? new CmpIARM(bool, (int)ti.value())
-            : new CmpARM(bool);
+                ? new CmpIARM(bool, (int)ti.value())
+                : new CmpARM(bool);
     }
 
     private Node ld(LoadNode ld) {
@@ -678,47 +707,49 @@ public class arm extends Machine {
         // If/Bool combos will match to a Cmp/Set which sets flags.
         // Most general arith ops will also set flags, which the Jmp needs directly.
         // Loads do not set the flags, and will need an explicit TEST
-        if( !(iff.in(1) instanceof BoolNode) )
-            iff.setDef(1,new BoolNode.EQ(iff.in(1),new ConstantNode(SONTypeInteger.ZERO)));
-        return new BranchARM(iff, invert(((BoolNode)iff.in(1)).op()));
+        String op = "!=";
+        if( iff.in(1) instanceof BoolNode bool ) op = bool.op();
+        else if( iff.in(1)==null ) op = "=="; // Never-node cutout
+        else iff.setDef(1, new BoolNode.NE(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
+        return new BranchARM(iff, op);
     }
 
     private Node add(AddNode add) {
         return add.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && imm12(ti)
-            ? new AddIARM(add, (int)ti.value())
-            : new AddARM(add);
+                ? new AddIARM(add, (int)ti.value())
+                : new AddARM(add);
     }
 
     private Node sub(SubNode sub) {
         return sub.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti)
-            ? new AddIARM(sub, (int)(-ti.value()))
-            : new SubARM(sub);
+                ? new SubIARM(sub, (int)(ti.value()))
+                : new SubARM(sub);
     }
 
-    private Node con(ConstantNode con) {
+    private Node con( ConstantNode con ) {
         if( !con._con.isConstant() ) return new ConstantNode( con ); // Default unknown caller inputs
         return switch( con._con ) {
-        case SONTypeInteger ti  -> new IntARM(con);
-        case SONTypeFloat   tf  -> new FloatARM(con);
-        case SONTypeFunPtr  tfp -> new TFPARM(con);
-        case SONTypeMemPtr tmp -> new ConstantNode(con);
-        case SONTypeNil tn  -> throw Utils.TODO();
-        // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
-        case SONType t -> new ConstantNode(con);
+            case SONTypeInteger ti  -> new IntARM(con);
+            case SONTypeFloat   tf  -> new FloatARM(con);
+            case SONTypeFunPtr  tfp -> new TFPARM(con);
+            case SONTypeMemPtr tmp -> new ConstantNode(con);
+            case SONTypeNil tn  -> throw Utils.TODO();
+            // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
+            case SONType t -> t==SONType.NIL ? new IntARM(con) : new ConstantNode(con);
         };
     }
 
     private Node call(CallNode call){
         return call.fptr() instanceof ConstantNode con && con._con instanceof SONTypeFunPtr tfp
-            ? new CallARM(call, tfp)
-            : new CallRRARM(call);
+                ? new CallARM(call, tfp)
+                : new CallRRARM(call);
     }
 
     private Node or(OrNode or) {
         int imm12;
         return or.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && (imm12 = imm12Logical(ti)) != -1
-            ? new OrIARM(or, imm12)
-            : new OrARM(or);
+                ? new OrIARM(or, imm12)
+                : new OrARM(or);
     }
 
     private Node xor(XorNode xor) {

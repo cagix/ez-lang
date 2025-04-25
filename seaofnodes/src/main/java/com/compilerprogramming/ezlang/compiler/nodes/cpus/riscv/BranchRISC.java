@@ -21,11 +21,13 @@ public class BranchRISC extends IfNode implements MachNode, RIPRelSize {
     @Override public String comment() { return "L"+cproj(1)._nid; }
     @Override public RegMask regmap(int i) { return riscv.RMASK; }
     @Override public RegMask outregmap() { return null; }
-    @Override public void invert() {
-        if( _bop.equals("<") || _bop.equals("<=") )
-            swap12();           // Cannot invert the test, so swap the operands
-        else
-            _bop = invert(_bop);
+    @Override public void negate() {
+        _bop = negate(_bop);
+        // Cannot encode ">" or "<=", so flip these
+        if( _bop.equals(">") || _bop.equals("<=") ) {
+            swap12();           // Cannot negate the test, so swap the operands
+            _bop = swap(_bop);  // Swap test to match
+        }
     }
 
     @Override public StringBuilder _print1(StringBuilder sb, BitSet visited) {
@@ -39,15 +41,21 @@ public class BranchRISC extends IfNode implements MachNode, RIPRelSize {
     }
 
     @Override public void encoding( Encoding enc ) {
+        if( in(1)==null && _bop=="!=" ) return; // Inverted never-node, no code
         enc.jump(this,cproj(0));
-        // Todo: relocs (for offset - immf)
-        short src1 = enc.reg(in(1));
-        short src2 = in(2)==null ? (short)riscv.ZERO : enc.reg(in(2));
-        enc.add4(riscv.b_type(riscv.OP_BRANCH, riscv.jumpop(_bop), src1, src2, 0));
+        if( in(1)==null )       // Never node
+            enc.add4(riscv.j_type(riscv.OP_JAL, 0, 0));
+        else {
+            // Todo: relocs (for offset - immf)
+            short src1 = enc.reg(in(1));
+            short src2 = in(2)==null ? (short)riscv.ZERO : enc.reg(in(2));
+            enc.add4(riscv.b_type(riscv.OP_BRANCH, riscv.jumpop(_bop), src1, src2, 0));
+        }
     }
 
     // Delta is from opcode start
     @Override public byte encSize(int delta) {
+        if( in(1)==null && _bop=="!=" ) return 0; // Inverted never-node, no code
         if( -4*1024 <= delta && delta < 4*1024 ) return 4;
         // 2 word encoding needs a tmp register, must teach RA
         throw Utils.TODO();
@@ -55,16 +63,25 @@ public class BranchRISC extends IfNode implements MachNode, RIPRelSize {
 
     // Delta is from opcode start
     @Override public void patch( Encoding enc, int opStart, int opLen, int delta ) {
-        short src1 = enc.reg(in(1));
-        short src2 = in(2)==null ? (short)riscv.ZERO : enc.reg(in(2));
-        if( opLen==4 ) {
-            enc.patch4(opStart,riscv.b_type(riscv.OP_BRANCH, riscv.jumpop(_bop), src1, src2, delta));
+        assert !( in(1)==null && _bop=="!=" ); // Inverted never-node, no code no patch
+        if( in(1)==null ) {     // Never node
+            enc.patch4(opStart,riscv.j_type(riscv.OP_JAL, 0, delta));
         } else {
-            throw Utils.TODO();
+            short src1 = enc.reg(in(1));
+            short src2 = in(2)==null ? (short)riscv.ZERO : enc.reg(in(2));
+            if( opLen==4 ) {
+                enc.patch4(opStart,riscv.b_type(riscv.OP_BRANCH, riscv.jumpop(_bop), src1, src2, delta));
+            } else {
+                throw Utils.TODO();
+            }
         }
     }
 
     @Override public void asm(CodeGen code, SB sb) {
+        if( in(1)==null && _bop=="!=" ) {
+            sb.p("never");
+            return;
+        }
         String src1 = in(1)==null ? "#0" : code.reg(in(1));
         String src2 = in(2)==null ? "#0" : code.reg(in(2));
         sb.p(src1).p(" ").p(_bop).p(" ").p(src2).p(" ");

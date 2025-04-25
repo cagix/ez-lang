@@ -173,7 +173,7 @@ abstract public class IFG {
             // Look for a must-use single register conflicting with some other must-def.
             if( n instanceof MachNode m ) {
                 RegMask ni_mask = m.regmap(i);
-                if( ni_mask.size1() ) { // Must-use single register
+                if( ni_mask!=null && ni_mask.size1() ) { // Must-use single register
                     // Search all current live
                     for( LRG tlrg : TMP.keySet() ) {
                         assert tlrg.leader();
@@ -452,8 +452,8 @@ abstract public class IFG {
         // Always pick callee-save registers as being very large area recovered
         // and very cheap to spill.
         if( lrg._machDef instanceof CalleeSaveNode )
-            return 1000000-2;
-        if( lrg._splitDef != null && lrg._splitDef.in(1) instanceof CalleeSaveNode &&
+            return 1000000-2-lrg._mask.firstReg();
+        if( lrg._splitDef != null && lrg._splitDef. in(1) instanceof CalleeSaveNode &&
             lrg._splitUse != null && lrg._splitUse.out(0) instanceof ReturnNode )
             return 1000000-1;
 

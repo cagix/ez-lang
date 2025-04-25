@@ -22,7 +22,7 @@ public class StoreNode extends MemOpNode {
      * @param value Value to be stored
      */
     public StoreNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off, Node value, boolean init) {
-        super(name, alias, glb, mem, ptr, off, value);
+        super(name, alias, false, glb, mem, ptr, off, value);
         _init = init;
     }
 
@@ -97,7 +97,7 @@ public class StoreNode extends MemOpNode {
         // when the other uses go away we can retry.
         for( Node use : mem._outputs )
             if( use != this )
-                use.addDep(this);
+                addDep(use);
         return false;
     }
 

@@ -17,6 +17,7 @@ public class SONTypeTuple extends SONType {
     public static final SONTypeTuple START= make(SONType.CONTROL, SONTypeMem.TOP, SONTypeInteger.BOT);
     public static final SONTypeTuple MAIN = make(SONTypeInteger.BOT);
     public static final SONTypeTuple RET  = make(SONType.CONTROL, SONTypeMem.BOT, SONType.BOTTOM);
+    public static final SONTypeTuple CALLOC = make(SONTypeInteger.BOT,SONTypeInteger.BOT);
 
     public static final SONTypeTuple IF_BOTH    = make(new SONType[]{SONType. CONTROL, SONType. CONTROL});
     public static final SONTypeTuple IF_NEITHER = make(new SONType[]{SONType.XCONTROL, SONType.XCONTROL});

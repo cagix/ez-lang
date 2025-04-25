@@ -22,6 +22,7 @@ public class CodeGen {
         Parse,                  // Parse ASCII text into Sea-of-Nodes IR
         Opto,                   // Run ideal optimizations
         TypeCheck,              // Last check for bad programs
+        LoopTree,               // Build a loop tree; break infinite loops
         InstSelect,             // Convert to target hardware nodes
         Schedule,               // Global schedule (code motion) nodes
         LocalSched,             // Local schedule
@@ -49,6 +50,27 @@ public class CodeGen {
         _arg = arg;
         _iter = new IterPeeps(workListSeed);
         P = new Compiler(this,arg);
+    }
+
+
+    // All passes up to Phase, except ELF
+    public CodeGen driver( Phase phase ) { return driver(phase,null,null); }
+    public CodeGen driver( Phase phase, String cpu, String callingConv ) {
+        if( _phase==null )                       parse();
+        if( _phase.ordinal() < phase.ordinal() ) opto();
+        if( _phase.ordinal() < phase.ordinal() ) typeCheck();
+        if( _phase.ordinal() < phase.ordinal() ) loopTree();
+        if( _phase.ordinal() < phase.ordinal() && cpu != null ) instSelect(cpu,callingConv);
+        if( _phase.ordinal() < phase.ordinal() ) GCM();
+        if( _phase.ordinal() < phase.ordinal() ) localSched();
+        if( _phase.ordinal() < phase.ordinal() ) regAlloc();
+        if( _phase.ordinal() < phase.ordinal() ) encode();
+        return this;
+    }
+
+    // Run all the phases through final ELF emission
+    public CodeGen driver( String cpu, String callingConv, String obj ) throws IOException {
+        return driver(Phase.Encoding,cpu,callingConv).exportELF(obj);
     }
 
 
@@ -125,6 +147,7 @@ public class CodeGen {
         assert _phase == null;
         _phase = Phase.Parse;
         long t0 = System.currentTimeMillis();
+
         P.parse();
         _tParse = (int)(System.currentTimeMillis() - t0);
         return this;
@@ -180,18 +203,42 @@ public class CodeGen {
         return this;
     }
 
+    // ---------------------------
+    // Build the loop tree; break never-exit loops
+    public int _tLoopTree;
+    public CodeGen loopTree() {
+        assert _phase.ordinal() <= Phase.TypeCheck.ordinal();
+        _phase = Phase.LoopTree;
+        long t0 = System.currentTimeMillis();
+        // Build the loop tree, fix never-exit loops
+        _start.buildLoopTree(_stop);
+        _tLoopTree = (int)(System.currentTimeMillis() - t0);
+        return this;
+    }
 
     // ---------------------------
     // Code generation CPU target
     public Machine _mach;
-    //
+    // Chosen calling convention (usually either Win64 or SystemV)
     public String _callingConv;
+    // Callee save registers
+    public RegMask _callerSave;
+
+    // All returns have the following inputs:
+    // 0 - ctrl
+    // 1 - memory
+    // 2 - varies with returning GPR,FPR
+    // 3 - RPC
+    // 4+- Caller save registers
+    public RegMask[] _retMasks;
+    // Return Program Counter
+    public RegMask _rpcMask;
 
     // Convert to target hardware nodes
     public int _tInsSel;
     public CodeGen instSelect( String cpu, String callingConv ) { return instSelect(cpu,callingConv,PORTS); }
     public CodeGen instSelect( String cpu, String callingConv, String base ) {
-        assert _phase.ordinal() <= Phase.TypeCheck.ordinal();
+        assert _phase.ordinal() == Phase.LoopTree.ordinal();
         _phase = Phase.InstSelect;
 
         _callingConv = callingConv;
@@ -202,6 +249,27 @@ public class CodeGen {
         String clzFile = base+"."+cpu+"."+cpu;
         try { _mach = ((Class<Machine>) Class.forName( clzFile )).getDeclaredConstructor(new Class[]{CodeGen.class}).newInstance(this); }
         catch( Exception e ) { throw new RuntimeException(e); }
+
+        // Build global copies of common register masks.
+        long callerSave = _mach.callerSave();
+        long  neverSave = _mach. neverSave();
+        int maxReg = Math.min(64,_mach.regs().length);
+        assert maxReg>=64 || (-1L << maxReg & callerSave)==0; // No stack slots in callerSave
+        _callerSave = new RegMask(callerSave);
+
+        // Build a Return RegMask array.  All returns have the following inputs:
+        // 0 - ctrl
+        // 1 - memory
+        // 2 - varies with returning GPR,FPR
+        // 3 - RPC
+        // 4+- Caller save registers
+        _retMasks = new RegMask[(maxReg-_callerSave.size()-Long.bitCount( neverSave ))+4];
+        for( int reg=0, i=4; reg<maxReg; reg++ )
+            if( !_callerSave.test(reg) && ((1L<<reg)&neverSave)==0 )
+                _retMasks[i++] = new RegMask(reg);
+        _rpcMask = new RegMask(_mach.rpc());
+        _retMasks[3] = _rpcMask;
+
 
         // Convert to machine ops
         long t0 = System.currentTimeMillis();
@@ -258,7 +326,7 @@ public class CodeGen {
 
 
     // ---------------------------
-    // Control Flow Graph in RPO order.
+    // Control Flow Graph in Reverse Post Order.
     public int _tGCM;
     public Ary<CFGNode> _cfg = new Ary<>(CFGNode.class);
 
@@ -269,8 +337,6 @@ public class CodeGen {
         _phase = Phase.Schedule;
         long t0 = System.currentTimeMillis();
 
-        // Build the loop tree, fix never-exit loops
-        _start.buildLoopTree(_stop);
         GlobalCodeMotion.buildCFG(this);
         _tGCM = (int)(System.currentTimeMillis() - t0);
         if( show )
@@ -305,34 +371,32 @@ public class CodeGen {
         return this;
     }
 
-    public String reg(Node n) {
+    // Human readable register name
+    public String reg(Node n) { return reg(n,null); }
+    public String reg(Node n, FunNode fun) {
         if( _phase.ordinal() >= Phase.RegAlloc.ordinal() ) {
-            String s = _regAlloc.reg(n);
+            String s = _regAlloc.reg(n,fun);
             if( s!=null ) return s;
         }
         return "N"+ n._nid;
     }
 
+
     // ---------------------------
     // Encoding
     public int _tEncode;
-    public boolean _JIT;
-    public Encoding _encoding;
-    public CodeGen encode(boolean jit) {
+    public Encoding _encoding;   // Encoding object
+    public void preEncode() {  } // overridden by alternative ports
+    public CodeGen encode() {
         assert _phase == Phase.RegAlloc;
         _phase = Phase.Encoding;
         long t0 = System.currentTimeMillis();
         _encoding = new Encoding(this);
-        _JIT = jit;
+        preEncode();
         _encoding.encode();
         _tEncode = (int)(System.currentTimeMillis() - t0);
         return this;
     }
-    public CodeGen encode() {
-        return encode(false);
-    }
-    // Encoded binary, no relocation info
-    public byte[] binary() { return _encoding.bits(); }
 
     // ---------------------------
     // Exporting to external formats
@@ -364,6 +428,15 @@ public class CodeGen {
 
     // Debugging helper
     public Node f(int idx) { return _stop.find(idx); }
+
+
+    String printCFG() {
+        if( _cfg==null ) return "no CFG";
+        SB sb = new SB();
+        for( CFGNode cfg : _cfg )
+            IRPrinter.printLine(cfg,sb);
+        return sb.toString();
+    }
 
     public static void print_as_hex(Encoding enc) {
         for (byte b : enc._bits.toByteArray()) {

@@ -29,13 +29,15 @@ public abstract class MemOpARM extends MemOpNode implements MachNode {
         _inputs.setX(4,val);
     }
 
-    @Override public String label() { return op(); }
+    @Override public String label() { return op();}
     Node val() { return in(4); } // Only for stores
 
     @Override public  StringBuilder _printMach(StringBuilder sb, BitSet visited) { return sb.append(".").append(_name); }
 
     @Override public SONType compute() { throw Utils.TODO(); }
     @Override public Node idealize() { throw Utils.TODO(); }
+
+    int size() { return 1<<_declaredType.log_size(); }
 
     // Wider mask to store both GPRs and FPRs
     @Override public RegMask regmap(int i) {
@@ -44,16 +46,16 @@ public abstract class MemOpARM extends MemOpNode implements MachNode {
         if( i==2 ) return arm.RMASK; // ptr/base
         if( i==3 ) return arm.RMASK; // off/index
         if( i==4 ) return arm.RMASK; // value
-        throw Utils.TODO();
+        return null; // Anti-dependence
     }
 
     // Shared encoding for loads and stores(int and float)
-    public void ldst_encode( Encoding enc, int opcode_imm, int opcode_reg, Node xval, boolean float_type ) {
+    public void ldst_encode( Encoding enc, int opcode_imm, int opcode_reg, Node xval, int size) {
         short ptr = enc.reg(ptr());
         short off = enc.reg(off());
         short val = enc.reg(xval);
         int body = off() == null
-            ? arm.load_str_imm(opcode_imm, _off, ptr, val)
+            ? arm.load_str_imm(opcode_imm, _off, ptr, val, size)
             : arm.indr_adr(opcode_reg, off, arm.STORE_LOAD_OPTION.SXTX, 0, ptr, val);
         enc.add4(body);
     }

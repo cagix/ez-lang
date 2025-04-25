@@ -44,13 +44,36 @@ public class RegionNode extends CFGNode {
         if( !hasPhi() &&         // No Phi users, just a control user
             in(1) instanceof CProjNode p1 &&
             in(2) instanceof CProjNode p2 &&
-            p1.in(0).addDep(this)==p2.in(0).addDep(this) &&
+            addDep(p1.in(0))==addDep(p2.in(0)) &&
             p1.in(0) instanceof IfNode iff ) {
             // Replace with the iff.ctrl directly
             if( nIns()==3 ) return iff.ctrl();
             // Just delete the path for fat Regions
             setDef(1,iff.ctrl());
             return delDef(2);
+        }
+
+        // Flatten stack regions (no loops involved)
+        if( getClass() == RegionNode.class ) {
+            for( int i=1; i<nIns(); i++ )
+                if( cfg(i) instanceof RegionNode region && region.getClass() == RegionNode.class && region.nIns()>2 && !hasMidUser(region) ) {
+                    assert !region.inProgress();
+                    // Fold Phis
+                    for( Node use : _outputs ) {
+                        if( use instanceof PhiNode phi ) {
+                            PhiNode phi2 = phi.in(i) instanceof PhiNode phi2x && phi2x.region()==region ? phi2x : null;
+                            for( int j=1; j<region.nIns(); j++ )
+                                phi.addDef(phi2==null ? phi.in(i) : phi2.in(j));
+                            CodeGen.CODE.add(phi);
+                        }
+                    }
+
+                    // Fold Region
+                    for( int j=1; j<region.nIns(); j++ )
+                        addDef(region.in(j));
+                    setDef(i,Compiler.XCTRL);
+                    return this;
+                }
         }
 
         return null;
@@ -95,6 +118,23 @@ public class RegionNode extends CFGNode {
         return false;
     }
 
+    // Is there a value in-between 2 Regions?  Difficult to correctly fuse
+    // without extensive testing, so just ignore.
+    boolean hasMidUser(RegionNode r) {
+        for( Node use : r._outputs ) {
+            if( use==this ) continue;
+            if( use instanceof PhiNode ) {
+                for( Node data : use._outputs ) {
+                    if( !(data instanceof PhiNode phi2) || phi2.region()!=this )
+                        { addDep(use); addDep(data); return true; }
+                }
+            } else
+                { addDep(use);  return true; } // Control user
+        }
+        return false;
+    }
+
+
     // Immediate dominator of Region is a little more complicated.
     @Override public int idepth() {
         if( _idepth!=0 ) return _idepth;
@@ -118,6 +158,6 @@ public class RegionNode extends CFGNode {
     public boolean inProgress() { return nIns()>1 && in(nIns()-1) == null; }
 
     // Never equal if inProgress
-    @Override boolean eq( Node n ) { return !inProgress(); }
+    @Override public boolean eq( Node n ) { return !inProgress(); }
 
 }

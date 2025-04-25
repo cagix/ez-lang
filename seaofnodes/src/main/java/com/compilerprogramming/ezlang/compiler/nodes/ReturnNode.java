@@ -2,6 +2,10 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.Utils;
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
+import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
@@ -30,7 +34,7 @@ public class ReturnNode extends CFGNode {
     public Node mem () { return in(1); }
     public Node expr() { return in(2); }
     public Node rpc () { return in(3); }
-    public FunNode fun() { return _fun; }
+    @Override public FunNode fun() { return _fun; }
 
     @Override
     public String label() { return "Return"; }
@@ -128,4 +132,39 @@ public class ReturnNode extends CFGNode {
         if( tp || tn ) sb.p("reference and ");
         return Compiler.error(sb.unchar(5).toString());
     }
+
+
+    // ------------
+    // MachNode specifics, shared across all CPUs
+    public String op() {
+        return _fun._frameAdjust > 0 ? "addi" : "ret";
+    }
+    // Correct Nodes outside the normal edges
+    public void postSelect(CodeGen code) {
+        FunNode fun = (FunNode)rpc().in(0);
+        _fun = fun;
+        fun.setRet(this);
+    }
+    public RegMask regmap(int i) {
+        return i==2
+            ? CodeGen.CODE._mach.retMask(_fun.sig())
+            : CodeGen.CODE._retMasks[i];
+    }
+    public RegMask outregmap() { return null; }
+    public void encoding( Encoding enc ) { throw Utils.TODO(); }
+    public void asm(CodeGen code, SB sb) {
+        int frameAdjust = fun()._frameAdjust;
+        if( frameAdjust>0 )
+            sb.p("rsp += #").p(frameAdjust).p("\nret");
+        // Post code-gen, just print the "ret"
+        if( code._phase.ordinal() <= CodeGen.Phase.RegAlloc.ordinal() )
+            // Prints return reg (either RAX or XMM0), RPC and then the
+            // callee-save registers.
+            for( int i=2; i<nIns(); i++ )
+                sb.p(code.reg(in(i),fun())).p("  ");
+        // If we did not get the expected rpc, print which one we got
+        else if( code._regAlloc.regnum(rpc()) != code._mach.rpc() )
+            sb.p("[").p(code.reg(rpc())).p("]");
+    }
+
 }
