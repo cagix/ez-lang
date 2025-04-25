@@ -44,6 +44,7 @@ public class SONTypeFunPtr extends SONTypeNil {
 //    public static SONTypeFunPtr TEST  = make((byte)2, SONTypeTuple.TEST, SONTypeInteger.BOT,1);
 //    public static SONTypeFunPtr TEST0 = make((byte)3, SONTypeTuple.TEST, SONTypeInteger.BOT,3);
     public static SONTypeFunPtr MAIN  = make((byte)3, SONTypeTuple.MAIN, SONTypeInteger.BOT,-1);
+    public static SONTypeFunPtr CALLOC= make((byte)3,SONTypeTuple.CALLOC,SONTypeMemPtr.BOT,-1);
     public static void gather(ArrayList<SONType> ts) { /* ts.add(TEST); ts.add(TEST0); */ ts.add(BOT); ts.add(MAIN); }
 
     @Override
