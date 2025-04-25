@@ -1,44 +1,34 @@
 package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
 
 public class FunX86 extends FunNode implements MachNode {
     FunX86( FunNode fun ) { super(fun); }
-    @Override public String op() { return "addi"; }
-    @Override public RegMask regmap(int i) { return null; }
-    @Override public RegMask outregmap() { return null; }
-    @Override public void postSelect(CodeGen code) { code.link(this);  }
+    @Override public void postSelect(CodeGen code) {
+        super.postSelect(code);
+        // One more for RPC pre-pushed; X86 special
+        _maxArgSlot++;
+    }
 
-    // Actual stack layout is up to each CPU.
-    // X86, with too many args & spills:
-    // | CALLER |
-    // |  argN  | // slot 1, required by callER
-    // +--------+
-    // |  RPC   | // slot 0, required by callER
-    // | callee | // slot 3, callEE
-    // | callee | // slot 2, callEE
-    // |  PAD16 |
-    // +--------+
+    @Override public void computeFrameAdjust(CodeGen code, int maxReg) {
+        super.computeFrameAdjust(code,maxReg);
+        // Alignment, but off by RPC
+        if( _hasCalls )         // If non-leaf, pad to 16b
+            _frameAdjust = ((_frameAdjust+8+8) & -16)-8;
+    }
+
     @Override public void encoding( Encoding enc ) {
-        // Stack frame size: _maxSlot - max(arg), padded to 16.
-        _maxArgSlot = x86_64_v2.maxSlot(enc._fun.sig());
-        int sz = _maxSlot - _maxArgSlot;
-        // If non-leaf function, pad to 16b
-        if( _hasCalls ) sz = ((sz+1) & -2)+1;
-        assert x86_64_v2.imm8(sz*8);
-        _frameAdjust = (short)sz;
+        int sz = _frameAdjust;
         if( sz == 0 ) return; // Skip if no frame adjust
-
         // opcode: 0x83, addi rsp with immediate 8
-        enc.add1( 0x83 );
-        enc.add1( x86_64_v2.modrm(x86_64_v2.MOD.DIRECT, 0, x86_64_v2.RSP) );
-        enc.add1(sz*8);
+        enc.add1( x86_64_v2.REX_W ).add1( x86_64_v2.imm8(sz) ? 0x83 : 0x81 );
+        enc.add1( x86_64_v2.modrm(x86_64_v2.MOD.DIRECT, 0b101, x86_64_v2.RSP) );
+        if( x86_64_v2.imm8(sz) )  enc.add1(sz);
+        else                      enc.add4(sz);
     }
 
-    @Override public void asm(CodeGen code, SB sb) {
-        sb.p("rsp += #").p(_frameAdjust*8);
-    }
 }

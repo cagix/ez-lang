@@ -1,7 +1,9 @@
 package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
 
+import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.SplitNode;
 import com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv.riscv;
@@ -23,17 +25,17 @@ public class SplitARM extends SplitNode {
             if(src >= arm.MAX_REG) {
                 throw Utils.TODO();
             }
-            int off = enc._fun.computeStackSlot(dst - arm.MAX_REG)*8;
+            int off = enc._fun.computeStackOffset(enc._code,dst);
             if( srcX ) src -= arm.D_OFFSET;
-            enc.add4(arm.load_str_imm(arm.OP_STORE_IMM, off, arm.RSP, src));
+            enc.add4(arm.load_str_imm(arm.OP_STORE_IMM_64, off, arm.RSP, src, 8));
             return;
         }
 
         if(src >= arm.MAX_REG) {
             // Load from SP
-            int off = enc._fun.computeStackSlot(src - arm.MAX_REG) * 8;
+            int off = enc._fun.computeStackOffset(enc._code,src);
             if( dstX ) dst -= arm.D_OFFSET;
-            enc.add4(arm.load_str_imm(arm.OP_LOAD_IMM, off, arm.RSP, dst));
+            enc.add4(arm.load_str_imm(arm.OP_LOAD_IMM_64, off, arm.RSP, dst, 8));
             return;
         }
 
@@ -54,5 +56,11 @@ public class SplitARM extends SplitNode {
             // FMOV(general) DOUBLE-PRECISION to 64 bits
             enc.add4(arm.f_mov_general(arm.OP_FMOV, 0b01, 0, 0b110, src - arm.D_OFFSET, dst));
         }
+    }
+
+    // General form: "mov  dst = src"
+    @Override public void asm(CodeGen code, SB sb) {
+        FunNode fun = code._encoding==null ? null : code._encoding._fun;
+        sb.p(code.reg(this,fun)).p(" = ").p(code.reg(in(1),fun));
     }
 }

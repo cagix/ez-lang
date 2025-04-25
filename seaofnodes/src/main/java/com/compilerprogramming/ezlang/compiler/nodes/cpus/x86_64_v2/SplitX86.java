@@ -3,6 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
+import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.SplitNode;
 import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
@@ -26,7 +27,7 @@ public class SplitX86 extends SplitNode {
             // push rcx
             // popf (Pop the top of the stack into the FLAGS register)
             // 50+rd	PUSH r64
-            if( src >= 8 ) x86_64_v2.rex(0,src,0,true);
+            x86_64_v2.rexF(0,src,0,false,enc);
             enc.add1(0x50 + src);
             // popf
             enc.add1(0x9D);
@@ -37,7 +38,7 @@ public class SplitX86 extends SplitNode {
             // pushf; pop reg
             enc.add1(0x9C);
             // 58+ rd	POP r64
-            if( dst >= 8 ) x86_64_v2.rex(0,dst,0,true);
+            x86_64_v2.rexF(0,dst,0,false, enc);
             enc.add1(0x58 + dst);
             return;
         }
@@ -50,12 +51,12 @@ public class SplitX86 extends SplitNode {
         if( dst >= x86_64_v2.MAX_REG ) {
             if( src >= x86_64_v2.MAX_REG )
                 throw Utils.TODO(); // Very rare stack-stack move
-            int off = enc._fun.computeStackSlot(dst - x86_64_v2.MAX_REG)*8;
+            int off = enc._fun.computeStackOffset(enc._code,dst);
             StoreX86.encVal(enc, srcX ? SONTypeFloat.F64 : SONTypeInteger.BOT, (short)x86_64_v2.RSP, (short)-1/*index*/, src, off, 0);
             return;
         }
         if( src >= x86_64_v2.MAX_REG ) {
-            int off = enc._fun.computeStackSlot(src - x86_64_v2.MAX_REG)*8;
+            int off = enc._fun.computeStackOffset(enc._code,src);
             LoadX86.enc(enc, dstX ? SONTypeFloat.F64 : SONTypeInteger.BOT, dst, (short)x86_64_v2.RSP, (short)-1, off, 0);
             return;
         }
@@ -66,6 +67,8 @@ public class SplitX86 extends SplitNode {
 
         // 0x66 if moving between register classes
         if( dstX ^ srcX )  enc.add1(0x66);
+        if( !dstX && srcX )
+            { short tmp=src; src=dst; dst=tmp; }
         enc.add1(x86_64_v2.rex(dst, src, 0));
 
         // pick opcode based on regs
@@ -84,7 +87,6 @@ public class SplitX86 extends SplitNode {
             // xmm->reg(66 0F 7E /r MOVQ r/m64, xmm)
             enc.add1(0x0F);
             enc.add1(0x7E);
-            short tmp=src; src=dst; dst=tmp;
         }
 
         enc.add1(x86_64_v2.modrm(x86_64_v2.MOD.DIRECT, dst, src));
@@ -92,6 +94,7 @@ public class SplitX86 extends SplitNode {
 
     // General form: "mov  dst = src"
     @Override public void asm(CodeGen code, SB sb) {
-        sb.p(code.reg(this)).p(" = ").p(code.reg(in(1)));
+        FunNode fun = code._encoding==null ? null : code._encoding._fun;
+        sb.p(code.reg(this,fun)).p(" = ").p(code.reg(in(1),fun));
     }
 }

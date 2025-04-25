@@ -12,19 +12,25 @@ import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
 // idx  = null
 // off  = off - offset added to base
 
-public class LoadARM extends MemOpARM{
-    LoadARM(LoadNode ld,Node base, Node idx, int off) {
+public class LoadARM extends MemOpARM {
+    LoadARM(LoadNode ld, Node base, Node idx, int off) {
         super(ld, base, idx, off, 0);
     }
     @Override public String op() { return "ld"+_sz; }
     @Override public RegMask outregmap() { return arm.MEM_MASK; }
+
+    private static final int[] OP_LOADS  = new int[]{ arm.OP_LOAD_IMM_8,  arm.OP_LOAD_IMM_16,  arm.OP_LOAD_IMM_32,  arm.OP_LOAD_IMM_64, };
+    private int imm_op() {
+        return _declaredType == SONTypeFloat.F32 ? arm.OPF_LOAD_IMM_32
+            :  _declaredType == SONTypeFloat.F64 ? arm.OPF_LOAD_IMM_64
+            :  OP_LOADS[_declaredType.log_size()];
+    }
+
+    private static final int[] OP_LOAD_RS  = new int[]{ arm.OP_LOAD_R_8 , arm.OP_LOAD_R_16 , arm.OP_LOAD_R_32 , arm.OP_LOAD_R_64,  };
+
     // ldr(immediate - unsigned offset) | ldr(register)
     @Override public void encoding( Encoding enc ) {
-        if(_declaredType == SONTypeFloat.F32 || _declaredType == SONTypeFloat.F64) {
-            ldst_encode(enc, arm.OPF_LOAD_IMM, arm.OPF_LOAD_R, this, true);
-        } else {
-            ldst_encode(enc, arm.OP_LOAD_IMM, arm.OP_LOAD_R, this, false);
-        }
+        ldst_encode(enc, imm_op(), OP_LOAD_RS[_declaredType.log_size()], this, size());
     }
     @Override public void asm(CodeGen code, SB sb) {
         sb.p(code.reg(this)).p(",");
