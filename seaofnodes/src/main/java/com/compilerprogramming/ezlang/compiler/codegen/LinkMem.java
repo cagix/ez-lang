@@ -6,9 +6,14 @@ public class LinkMem {
     LinkMem( CodeGen code ) { _code = code; }
 
     public CodeGen link() {
+        Encoding enc = _code._encoding;
+
+        // Patch external calls internally
+        enc.patchGlobalRelocations();
+
         // Write any large constants into a constant pool; they
         // are accessed by RIP-relative addressing.
-        _code._encoding.writeConstantPool(_code._encoding._bits,true);
+        enc.writeConstantPool(enc._bits,true);
 
         return _code;
     }
