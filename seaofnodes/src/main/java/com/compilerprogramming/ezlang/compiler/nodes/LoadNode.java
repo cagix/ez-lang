@@ -19,7 +19,7 @@ public class LoadNode extends MemOpNode {
      * @param off   The offset inside the struct base
      */
     public LoadNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off) {
-        super(name, alias, glb, mem, ptr, off);
+        super(name, alias, true, glb, mem, ptr, off);
     }
 
     // GraphVis DOT code (must be valid Java identifiers) and debugger labels
@@ -76,7 +76,7 @@ public class LoadNode extends MemOpNode {
         while( true ) {
             switch( mem ) {
             case StoreNode st:
-                if( ptr == st.ptr().addDep(this) && off() == st.off() )
+                if( ptr == addDep(st.ptr()) && off() == st.off() )
                     return extend(castRO(st.val())); // Proved equal
                 // Can we prove unequal?  Offsets do not overlap?
                 if( !off()._type.join(st.off()._type).isHigh() && // Offsets overlap
@@ -87,7 +87,7 @@ public class LoadNode extends MemOpNode {
                 break;
             case PhiNode phi:
                 // Assume related
-                phi.addDep(this);
+                addDep(phi);
                 break outer;
             case ConstantNode top: break outer;  // Assume shortly dead
             case ProjNode mproj: // Memory projection
@@ -181,7 +181,7 @@ public class LoadNode extends MemOpNode {
         if( px==null ) return false;
         if( px._type instanceof SONTypeMem mem && mem._t.isHighOrConst() ) return true;
         if( px instanceof StoreNode st1 && ptr()==st1.ptr() && off()==st1.off() ) return true;
-        px.addDep(this);
+        addDep(px);
         return false;
     }
 

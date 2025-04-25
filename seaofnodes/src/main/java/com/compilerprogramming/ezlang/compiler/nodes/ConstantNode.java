@@ -26,7 +26,7 @@ public class ConstantNode extends Node {
         _con = _type = type;
     }
     public ConstantNode( Node con, SONType t ) { super(con);  _con = t;  }
-    public ConstantNode( ConstantNode con ) { super(con);  _con = con._type;  }
+    public ConstantNode( ConstantNode con ) { this(con,con._type);  }
 
     public static Node make( SONType type ) {
         if( type== SONType. CONTROL ) return new CtrlNode();
@@ -44,7 +44,7 @@ public class ConstantNode extends Node {
     public StringBuilder _print1(StringBuilder sb, BitSet visited) {
         if( _con instanceof SONTypeFunPtr tfp && tfp.isConstant() ) {
             FunNode fun = CodeGen.CODE.link(tfp);
-            if( fun._name != null )
+            if( fun!=null && fun._name != null )
                 return sb.append("{ ").append(fun._name).append("}");
         }
         return sb.append(_con==null ? "---" : _con.print(new SB()));

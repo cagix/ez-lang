@@ -1,7 +1,11 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
+import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
+import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
+import com.compilerprogramming.ezlang.compiler.codegen.RegMaskRW;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 import java.util.BitSet;
 
@@ -38,7 +42,7 @@ public class CallEndNode extends CFGNode implements MultiNode {
             return SONTypeTuple.RET.dual();
         SONType ret = SONType.BOTTOM;
         SONTypeMem mem = SONTypeMem.BOT;
-        if( call.fptr().addDep(this)._type instanceof SONTypeFunPtr tfp ) {
+        if( addDep(call.fptr())._type instanceof SONTypeFunPtr tfp ) {
             ret = tfp.ret();
             // Here, if I can figure out I've found *all* callers, then I can meet
             // across the linked returns and join with the function return type.
@@ -84,10 +88,10 @@ public class CallEndNode extends CFGNode implements MultiNode {
                         return this;
                     }
                 } else {
-                    fun.addDep(this);
+                    addDep(fun);
                 }
             } else { // Function ptr has multiple users (so maybe multiple call sites)
-                fptr.addDep(this);
+                addDep(fptr);
             }
         }
 
@@ -97,4 +101,34 @@ public class CallEndNode extends CFGNode implements MultiNode {
     @Override public Node pcopy(int idx) {
         return _folding ? in(1).in(idx) : null;
     }
+
+    // ------------
+    // MachNode specifics, shared across all CPUs
+    public int _xslot;
+    private RegMask _retMask;
+    private RegMask _kills;
+    public void cacheRegs(CodeGen code) {
+        // Return mask depends on TFP (either GPR or FPR)
+        _retMask = code._mach.retMask(call().tfp());
+        // Kill mask is all caller-saves, and any mirror stack slots for args
+        // in registers.
+        RegMaskRW kills = code._callerSave.copy();
+        // Start of stack slots
+        int maxReg = code._mach.regs().length;
+        // Incoming function arg slots, all low numbered in the RA
+        int fslot = fun()._maxArgSlot;
+        // Killed slots for this calls outgoing args
+        int xslot = code._mach.maxArgSlot(call().tfp());
+        _xslot = (maxReg+fslot)+xslot;
+        for( int i=0; i<xslot; i++ )
+            kills.set((maxReg+fslot)+i);
+        _kills = kills;
+    }
+    public String op() { return "cend"; }
+    public RegMask regmap(int i) { return null; }
+    public RegMask outregmap() { return null; }
+    public RegMask outregmap(int idx) { return idx==2  ? _retMask : null; }
+    public RegMask killmap() { return _kills; }
+    public void encoding( Encoding enc ) { }
+    public void asm(CodeGen code, SB sb) {  }
 }

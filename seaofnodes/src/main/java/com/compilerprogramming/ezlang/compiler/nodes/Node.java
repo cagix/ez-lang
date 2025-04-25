@@ -17,14 +17,14 @@ import static com.compilerprogramming.ezlang.compiler.codegen.CodeGen.CODE;
  * The Node class provides common functionality used by all subtypes.
  * Subtypes of Node specialize by overriding methods.
  */
-public abstract class Node {
+public abstract class Node implements Cloneable {
 
     /**
      * Each node has a unique dense Node ID within a compilation context
      * The ID is useful for debugging, for using as an offset in a bitvector,
      * as well as for computing equality of nodes (to be implemented later).
      */
-    public final int _nid;
+    public int _nid;
 
     /**
      * Inputs to the node. These are use-def references to Nodes.
@@ -33,7 +33,7 @@ public abstract class Node {
      * Ordering is required because e.g. "a/b" is different from "b/a".
      * The first input (offset 0) is often a {@link CFGNode} node.
      */
-    public final Ary<Node> _inputs;
+    public Ary<Node> _inputs;
 
     /**
      * Outputs reference Nodes that are not null and have this Node as an
@@ -44,7 +44,7 @@ public abstract class Node {
      * walked in either direction.  These outputs are typically used for
      * efficient optimizations but otherwise have no semantics meaning.
      */
-    public final Ary<Node> _outputs;
+    public Ary<Node> _outputs;
 
 
     /**
@@ -550,17 +550,16 @@ public abstract class Node {
      * or output of this node, that is, it is at least one step away.  The node
      * being added must benefit from this node being peepholed.
      */
-    Node addDep( Node dep ) {
+    <N extends Node> N addDep( N dep ) {
         // Running peepholes during the big assert cannot have side effects
         // like adding dependencies.
-        if( CODE._midAssert ) return this;
-        if( dep == null ) return this;
-        if( _deps==null ) _deps = new Ary<>(Node.class);
-        if( _deps   .find(dep) != -1 ) return this; // Already on list
-        if( _inputs .find(dep) != -1 ) return this; // No need for deps on immediate neighbors
-        if( _outputs.find(dep) != -1 ) return this;
-        _deps.add(dep);
-        return this;
+        if( CODE._midAssert ) return dep;
+        if( dep._deps==null ) dep._deps = new Ary<>(Node.class);
+        if( dep._deps   .find(this) != -1 ) return dep; // Already on list
+        if( dep._inputs .find(this) != -1 ) return dep; // No need for deps on immediate neighbors
+        if( dep._outputs.find(this) != -1 ) return dep;
+        dep._deps.add(this);
+        return dep;
     }
 
     // Move the dependents onto a worklist, and clear for future dependents.
@@ -586,7 +585,7 @@ public abstract class Node {
     }
     // Subclasses add extra checks (such as ConstantNodes have same constant),
     // and can assume "this!=n" and has the same Java class.
-    boolean eq( Node n ) { return true; }
+    public boolean eq( Node n ) { return true; }
 
 
     // Cached hash.  If zero, then not computed AND this Node is NOT in the GVN
@@ -668,7 +667,7 @@ public abstract class Node {
     boolean allCons(Node dep) {
         for( int i=1; i<nIns(); i++ )
             if( !(in(i)._type.isConstant()) ) {
-                in(i).addDep(dep); // If in(i) becomes a constant later, will trigger some peephole
+                dep.addDep(in(i)); // If in(i) becomes a constant later, will trigger some peephole
                 return false;
             }
         return true;
@@ -679,6 +678,18 @@ public abstract class Node {
     // empty outputs and a new Node ID.  The original inputs are ignored.
     // Does not need to be implemented in isCFG() nodes.
     Node copy(Node lhs, Node rhs) { throw Utils.TODO("Binary ops need to implement copy"); }
+
+    public Node copy() {
+        Node n;
+        try { n = (Node)clone(); }
+        catch( Exception e ) { throw new RuntimeException(e); }
+        n._nid = CODE.getUID(); // allocate unique dense ID
+        n._inputs  = new Ary<>(Node.class);
+        n._outputs = new Ary<>(Node.class);
+        n._deps = null;
+        n._hash = 0;
+        return n;
+    }
 
     // Report any post-optimize errors
     public CompilerException err() { return null; }
