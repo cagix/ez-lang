@@ -554,7 +554,7 @@ public class Compiler {
         Type type = newExpr.type;
         if (type instanceof Type.TypeArray typeArray) {
             SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(typeArray.name());
-            return newArray(tarray._obj,ZERO);
+            return newArray(tarray._obj,newExpr.len==0?ZERO:con(newExpr.len));
         }
         else if (type instanceof Type.TypeStruct typeStruct) {
             SONTypeMemPtr tptr = (SONTypeMemPtr) TYPES.get(typeStruct.name());
@@ -686,6 +686,7 @@ public class Compiler {
 
         // Post-call setup
         CallEndNode cend = (CallEndNode)new CallEndNode(call).peephole();
+        call.peephole();        // Rerun peeps after CallEnd, allows early inlining
         // Control from CallEnd
         ctrl(new CProjNode(cend,0,ScopeNode.CTRL).peephole());
         // Memory from CallEnd
