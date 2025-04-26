@@ -545,8 +545,14 @@ public abstract class AST {
      */
     public static class NewExpr extends Expr {
         public final TypeExpr typeExpr;
+        public final long len; // temp hack, as this needs to be an expression rather than constant
         public NewExpr(TypeExpr typeExpr) {
             this.typeExpr = typeExpr;
+            this.len = 0;
+        }
+        public NewExpr(TypeExpr typeExpr, long len) {
+            this.typeExpr = typeExpr;
+            this.len = len;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
@@ -572,8 +578,13 @@ public abstract class AST {
         public final NewExpr newExpr;
         public final List<Expr> initExprList;
         public InitExpr(NewExpr newExpr, List<Expr> initExprList) {
-            this.newExpr = newExpr;
             this.initExprList = initExprList;
+            // For arrays we compute length based on number of elements
+            // This is not actually correct - see https://github.com/CompilerProgramming/ez-lang/issues/47
+            if (initExprList.size() != newExpr.len)
+                this.newExpr = new NewExpr(newExpr.typeExpr,initExprList.size());
+            else
+                this.newExpr = newExpr;
         }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
