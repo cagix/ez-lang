@@ -43,9 +43,9 @@ public class SONTypeMemPtr extends SONTypeNil {
 
     // An abstract pointer, pointing to either a Struct or an Array.
     // Can also be null or not, so 4 choices {TOP,BOT} x {nil,not}
-    public static SONTypeMemPtr BOT = make((byte)3, SONTypeStruct.BOT);
-    public static SONTypeMemPtr TOP = BOT.dual();
-    public static SONTypeMemPtr NOTBOT = make((byte)2, SONTypeStruct.BOT);
+    public static final SONTypeMemPtr BOT = make((byte)3, SONTypeStruct.BOT);
+    public static final SONTypeMemPtr TOP = BOT.dual();
+    public static final SONTypeMemPtr NOTBOT = make((byte)2, SONTypeStruct.BOT);
 
     //public static SONTypeMemPtr TEST= make((byte)2, SONTypeStruct.TEST);
     public static void gather(ArrayList<SONType> ts) { ts.add(NOTBOT); ts.add(BOT); /* ts.add(TEST); */ }
@@ -79,7 +79,7 @@ public class SONTypeMemPtr extends SONTypeNil {
     // Is forward-reference
     @Override public boolean isFRef() { return _obj.isFRef(); }
 
-    @Override public int log_size() { return 2; } // (1<<2)==4-byte pointers
+    @Override public int log_size() { return 3; } // (1<<3)==8-byte pointers
 
     @Override int hash() { return _obj.hashCode() ^ super.hash(); }
 

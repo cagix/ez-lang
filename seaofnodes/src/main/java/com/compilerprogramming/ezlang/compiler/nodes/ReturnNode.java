@@ -61,7 +61,9 @@ public class ReturnNode extends CFGNode {
         if( inProgress () ) return null;
         if( _fun.isDead() ) return null;
 
-//        // Upgrade signature based on return type
+          // Upgrade signature based on return type
+          // FIXME Dibyendu - EZ lang does not support modifying function signature
+          // but we should probably do the checking?
 //        SONType ret = expr()._type;
 //        SONTypeFunPtr fcn = _fun.sig();
 //        assert ret.isa(fcn.ret());
