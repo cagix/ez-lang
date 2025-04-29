@@ -88,6 +88,7 @@ public class FunNode extends RegionNode {
 
         // Upgrade inferred or user-written return type to actual
         if( _ret!=null && _ret._type instanceof SONTypeTuple tt && tt.ret() != _sig.ret() )
+		    // FIXME Dibyendu
             //throw Utils.TODO();
             return null;
 
@@ -113,8 +114,11 @@ public class FunNode extends RegionNode {
         return null;
     }
 
-    // Bypass Region idom, always assume depth == 1, one more than Start
-    @Override public int idepth() { return (_idepth=1); }
+    // Bypass Region idom, always assume depth == 1, one more than Start,
+    // unless folding then just a ID on input#1
+    @Override public int idepth() {
+        return _folding ? super.idepth() : CodeGen.CODE.iDepthAt(1);
+    }
     // Bypass Region idom, always assume idom is Start
     @Override public CFGNode idom(Node dep) { return cfg(1); }
 

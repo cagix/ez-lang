@@ -86,6 +86,11 @@ public class StoreNode extends MemOpNode {
             }
         }
 
+        // Store of zero after alloc
+        if( mem() instanceof ProjNode prj && prj.in(0) instanceof NewNode &&
+            prj.in(0)==ptr().in(0) &&  // Same NewNode memory & pointer
+            (val()._type==SONTypeInteger.ZERO || val()._type==SONType.NIL ) )
+            return mem();
 
         return null;
     }

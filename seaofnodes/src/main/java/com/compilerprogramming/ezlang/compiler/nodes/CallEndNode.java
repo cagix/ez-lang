@@ -59,7 +59,7 @@ public class CallEndNode extends CFGNode implements MultiNode {
 
         // Trivial inlining: call site calls a single function; single function
         // is only called by this call site.
-        if( !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
+        if( false && !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
             Node fptr = call.fptr();
             if( fptr.nOuts() == 1 && // Only user is this call
                 fptr instanceof ConstantNode && // We have an immediate call
@@ -74,8 +74,9 @@ public class CallEndNode extends CFGNode implements MultiNode {
                     assert fun.in(1) instanceof StartNode && fun.in(2)==call;
                     // Disallow self-recursive inlining (loop unrolling by another name)
                     CFGNode idom = call;
-                    while( !(idom instanceof FunNode fun2) )
+                    while( !(idom instanceof FunNode) )
                         idom = idom.idom();
+                    // Inline?
                     if( idom != fun ) {
                         // Trivial inline: rewrite
                         _folding = true;
@@ -85,6 +86,9 @@ public class CallEndNode extends CFGNode implements MultiNode {
                         fun.setDef(2,call.ctrl());  // Bypass the Call;
                         fun.ret().setDef(3,null);   // Return is folding also
                         CodeGen.CODE.addAll(fun._outputs);
+                        // Inlining immediately blows all cache idepth fields past the inline point.
+                        // Bump the global version number invalidating them en-masse.
+                        CodeGen.CODE.invalidateIDepthCaches();
                         return this;
                     }
                 } else {

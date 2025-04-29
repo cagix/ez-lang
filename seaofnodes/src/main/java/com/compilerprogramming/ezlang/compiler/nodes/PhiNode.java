@@ -14,7 +14,7 @@ public class PhiNode extends Node {
     final SONType _declaredType;
 
     public PhiNode(String label, SONType declaredType, Node... inputs) { super(inputs); _label = label;  assert declaredType!=null; _declaredType = declaredType; }
-    public PhiNode(PhiNode phi, String label, SONType declaredType) { super(phi); _label = label; _declaredType = declaredType; }
+    public PhiNode(PhiNode phi, String label, SONType declaredType) { super(phi); _label = label; _type = _declaredType = declaredType; }
     public PhiNode(PhiNode phi) { super(phi); _label = phi._label; _declaredType = phi._declaredType;  }
 
     public PhiNode(RegionNode r, Node sample) {
