@@ -1,6 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 import java.util.BitSet;
 
@@ -68,7 +69,9 @@ public abstract class CFGNode extends Node {
      * See {@link <a href="https://en.wikipedia.org/wiki/Dominator_(graph_theory)">...</a>}
      */
     public int _idepth;
-    public int idepth() { return _idepth==0 ? (_idepth=idom().idepth()+1) : _idepth; }
+    public int idepth() {
+        return CodeGen.CODE.validIDepth(_idepth) ? _idepth : (_idepth=CodeGen.CODE.iDepthFrom(idom().idepth()));
+    }
 
     // Return the immediate dominator of this Node and compute dom tree depth.
     public CFGNode idom(Node dep) { return cfg(0); }
