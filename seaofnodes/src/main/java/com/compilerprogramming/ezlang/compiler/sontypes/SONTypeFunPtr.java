@@ -35,8 +35,7 @@ public class SONTypeFunPtr extends SONTypeNil {
 
     public static SONTypeFunPtr make(byte nil, SONTypeTuple sig, SONType ret, long fidxs ) { return new SONTypeFunPtr(nil,sig,ret,fidxs).intern(); }
     public static SONTypeFunPtr make(boolean nil, SONTypeTuple sig, SONType ret ) { return make((byte)(nil ? 3 : 2),sig,ret,-1); }
-    @Override
-    SONTypeFunPtr makeFrom(byte nil ) { return  nil ==_nil   ? this : make(  nil,_sig,_ret,   _fidxs); }
+    @Override SONTypeFunPtr makeFrom(byte nil ) { return  nil ==_nil   ? this : make(  nil,_sig,_ret,   _fidxs); }
     public SONTypeFunPtr makeFrom(SONType ret ) { return     ret ==_ret   ? this : make( _nil,_sig, ret,   _fidxs); }
     public SONTypeFunPtr makeFrom(int fidx ) { return make((byte)2, _sig,_ret,1L<<fidx ); }
 
