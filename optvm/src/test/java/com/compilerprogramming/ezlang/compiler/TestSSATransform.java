@@ -1662,7 +1662,7 @@ func foo
 Before SSA
 ==========
 L0:
-    %t2 = New([Int])
+    %t2 = New([Int], len=2)
     %t2[0] = 1
     %t2[1] = 2
     arr = %t2
@@ -1675,7 +1675,7 @@ L1:
 After SSA
 =========
 L0:
-    %t2_0 = New([Int])
+    %t2_0 = New([Int], len=2)
     %t2_0[0] = 1
     %t2_0[1] = 2
     arr_0 = %t2_0
@@ -1688,7 +1688,7 @@ L1:
 After exiting SSA
 =================
 L0:
-    %t2_0 = New([Int])
+    %t2_0 = New([Int], len=2)
     %t2_0[0] = 1
     %t2_0[1] = 2
     arr_0 = %t2_0
@@ -2781,7 +2781,7 @@ func foo
 Before SSA
 ==========
 L0:
-    %t1 = New([Foo?])
+    %t1 = New([Foo?], len=2)
     %t2 = New(Foo)
     %t2.i = 1
     %t1[0] = %t2
@@ -2805,7 +2805,7 @@ L3:
 After SSA
 =========
 L0:
-    %t1_0 = New([Foo?])
+    %t1_0 = New([Foo?], len=2)
     %t2_0 = New(Foo)
     %t2_0.i = 1
     %t1_0[0] = %t2_0
@@ -2830,7 +2830,7 @@ L3:
 After exiting SSA
 =================
 L0:
-    %t1_0 = New([Foo?])
+    %t1_0 = New([Foo?], len=2)
     %t2_0 = New(Foo)
     %t2_0.i = 1
     %t1_0[0] = %t2_0
@@ -2971,6 +2971,90 @@ L8:
 L9:
     goto  L3
 L3:
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testSSA18()
+    {
+        String src = """
+                func foo(len: Int, val: Int, x: Int, y: Int)->[Int] {
+                    if (x > y) {
+                        len=len+x
+                        val=val+x
+                    }
+                    return new [Int]{len=len,value=val} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg len
+    arg val
+    arg x
+    arg y
+    %t4 = x>y
+    if %t4 goto L2 else goto L3
+L2:
+    %t5 = len+x
+    len = %t5
+    %t6 = val+x
+    val = %t6
+    goto  L3
+L3:
+    %t7 = New([Int], len=len, initValue=val)
+    ret %t7
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    goto  L3
+L3:
+    val_2 = phi(val_0, val_1)
+    len_2 = phi(len_0, len_1)
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    val_2 = val_0
+    len_2 = len_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    val_2 = val_1
+    len_2 = len_1
+    goto  L3
+L3:
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
     goto  L1
 L1:
 """, result);

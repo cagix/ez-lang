@@ -426,7 +426,7 @@ public class CompiledFunction {
     }
 
     private boolean compileNewExpr(AST.NewExpr newExpr) {
-        codeNew(newExpr.type);
+        codeNew(newExpr.type,newExpr.len,newExpr.initValue);
         return false;
     }
 
@@ -644,20 +644,44 @@ public class CompiledFunction {
             codeMove(value, indexed);
     }
 
-    private void codeNew(Type type) {
+    private void codeNew(Type type, AST.Expr len, AST.Expr initVal) {
         if (type instanceof Type.TypeArray typeArray)
-            codeNewArray(typeArray);
+            codeNewArray(typeArray, len, initVal);
         else if (type instanceof Type.TypeStruct typeStruct)
             codeNewStruct(typeStruct);
         else
             throw new CompilerException("Unexpected type: " + type);
     }
 
-    private void codeNewArray(Type.TypeArray typeArray) {
+    private void codeNewArray(Type.TypeArray typeArray, AST.Expr len, AST.Expr initVal) {
         var temp = createTemp(typeArray);
+        Operand lenOperand = null;
+        Operand initValOperand = null;
+        if (len != null) {
+            boolean indexed = compileExpr(len);
+            if (indexed)
+                codeIndexedLoad();
+            if (initVal != null) {
+                indexed = compileExpr(initVal);
+                if (indexed)
+                    codeIndexedLoad();
+                initValOperand = pop();
+            }
+            lenOperand = pop();
+        }
+        Instruction insn;
         var target = (Operand.RegisterOperand) issa.write(temp);
-        var insn = new Instruction.NewArray(typeArray, target);
+        if (lenOperand != null) {
+            if (initValOperand != null)
+                insn = new Instruction.NewArray(typeArray, target, issa.read(lenOperand), issa.read(initValOperand));
+            else
+                insn = new Instruction.NewArray(typeArray, target, issa.read(lenOperand));
+        }
+        else
+            insn = new Instruction.NewArray(typeArray, target);
         issa.recordDef(target, insn);
+        if (lenOperand != null) issa.recordUse(lenOperand,insn);
+        if (initValOperand != null) issa.recordUse(initValOperand,insn);
         code(insn);
     }
 

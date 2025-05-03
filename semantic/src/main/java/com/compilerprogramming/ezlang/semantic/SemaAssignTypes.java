@@ -67,6 +67,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.BinaryExpr binaryExpr, boolean enter) {
         if (!enter) {
+            if (binaryExpr.type != null)
+                return this;
             validType(binaryExpr.expr1.type, true);
             validType(binaryExpr.expr2.type, true);
             if (binaryExpr.expr1.type instanceof Type.TypeInteger &&
@@ -92,7 +94,7 @@ public class SemaAssignTypes implements ASTVisitor {
 
     @Override
     public ASTVisitor visit(AST.UnaryExpr unaryExpr, boolean enter) {
-        if (enter) {
+        if (enter || unaryExpr.type != null) {
             return this;
         }
         validType(unaryExpr.expr.type, false);
@@ -108,6 +110,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.GetFieldExpr fieldExpr, boolean enter) {
         if (enter)
+            return this;
+        if (fieldExpr.type != null)
             return this;
         validType(fieldExpr.object.type, false);
         Type.TypeStruct structType = null;
@@ -131,6 +135,8 @@ public class SemaAssignTypes implements ASTVisitor {
     public ASTVisitor visit(AST.SetFieldExpr fieldExpr, boolean enter) {
         if (enter)
             return this;
+        if (fieldExpr.type != null)
+            return this;
         validType(fieldExpr.object.type, true);
         Type.TypeStruct structType = null;
         if (fieldExpr.object.type instanceof Type.TypeStruct ts) {
@@ -139,6 +145,16 @@ public class SemaAssignTypes implements ASTVisitor {
         else if (fieldExpr.object.type instanceof Type.TypeNullable ptr &&
                 ptr.baseType instanceof Type.TypeStruct ts) {
             structType = ts;
+        }
+        else if (fieldExpr.object.type instanceof Type.TypeArray typeArray) {
+            if (fieldExpr.fieldName.equals("len"))
+                checkAssignmentCompatible(typeDictionary.INT,fieldExpr.value.type);
+            else if (fieldExpr.fieldName.equals("value"))
+                checkAssignmentCompatible(typeArray.getElementType(),fieldExpr.value.type);
+            else
+                throw new CompilerException("Unexpected array initializer " + fieldExpr.fieldName);
+            fieldExpr.type = fieldExpr.value.type;
+            return this;
         }
         else
             throw new CompilerException("Unexpected struct type " + fieldExpr.object.type);
@@ -155,6 +171,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.CallExpr callExpr, boolean enter) {
         if (!enter) {
+            if (callExpr.type != null)
+                return this;
             validType(callExpr.callee.type, false);
             if (callExpr.callee.type instanceof Type.TypeFunction f) {
                 callExpr.type = f.returnType;
@@ -192,6 +210,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.LiteralExpr literalExpr, boolean enter) {
         if (enter) {
+            if (literalExpr.type != null)
+                return this;
             if (literalExpr.value.kind == Token.Kind.NUM) {
                 literalExpr.type = typeDictionary.INT;
             }
@@ -209,6 +229,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.ArrayLoadExpr arrayIndexExpr, boolean enter) {
         if (!enter) {
+            if (arrayIndexExpr.type != null)
+                return this;
             validType(arrayIndexExpr.array.type, false);
             Type.TypeArray arrayType = null;
             if (arrayIndexExpr.array.type instanceof Type.TypeArray ta) {
@@ -231,6 +253,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.ArrayStoreExpr arrayIndexExpr, boolean enter) {
         if (!enter) {
+            if (arrayIndexExpr.type != null)
+                return this;
             validType(arrayIndexExpr.array.type, false);
             Type.TypeArray arrayType = null;
             if (arrayIndexExpr.array.type instanceof Type.TypeArray ta) {
@@ -256,6 +280,8 @@ public class SemaAssignTypes implements ASTVisitor {
     public ASTVisitor visit(AST.NewExpr newExpr, boolean enter) {
         if (enter)
             return this;
+        if (newExpr.type != null)
+            return this;
         if (newExpr.typeExpr.type == null)
             throw new CompilerException("Unresolved type in new expression");
         validType(newExpr.typeExpr.type, false);
@@ -266,6 +292,14 @@ public class SemaAssignTypes implements ASTVisitor {
         }
         else if (newExpr.typeExpr.type instanceof Type.TypeArray arrayType) {
             newExpr.type = newExpr.typeExpr.type;
+            if (newExpr.len != null) {
+                if (!(newExpr.len.type instanceof Type.TypeInteger))
+                    throw new CompilerException("Array len must be integer type");
+                if (newExpr.initValue != null) {
+                    if (!arrayType.getElementType().isAssignable(newExpr.initValue.type))
+                        throw new CompilerException("Array init value must be assignable to array element type");
+                }
+            }
         }
         else
             throw new CompilerException("Unsupported type in new expression");
@@ -278,6 +312,8 @@ public class SemaAssignTypes implements ASTVisitor {
             return this;
         if (initExpr.newExpr.type == null)
             throw new CompilerException("Unresolved type in new expression");
+        if (initExpr.type != null)
+            return this;
         validType(initExpr.newExpr.type, false);
         if (initExpr.newExpr.type instanceof Type.TypeNullable)
             throw new CompilerException("new cannot be used to create a Nullable type");
@@ -290,6 +326,8 @@ public class SemaAssignTypes implements ASTVisitor {
             }
         }
         else if (initExpr.newExpr.type instanceof Type.TypeArray arrayType) {
+            if (initExpr.initExprList.size() > 0)
+                initExpr.initExprList.removeIf(e->e instanceof AST.InitFieldExpr);
             for (AST.Expr expr: initExpr.initExprList) {
                 checkAssignmentCompatible(arrayType.getElementType(), expr.type);
             }
@@ -303,6 +341,8 @@ public class SemaAssignTypes implements ASTVisitor {
     @Override
     public ASTVisitor visit(AST.NameExpr nameExpr, boolean enter) {
         if (!enter)
+            return this;
+        if (nameExpr.type != null)
             return this;
         var symbol = currentScope.lookup(nameExpr.name);
         if (symbol == null) {

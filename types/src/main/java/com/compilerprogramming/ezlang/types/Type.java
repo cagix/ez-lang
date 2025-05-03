@@ -53,7 +53,7 @@ public abstract class Type {
     public String name() { return name; }
 
     public boolean isAssignable(Type other) {
-        if (other instanceof TypeVoid || other instanceof TypeUnknown)
+        if (other == null || other instanceof TypeVoid || other instanceof TypeUnknown)
             return false;
         if (this == other || equals(other)) return true;
         if (this instanceof TypeNullable nullable) {

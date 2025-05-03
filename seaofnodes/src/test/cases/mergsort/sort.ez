@@ -6,14 +6,15 @@ func merge_sort(a: [Int], b: [Int], n: Int)
     split_merge(a, 0, n, b)
 }
 
-func split_merge(b: [Int], begin: Int, end: Int, a: [Int])
+func split_merge(b: [Int], begin: Int, end: Int, a: [Int])->Int
 {
     if (end - begin <= 1)
-        return;
+        return 0
     var middle = (end + begin) / 2
     split_merge(a, begin, middle, b)
     split_merge(a, middle, end, b)
     merge(b, begin, middle, end, a)
+    return 0
 }
 
 func merge(b: [Int], begin: Int, middle: Int, end: Int, a: [Int])

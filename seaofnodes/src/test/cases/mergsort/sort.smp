@@ -17,23 +17,34 @@ val split_merge = { int[] b, int begin, int end, int[] a ->
 };
 
 val merge = { int[] b, int begin, int middle, int end, int[] a ->
-    int i = begin, j = middle;
-
-    for (int k = begin; k < end; k++) {
+    int i = begin;
+    int j = middle;
+    int k = begin;
+    while (k < end) {
         // && and ||
         bool cond = false;
         if (i < middle) {
             if (j >= end)          cond = true;
             else if (a[i] <= a[j]) cond = true;
         }
-        if (cond) b[k] = a[i++];
-        else      b[k] = a[j++];
+        if (cond) {
+            b[k] = a[i];
+            i = i + 1;
+        }
+        else {
+            b[k] = a[j];
+            j = j + 1;
+        }
+        k = k + 1;
     }
 };
 
 val copy_array = { int[] a, int begin, int end, int[] b ->
-    for (int k = begin; k < end; k++)
+    int k = begin;
+    while (k < end) {
         b[k] = a[k];
+        k = k + 1;
+    }
 };
 
 val eq = { int[] a, int[] b, int n ->

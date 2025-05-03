@@ -670,4 +670,54 @@ L1:
 """, result);
     }
 
+    @Test
+    public void testSSA18()
+    {
+        String src = """
+                func foo(len: Int, val: Int, x: Int, y: Int)->[Int] {
+                    if (x > y) {
+                        len=len+x
+                        val=val+x
+                    }
+                    return new [Int]{len=len,value=val} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func foo(len: Int,val: Int,x: Int,y: Int)->[Int]
+Reg #0 len 0
+Reg #1 val 1
+Reg #2 x 2
+Reg #3 y 3
+Reg #4 %t4 4
+Reg #5 %t5 5
+Reg #6 len_1 0
+Reg #7 %t7 7
+Reg #8 val_1 1
+Reg #9 %t9 9
+Reg #10 len_2 0
+Reg #11 val_2 1
+L0:
+    arg len
+    arg val
+    arg x
+    arg y
+    %t4 = x>y
+    if %t4 goto L2 else goto L3
+L2:
+    %t5 = len+x
+    len_1 = %t5
+    %t7 = val+x
+    val_1 = %t7
+    goto  L3
+L3:
+    val_2 = phi(val, val_1)
+    len_2 = phi(len, len_1)
+    %t9 = New([Int], len=len_2, initValue=val_2)
+    ret %t9
+    goto  L1
+L1:
+""", result);
+    }
+
 }

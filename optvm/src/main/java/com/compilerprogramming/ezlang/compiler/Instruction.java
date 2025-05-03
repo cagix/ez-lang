@@ -124,14 +124,28 @@ public abstract class Instruction {
             super(I_NEW_ARRAY, destOperand);
             this.type = type;
         }
+        public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand, Operand len) {
+            super(I_NEW_ARRAY, destOperand, len);
+            this.type = type;
+        }
+        public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand, Operand len, Operand initValue) {
+            super(I_NEW_ARRAY, destOperand, len, initValue);
+            this.type = type;
+        }
+        public Operand len() { return uses.length > 0 ? uses[0] : null; }
+        public Operand initValue() { return uses.length > 1 ? uses[1] : null; }
         public Operand.RegisterOperand destOperand() { return def; }
         @Override
         public StringBuilder toStr(StringBuilder sb) {
-            return sb.append(def)
+            sb.append(def)
                     .append(" = ")
                     .append("New(")
-                    .append(type)
-                    .append(")");
+                    .append(type);
+            if (len() != null)
+                sb.append(", len=").append(len());
+            if (initValue() != null)
+                sb.append(", initValue=").append(initValue());
+            return sb.append(")");
         }
     }
 

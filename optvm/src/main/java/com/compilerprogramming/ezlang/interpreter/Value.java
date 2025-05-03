@@ -17,9 +17,12 @@ public class Value {
     static public class ArrayValue extends Value {
         public final Type.TypeArray arrayType;
         public final ArrayList<Value> values;
-        public ArrayValue(Type.TypeArray arrayType) {
+        public ArrayValue(Type.TypeArray arrayType, long len, Value initValue) {
             this.arrayType = arrayType;
             values = new ArrayList<>();
+            for (long i = 0; i < len; i++) {
+                values.add(initValue);
+            }
         }
     }
     static public class StructValue extends Value {
