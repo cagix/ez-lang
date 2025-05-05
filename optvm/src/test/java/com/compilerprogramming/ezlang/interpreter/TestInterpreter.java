@@ -693,4 +693,29 @@ func main()->Int
                 integerValue.value == 1);
     }
 
+    @Test
+    public void testFunction108() {
+        String src = """
+                func make(len: Int, val: Int)->[Int]
+                {
+                    return new [Int]{len=len, value=val}
+                }
+                func main()->Int
+                {
+                    var arr = make(3,3);
+                    var i = 0
+                    while (i < 3) {
+                        if (arr[i] != 3)
+                            return 1
+                        i = i + 1
+                    }
+                    return 0
+                }
+                """;
+        var value = compileAndRun(src, "main", Options.OPT);
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 0);
+    }
+
 }
