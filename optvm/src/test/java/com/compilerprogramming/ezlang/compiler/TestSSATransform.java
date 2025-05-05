@@ -24,10 +24,12 @@ public class TestSSATransform {
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
+                //functionBuilder.toDot(sb,false);
                 new EnterSSA(functionBuilder, Options.NONE);
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
+                //functionBuilder.toDot(sb,false);
                 new ExitSSA(functionBuilder, Options.NONE);
                 sb.append("After exiting SSA\n");
                 sb.append("=================\n");
@@ -3066,20 +3068,12 @@ L1:
         String src = """
 func bug(N: Int)
 {
-    // The main Sieve array
-    //var ary = new [Int]{len=N,value=0}
     var p=2
-    // Find primes while p^2 < N
-    while( p*p < N ) {
-        // skip marked non-primes
-        //while( ary[p] ) {
-        while (p) {
+    while( p < N ) {
+        if (p) {
             p = p + 1
         }
-        p = p + 1
     }
-
-    // Now just collect the remaining primes, no more marking
     while ( p < N ) {
         p = p + 1
     }
