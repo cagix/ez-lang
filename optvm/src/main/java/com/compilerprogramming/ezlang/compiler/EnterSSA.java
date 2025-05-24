@@ -41,6 +41,10 @@ public class EnterSSA {
             System.out.println("Pre SSA Dominator Tree");
             System.out.println(domTree.generateDotOutput());
         }
+        if (options.contains(Options.DUMP_PRE_SSA_DOMFRONTIERS)) {
+            System.out.println("Pre SSA Dominance Frontiers");
+            System.out.println(domTree.listDomFrontiers());
+        }
         this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
         new Liveness(bytecodeFunction); // EWe require liveness info to construct pruned ssa

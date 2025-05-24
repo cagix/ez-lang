@@ -26,6 +26,7 @@ public class TestSSATransform {
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
                 //functionBuilder.toDot(sb,false);
                 new EnterSSA(functionBuilder, Options.NONE);
+                //new EnterSSA(functionBuilder, EnumSet.of(DUMP_PRE_SSA_DOMFRONTIERS));
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);

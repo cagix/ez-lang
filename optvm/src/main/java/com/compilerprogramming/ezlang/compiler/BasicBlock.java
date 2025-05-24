@@ -213,6 +213,14 @@ public class BasicBlock {
         sb.append("</TABLE>");
         return sb;
     }
+    public StringBuilder listDomFrontiers(StringBuilder sb) {
+        sb.append("L").append(this.bid).append(":");
+        for (BasicBlock bb: dominationFrontier) {
+            sb.append(" L").append(bb.bid);
+        }
+        sb.append("\n");
+        return sb;
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
