@@ -48,6 +48,10 @@ public class EnterSSA {
         this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
         new Liveness(bytecodeFunction); // EWe require liveness info to construct pruned ssa
+        if (options.contains(Options.DUMP_PRE_SSA_LIVENESS)) {
+            System.out.println("Pre SSA Liveness");
+            System.out.println(bytecodeFunction.toStr(new StringBuilder(), true));
+        }
         insertPhis();
         renameVars();
         bytecodeFunction.isSSA = true;
