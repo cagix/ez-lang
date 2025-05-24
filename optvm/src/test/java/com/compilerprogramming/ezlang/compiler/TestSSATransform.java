@@ -2279,7 +2279,7 @@ L6:
     %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
-    %t6_0 = a_4+i_1
+    %t6_0 = a_2+i_1
     %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     goto  L10
@@ -2330,7 +2330,7 @@ L6:
     %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
-    %t6_0 = a_4+i_1
+    %t6_0 = a_2+i_1
     %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     a_6 = a_5
@@ -3081,6 +3081,104 @@ func bug(N: Int)
 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
+        Assert.assertEquals("""
+func bug
+Before SSA
+==========
+L0:
+    arg N
+    p = 2
+    goto  L2
+L2:
+    %t2 = p<N
+    if %t2 goto L3 else goto L4
+L3:
+    if p goto L5 else goto L6
+L5:
+    %t3 = p+1
+    p = %t3
+    goto  L6
+L6:
+    goto  L2
+L4:
+    goto  L7
+L7:
+    %t4 = p<N
+    if %t4 goto L8 else goto L9
+L8:
+    %t5 = p+1
+    p = %t5
+    goto  L7
+L9:
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg N_0
+    p_0 = 2
+    goto  L2
+L2:
+    p_1 = phi(p_0, p_5)
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    goto  L6
+L6:
+    p_5 = phi(p_1, p_4)
+    goto  L2
+L4:
+    goto  L7
+L7:
+    p_2 = phi(p_1, p_3)
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    goto  L7
+L9:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg N_0
+    p_0 = 2
+    p_1 = p_0
+    goto  L2
+L2:
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    p_5 = p_1
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    p_5 = p_4
+    goto  L6
+L6:
+    p_1 = p_5
+    goto  L2
+L4:
+    p_2 = p_1
+    goto  L7
+L7:
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    p_2 = p_3
+    goto  L7
+L9:
+    goto  L1
+L1:
+""", result);
     }
 }

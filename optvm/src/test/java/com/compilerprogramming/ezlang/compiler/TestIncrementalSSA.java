@@ -607,6 +607,111 @@ L1:
     }
 
     @Test
+    public void testSSA11() {
+        String src = """
+        func main()->Int {
+            var a = 0
+            var i = 0
+            var j = 0
+            while (i < 3) {
+                j = 0
+                while (j < 3) {
+                    if (i == j) 
+                        a = a + i + j
+                    else if (i > j)
+                        a = a - 1
+                    j = j + 1        
+                }
+                i = i + 1    
+            }
+            return a
+        }
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func main()->Int
+Reg #0 a 0
+Reg #1 i 1
+Reg #2 j 2
+Reg #3 %t3 3
+Reg #4 i_1 1
+Reg #5 j_1 2
+Reg #6 %t6 6
+Reg #7 j_2 2
+Reg #8 %t8 8
+Reg #9 i_2 1
+Reg #10 %t10 10
+Reg #11 a_1 0
+Reg #12 %t12 12
+Reg #13 a_2 0
+Reg #14 %t14 14
+Reg #15 %t15 15
+Reg #16 a_3 0
+Reg #17 %t17 17
+Reg #18 j_3 2
+Reg #19 j_4 2
+Reg #20 j_5 2
+Reg #21 a_4 0
+Reg #22 a_5 0
+Reg #23 a_6 0
+Reg #24 i_3 1
+Reg #25 i_4 1
+Reg #26 %t26 26
+Reg #27 i_5 1
+L0:
+    a = 0
+    i = 0
+    j = 0
+    goto  L2
+L2:
+    a_4 = phi(a, a_1)
+    i_1 = phi(i, i_5)
+    %t3 = i_1<3
+    if %t3 goto L3 else goto L4
+L3:
+    j_1 = 0
+    goto  L5
+L5:
+    a_1 = phi(a_4, a_5)
+    j_2 = phi(j_1, j_5)
+    %t6 = j_2<3
+    if %t6 goto L6 else goto L7
+L6:
+    %t8 = i_1==j_2
+    if %t8 goto L8 else goto L9
+L8:
+    %t10 = a_1+i_1
+    %t12 = %t10+j_2
+    a_2 = %t12
+    goto  L10
+L10:
+    a_5 = phi(a_2, a_6)
+    %t17 = j_2+1
+    j_5 = %t17
+    goto  L5
+L9:
+    %t14 = i_1>j_2
+    if %t14 goto L11 else goto L12
+L11:
+    %t15 = a_1-1
+    a_3 = %t15
+    goto  L12
+L12:
+    a_6 = phi(a_1, a_3)
+    goto  L10
+L7:
+    %t26 = i_2+1
+    i_5 = %t26
+    goto  L2
+L4:
+    ret a_4
+    goto  L1
+L1:
+""", result);
+    }
+
+
+    @Test
     public void testSSA17() {
         String src = """
 func merge(begin: Int, middle: Int, end: Int)
@@ -737,6 +842,51 @@ func bug(N: Int)
 }
                 """;
         String result = compileSrc(src);
-        System.out.println(result);
-    }
+        Assert.assertEquals("""
+func bug(N: Int)
+Reg #0 N 0
+Reg #1 p 1
+Reg #2 %t2 2
+Reg #3 p_1 1
+Reg #4 N_1 0
+Reg #5 %t5 5
+Reg #6 p_2 1
+Reg #7 N_2 0
+Reg #8 p_3 1
+Reg #9 %t9 9
+Reg #10 p_4 1
+Reg #11 N_3 0
+Reg #12 %t12 12
+Reg #13 p_5 1
+L0:
+    arg N
+    p = 2
+    goto  L2
+L2:
+    p_1 = phi(p, p_3)
+    %t2 = p_1<N
+    if %t2 goto L3 else goto L4
+L3:
+    if p_1 goto L5 else goto L6
+L5:
+    %t5 = p_1+1
+    p_2 = %t5
+    goto  L6
+L6:
+    p_3 = phi(p_1, p_2)
+    goto  L2
+L4:
+    goto  L7
+L7:
+    p_4 = phi(p_1, p_5)
+    %t9 = p_4<N_1
+    if %t9 goto L8 else goto L9
+L8:
+    %t12 = p_4+1
+    p_5 = %t12
+    goto  L7
+L9:
+    goto  L1
+L1:
+""", result);    }
 }

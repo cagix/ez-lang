@@ -185,8 +185,9 @@ public class EnterSSA {
         }
         // Pop stacks for defs
         for (Instruction i: block.instructions) {
-            if (i.definesVar()) {
-                var reg = i.def();
+            // Phis don't answer to definesVar() or def()
+            if (i.definesVar() || i instanceof Instruction.Phi) {
+                var reg = i instanceof Instruction.Phi phi ? phi.value() : i.def();
                 stacks[reg.nonSSAId()].pop();
             }
         }
