@@ -203,7 +203,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t0 = New([Int])
+                    %t0 = New([Int], len=3)
                     %t0[0] = 1
                     %t0[1] = 2
                     %t0[2] = 3
@@ -223,7 +223,7 @@ public class TestCompiler {
         String result = compileSrc(src);
         Assert.assertEquals("""
                 L0:
-                    %t1 = New([Int])
+                    %t1 = New([Int], len=1)
                     %t1[0] = n
                     ret %t1
                     goto  L1
@@ -575,6 +575,89 @@ public class TestCompiler {
         Assert.assertEquals("""
 L0:
     ret null
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testFunction30() {
+        String src = """
+                func foo()->[Int] { 
+                    return new [Int]{len=10,value=0} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+    %t0 = New([Int], len=10, initValue=0)
+    ret %t0
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testFunction31() {
+        String src = """
+                func foo(len: Int, val: Int)->[Int] { 
+                    return new [Int]{len=len,value=val} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+    %t2 = New([Int], len=len, initValue=val)
+    ret %t2
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testFunction32() {
+        String src = """
+                func foo(len: Int, val: Int, x: Int)->[Int] { 
+                    return new [Int]{len=len+x,value=val+x} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+    %t4 = len+x
+    %t5 = val+x
+    %t3 = New([Int], len=%t4, initValue=%t5)
+    ret %t3
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testFunction33() {
+        String src = """
+                func foo(len: Int, val: Int, x: Int, y: Int)->[Int] {
+                    if (x > y) {
+                        len=len+x
+                        val=val+x
+                    }
+                    return new [Int]{len=len,value=val} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+L0:
+    %t4 = x>y
+    if %t4 goto L2 else goto L3
+L2:
+    %t4 = len+x
+    len = %t4
+    %t4 = val+x
+    val = %t4
+    goto  L3
+L3:
+    %t4 = New([Int], len=len, initValue=val)
+    ret %t4
     goto  L1
 L1:
 """, result);

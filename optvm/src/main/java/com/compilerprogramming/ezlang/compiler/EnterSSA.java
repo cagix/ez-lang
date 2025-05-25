@@ -41,9 +41,17 @@ public class EnterSSA {
             System.out.println("Pre SSA Dominator Tree");
             System.out.println(domTree.generateDotOutput());
         }
+        if (options.contains(Options.DUMP_PRE_SSA_DOMFRONTIERS)) {
+            System.out.println("Pre SSA Dominance Frontiers");
+            System.out.println(domTree.listDomFrontiers());
+        }
         this.blocks = domTree.blocks;   // the blocks are ordered reverse post order
         findNonLocalNames();
         new Liveness(bytecodeFunction); // EWe require liveness info to construct pruned ssa
+        if (options.contains(Options.DUMP_PRE_SSA_LIVENESS)) {
+            System.out.println("Pre SSA Liveness");
+            System.out.println(bytecodeFunction.toStr(new StringBuilder(), true));
+        }
         insertPhis();
         renameVars();
         bytecodeFunction.isSSA = true;
@@ -177,8 +185,9 @@ public class EnterSSA {
         }
         // Pop stacks for defs
         for (Instruction i: block.instructions) {
-            if (i.definesVar()) {
-                var reg = i.def();
+            // Phis don't answer to definesVar() or def()
+            if (i.definesVar() || i instanceof Instruction.Phi) {
+                var reg = i instanceof Instruction.Phi phi ? phi.value() : i.def();
                 stacks[reg.nonSSAId()].pop();
             }
         }

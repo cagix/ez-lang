@@ -1,10 +1,8 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * The dominator tree construction algorithm is based on figure 9.24,
@@ -34,6 +32,7 @@ public class DominatorTree {
         populateTree();
         setDepth();
         calculateDominanceFrontiers();
+        //calculateDominanceFrontiersMethod2();
     }
 
     private void calculateDominatorTree() {
@@ -41,7 +40,7 @@ public class DominatorTree {
         annotateBlocksWithRPO();
         sortBlocksByRPO();
 
-        // Set IDom entry for root to itself
+        // Set IDom entry for root to itself (see note below)
         entry.idom = entry;
         boolean changed = true;
         while (changed) {
@@ -68,6 +67,11 @@ public class DominatorTree {
                 }
             }
         }
+        // There is a contradiction between what is described in the book
+        // and the algo - as the book says the IDOM for root is undefined
+        // But we set this to itself when calculating. So after calculations
+        // are done, set this to null. This is technically more correct IMO.
+        entry.idom = null;
     }
 
     private void resetDomInfo() {
@@ -146,7 +150,7 @@ public class DominatorTree {
     private void populateTree() {
         for (BasicBlock block : blocks) {
             BasicBlock idom = block.idom;
-            if (idom == block) // root
+            if (idom == null) // root
                 continue;
             // add edge from idom to n
             idom.dominatedChildren.add(block);
@@ -166,12 +170,13 @@ public class DominatorTree {
      */
     private void setDepth_(BasicBlock block) {
         BasicBlock idom = block.idom;
-        if (idom != block) {
+        if (idom != null) {
             assert idom.domDepth > 0;
             block.domDepth = idom.domDepth + 1;
-        } else {
-            assert idom.domDepth == 1;
-            assert idom.domDepth == block.domDepth;
+        }
+        else {
+            // root (entry) block's idom is null
+            assert block.domDepth == 1;
         }
         for (BasicBlock child : block.dominatedChildren)
             setDepth_(child);
@@ -189,6 +194,8 @@ public class DominatorTree {
         //          while runner != doms[b]
         //              add b to runner’s dominance frontier set
         //              runner = doms[runner]
+        for (BasicBlock b: blocks)
+            b.dominationFrontier.clear();   // empty set
         for (BasicBlock b : blocks) {
             if (b.predecessors.size() >= 2) {
                 for (BasicBlock p : b.predecessors) {
@@ -204,6 +211,37 @@ public class DominatorTree {
         }
     }
 
+    // We have an alternative approach to calculating DOM Frontiers to
+    // allow us to validate above
+    private void calculateDominanceFrontiersMethod2()
+    {
+        for (BasicBlock b: blocks)
+            b.dominationFrontier.clear();   // empty set
+        computeDF(entry);
+    }
+
+    // Implementation based on description in pg 440 of
+    // Modern Compiler implementation in C
+    // Appel
+    private void computeDF(BasicBlock n) {
+        var S = new HashSet<BasicBlock>();
+        for (BasicBlock y: n.successors) {
+            if (y.idom != n)
+                S.add(y);
+        }
+        for (BasicBlock c: n.dominatedChildren) {
+            computeDF(c);
+            for (BasicBlock w: c.dominationFrontier) {
+                // Note that the printed book has an error below
+                // and errata gives the correct version
+                if (!n.dominates(w) || n==w) {
+                    S.add(w);
+                }
+            }
+        }
+        n.dominationFrontier.addAll(S);
+    }
+
     public String generateDotOutput() {
         StringBuilder sb = new StringBuilder();
         sb.append("digraph DomTree {\n");
@@ -212,10 +250,18 @@ public class DominatorTree {
         }
         for (BasicBlock n : blocks) {
             BasicBlock idom = n.idom;
-            if (idom == n) continue;
+            if (idom == null) continue;
             sb.append(idom.uniqueName()).append("->").append(n.uniqueName()).append(";\n");
         }
         sb.append("}\n");
+        return sb.toString();
+    }
+
+    public String listDomFrontiers() {
+        StringBuilder sb = new StringBuilder();
+        for (BasicBlock n : blocks) {
+            n.listDomFrontiers(sb);
+        }
         return sb.toString();
     }
 }

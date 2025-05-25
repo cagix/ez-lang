@@ -12,6 +12,8 @@ public class TestDominators {
         return node;
     }
 
+    // This CFG example is taken from page 473 of
+    // Engineering a Compiler 3rd ed
     BasicBlock makeGraph(List<BasicBlock> nodes) {
         BasicBlock r0 = add(nodes, new BasicBlock(1));
         BasicBlock r1 = add(nodes, new BasicBlock(2, r0));
@@ -28,15 +30,34 @@ public class TestDominators {
         return r0;
     }
 
+    // This DOM Tree example is taken from page 473 of
+    // Engineering a Compiler 3rd ed
     @Test
     public void testDominatorTree() {
         List<BasicBlock> nodes = new ArrayList<>();
         BasicBlock root = makeGraph(nodes);
         DominatorTree tree = new DominatorTree(root);
         System.out.println(tree.generateDotOutput());
-        long[] expectedIdoms = {0,1,1,2,2,4,2,6,6,6};
+        // expected            {_,_,0,1,1,3,1,5,5,5}
+        // Note first entry is not used
+        // Note we set idom of root to itself so the second entry
+        // does not match example
+        long[] expectedIdoms = {-1,0,1,2,2,4,2,6,6,6};
         for (BasicBlock n: nodes) {
-            Assert.assertEquals(expectedIdoms[(int)n.bid], n.idom.bid);
+            if (expectedIdoms[(int)n.bid] == 0)
+                Assert.assertNull(n.idom);
+            else
+                Assert.assertEquals(expectedIdoms[(int)n.bid], n.idom.bid);
+        }
+        // -1 means empty set
+        long[] expectedDF = {0,-1,2,4,2,-1,4,8,4,8};
+        for (BasicBlock n: nodes) {
+            if (expectedDF[(int)n.bid] == -1) {
+                Assert.assertTrue(n.dominationFrontier.isEmpty());
+            }
+            else {
+                Assert.assertEquals(1,n.dominationFrontier.size());
+            }
         }
     }
 

@@ -332,4 +332,106 @@ func main()->Int
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
                 integerValue.value == 1);
     }
+
+    @Test
+    public void testFunction108() {
+        String src = """
+                func make(len: Int, val: Int)->[Int]
+                {
+                    return new [Int]{len=len, value=val}
+                }
+                func main()->Int
+                {
+                    var arr = make(3,3);
+                    var i = 0
+                    while (i < 3) {
+                        if (arr[i] != 3)
+                            return 1
+                        i = i + 1
+                    }
+                    return 0
+                }
+                """;
+        var value = compileAndRun(src, "main");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 0);
+    }
+
+    @Test
+    public void testFunction109() {
+        String src = """
+func sieve(N: Int)->[Int]
+{
+    // The main Sieve array
+    var ary = new [Int]{len=N,value=0}
+    // The primes less than N
+    var primes = new [Int]{len=N/2,value=0}
+    // Number of primes so far, searching at index p
+    var nprimes = 0
+    var p=2
+    // Find primes while p^2 < N
+    while( p*p < N ) {
+        // skip marked non-primes
+        while( ary[p] ) {
+            p = p + 1
+        }
+        // p is now a prime
+        primes[nprimes] = p
+        nprimes = nprimes+1
+        // Mark out the rest non-primes
+        var i = p + p
+        while( i < N ) {
+            ary[i] = 1
+            i = i + p
+        }
+        p = p + 1
+    }
+
+    // Now just collect the remaining primes, no more marking
+    while ( p < N ) {
+        if( !ary[p] ) {
+            primes[nprimes] = p
+            nprimes = nprimes + 1
+        }
+        p = p + 1
+    }
+
+    // Copy/shrink the result array
+    var rez = new [Int]{len=nprimes,value=0}
+    var j = 0
+    while( j < nprimes ) {
+        rez[j] = primes[j]
+        j = j + 1
+    }
+    return rez
+}
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func main()->Int
+{
+    var rez = sieve(20)
+    var expected = new [Int]{2,3,5,7,11,13,17,19}
+    return eq(rez,expected,8)
+}
+""";
+        var value = compileAndRun(src, "main");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
 }

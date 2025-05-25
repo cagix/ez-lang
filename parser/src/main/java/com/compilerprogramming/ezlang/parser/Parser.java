@@ -333,6 +333,8 @@ public class Parser {
         matchIdentifier(lexer, "new");
         AST.TypeExpr resultType = parseTypeExpr(lexer);
         var newExpr = new AST.NewExpr(resultType);
+        AST.Expr lenExpr = null;
+        AST.Expr initValueExpr = null;
         List<AST.Expr> initExpr = new ArrayList<>();
         int index = 0;
         if (testPunctuation(lexer, "{")) {
@@ -343,10 +345,14 @@ public class Parser {
                     matchPunctuation(lexer, "=");
                     AST.Expr value = parseBool(lexer);
                     initExpr.add(new AST.InitFieldExpr(newExpr, fieldname, value));
+                    if (fieldname.equals("len"))
+                        lenExpr = value;
+                    else if (fieldname.equals("value"))
+                        initValueExpr = value;
                 }
                 else {
                     var indexLit = Integer.valueOf(index++);
-                    var indexExpr = new AST.LiteralExpr(Token.newNum(indexLit,indexLit.toString(),0));
+                    var indexExpr = new AST.LiteralExpr(Token.newNum(indexLit,indexLit.toString(),currentToken.lineNumber));
                     initExpr.add(new AST.ArrayInitExpr(newExpr, indexExpr, parseBool(lexer)));
                 }
                 if (isToken(currentToken, ","))
@@ -355,6 +361,12 @@ public class Parser {
             }
         }
         matchPunctuation(lexer, "}");
+        if (initExpr.size() > 0 && lenExpr == null) {
+            var sizeLit = Integer.valueOf(initExpr.size());
+            lenExpr = new AST.LiteralExpr(Token.newNum(sizeLit,sizeLit.toString(),currentToken.lineNumber));
+        }
+        if (lenExpr != null)
+            return new AST.InitExpr(new AST.NewExpr(newExpr.typeExpr, lenExpr, initValueExpr), initExpr);
         return new AST.InitExpr(newExpr, initExpr);
     }
 

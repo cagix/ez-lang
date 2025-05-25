@@ -554,7 +554,7 @@ public class Compiler {
         Type type = newExpr.type;
         if (type instanceof Type.TypeArray typeArray) {
             SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(typeArray.name());
-            return newArray(tarray._obj,newExpr.len==0?ZERO:con(newExpr.len));
+            return newArray(tarray._obj,newExpr.len==null?ZERO:compileExpr(newExpr.len));
         }
         else if (type instanceof Type.TypeStruct typeStruct) {
             SONTypeMemPtr tptr = (SONTypeMemPtr) TYPES.get(typeStruct.name());

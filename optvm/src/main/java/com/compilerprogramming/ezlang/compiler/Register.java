@@ -40,7 +40,7 @@ public class Register {
      *
      * Not unique.
      */
-    private final String name;
+    protected final String name;
     /**
      * The type of the register
      */
@@ -50,7 +50,7 @@ public class Register {
      * of the executing function. Multiple registers may share the same
      * frame slot because of different non-overlapping life times.
      */
-    private int frameSlot;
+    protected int frameSlot;
 
     public Register(int id, String name, Type type) {
         this(id,name,type,id);  // Initially frame slot is set to the unique ID
@@ -107,7 +107,15 @@ public class Register {
         public int nonSSAId() {
             return originalRegNumber;
         }
+
+        @Override
+        public String toString() {
+            return "SSARegister{name=" + name + ", id=" + id + ", frameSlot=" + frameSlot + ", ssaVersion=" + ssaVersion + ", originalRegNumber=" + originalRegNumber + '}';
+        }
     }
 
-
+    @Override
+    public String toString() {
+        return "Register{name=" + name + ", id=" + id + ", frameSlot=" + frameSlot + "}";
+    }
 }

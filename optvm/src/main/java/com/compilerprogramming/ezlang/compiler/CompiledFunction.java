@@ -426,7 +426,7 @@ public class CompiledFunction {
     }
 
     private boolean compileNewExpr(AST.NewExpr newExpr) {
-        codeNew(newExpr.type);
+        codeNew(newExpr.type,newExpr.len,newExpr.initValue);
         return false;
     }
 
@@ -644,20 +644,44 @@ public class CompiledFunction {
             codeMove(value, indexed);
     }
 
-    private void codeNew(Type type) {
+    private void codeNew(Type type, AST.Expr len, AST.Expr initVal) {
         if (type instanceof Type.TypeArray typeArray)
-            codeNewArray(typeArray);
+            codeNewArray(typeArray, len, initVal);
         else if (type instanceof Type.TypeStruct typeStruct)
             codeNewStruct(typeStruct);
         else
             throw new CompilerException("Unexpected type: " + type);
     }
 
-    private void codeNewArray(Type.TypeArray typeArray) {
+    private void codeNewArray(Type.TypeArray typeArray, AST.Expr len, AST.Expr initVal) {
         var temp = createTemp(typeArray);
+        Operand lenOperand = null;
+        Operand initValOperand = null;
+        if (len != null) {
+            boolean indexed = compileExpr(len);
+            if (indexed)
+                codeIndexedLoad();
+            if (initVal != null) {
+                indexed = compileExpr(initVal);
+                if (indexed)
+                    codeIndexedLoad();
+                initValOperand = pop();
+            }
+            lenOperand = pop();
+        }
+        Instruction insn;
         var target = (Operand.RegisterOperand) issa.write(temp);
-        var insn = new Instruction.NewArray(typeArray, target);
+        if (lenOperand != null) {
+            if (initValOperand != null)
+                insn = new Instruction.NewArray(typeArray, target, issa.read(lenOperand), issa.read(initValOperand));
+            else
+                insn = new Instruction.NewArray(typeArray, target, issa.read(lenOperand));
+        }
+        else
+            insn = new Instruction.NewArray(typeArray, target);
         issa.recordDef(target, insn);
+        if (lenOperand != null) issa.recordUse(lenOperand,insn);
+        if (initValOperand != null) issa.recordUse(initValOperand,insn);
         code(insn);
     }
 
@@ -941,6 +965,32 @@ public class CompiledFunction {
             return tryRemovingPhi(phi);
         }
 
+        // The Phi's def is dead so we need to remove
+        // all occurrences of this def from the memoized defs
+        // per Basic Block
+        private void clearDefs(Instruction.Phi phi) {
+            // TODO rethink the data structure for currentDef
+            var def = phi.value();
+            var defs = currentDef.get(def.nonSSAId());
+            // Make a list of block/reg that we need to delete
+            var bbList = new ArrayList<BasicBlock>();
+            var regList = new ArrayList<Register>();
+            for (var entries : defs.entrySet()) {
+                var bb = entries.getKey();
+                var reg = entries.getValue();
+                if (reg.equals(def)) {
+                    bbList.add(bb);
+                    regList.add(reg);
+                }
+            }
+            // Now delete them
+            for (int i = 0; i < bbList.size(); i++) {
+                var bb = bbList.get(i);
+                var reg = regList.get(i);
+                defs.remove(bb, reg);
+            }
+        }
+
         private Register tryRemovingPhi(Instruction.Phi phi) {
             Register same = null;
             // Check if phi has distinct inputs
@@ -967,6 +1017,9 @@ public class CompiledFunction {
             // remove all uses of phi to same and remove phi
             replacePhiValueAndUsers(phi, same);
             phi.block.deleteInstruction(phi);
+            // Since the phi is dead any references to its def
+            // must be removed; this is not mentioned in the paper
+            clearDefs(phi);
             // try to recursively remove all phi users, which might have become trivial
             for (var use: users) {
                 if (use instanceof Instruction.Phi phiuser)
@@ -979,25 +1032,28 @@ public class CompiledFunction {
          * Reroute all uses of phi to new value
          */
         private void replacePhiValueAndUsers(Instruction.Phi phi, Register newValue) {
-            var oldDefUseChain = ssaDefUses.get(phi.value());
+            var oldValue = phi.value();
+            var oldDefUseChain = ssaDefUses.get(oldValue);
             var newDefUseChain = ssaDefUses.get(newValue);
             if (newDefUseChain == null) {
-                // Can be null because this may be existing def
-                newDefUseChain = SSAEdges.addDef(ssaDefUses, newValue, phi);
+                throw new CompilerException("Expected error: undefined var " + newValue);
             }
             if (oldDefUseChain != null) {
                 for (Instruction instruction: oldDefUseChain.useList) {
+                    boolean replaced;
                     if (instruction instanceof Instruction.Phi somePhi) {
-                        somePhi.replaceInput(phi.value(), newValue);
+                        replaced = somePhi.replaceInput(oldValue, newValue);
                     }
                     else {
-                        instruction.replaceUse(phi.value(), newValue);
+                        replaced = instruction.replaceUse(oldValue, newValue);
+                    }
+                    if (!replaced) {
+                        throw new CompilerException("Discrepancy between var use list and var definition");
                     }
                 }
                 // Users of phi old value become users of the new value
                 newDefUseChain.useList.addAll(oldDefUseChain.useList);
                 oldDefUseChain.useList.clear();
-                // FIXME remove old def from def-use chains
             }
         }
 

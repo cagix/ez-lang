@@ -24,10 +24,13 @@ public class TestSSATransform {
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
+                //functionBuilder.toDot(sb,false);
                 new EnterSSA(functionBuilder, Options.NONE);
+                //new EnterSSA(functionBuilder, EnumSet.of(DUMP_PRE_SSA_DOMFRONTIERS));
                 sb.append("After SSA\n");
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
+                //functionBuilder.toDot(sb,false);
                 new ExitSSA(functionBuilder, Options.NONE);
                 sb.append("After exiting SSA\n");
                 sb.append("=================\n");
@@ -1662,7 +1665,7 @@ func foo
 Before SSA
 ==========
 L0:
-    %t2 = New([Int])
+    %t2 = New([Int], len=2)
     %t2[0] = 1
     %t2[1] = 2
     arr = %t2
@@ -1675,7 +1678,7 @@ L1:
 After SSA
 =========
 L0:
-    %t2_0 = New([Int])
+    %t2_0 = New([Int], len=2)
     %t2_0[0] = 1
     %t2_0[1] = 2
     arr_0 = %t2_0
@@ -1688,7 +1691,7 @@ L1:
 After exiting SSA
 =================
 L0:
-    %t2_0 = New([Int])
+    %t2_0 = New([Int], len=2)
     %t2_0[0] = 1
     %t2_0[1] = 2
     arr_0 = %t2_0
@@ -2276,7 +2279,7 @@ L6:
     %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
-    %t6_0 = a_4+i_1
+    %t6_0 = a_2+i_1
     %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     goto  L10
@@ -2327,7 +2330,7 @@ L6:
     %t5_0 = i_1==j_2
     if %t5_0 goto L8 else goto L9
 L8:
-    %t6_0 = a_4+i_1
+    %t6_0 = a_2+i_1
     %t7_0 = %t6_0+j_2
     a_5 = %t7_0
     a_6 = a_5
@@ -2781,7 +2784,7 @@ func foo
 Before SSA
 ==========
 L0:
-    %t1 = New([Foo?])
+    %t1 = New([Foo?], len=2)
     %t2 = New(Foo)
     %t2.i = 1
     %t1[0] = %t2
@@ -2805,7 +2808,7 @@ L3:
 After SSA
 =========
 L0:
-    %t1_0 = New([Foo?])
+    %t1_0 = New([Foo?], len=2)
     %t2_0 = New(Foo)
     %t2_0.i = 1
     %t1_0[0] = %t2_0
@@ -2830,7 +2833,7 @@ L3:
 After exiting SSA
 =================
 L0:
-    %t1_0 = New([Foo?])
+    %t1_0 = New([Foo?], len=2)
     %t2_0 = New(Foo)
     %t2_0.i = 1
     %t1_0[0] = %t2_0
@@ -2971,6 +2974,712 @@ L8:
 L9:
     goto  L3
 L3:
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testSSA18()
+    {
+        String src = """
+                func foo(len: Int, val: Int, x: Int, y: Int)->[Int] {
+                    if (x > y) {
+                        len=len+x
+                        val=val+x
+                    }
+                    return new [Int]{len=len,value=val} 
+                }
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func foo
+Before SSA
+==========
+L0:
+    arg len
+    arg val
+    arg x
+    arg y
+    %t4 = x>y
+    if %t4 goto L2 else goto L3
+L2:
+    %t5 = len+x
+    len = %t5
+    %t6 = val+x
+    val = %t6
+    goto  L3
+L3:
+    %t7 = New([Int], len=len, initValue=val)
+    ret %t7
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    goto  L3
+L3:
+    val_2 = phi(val_0, val_1)
+    len_2 = phi(len_0, len_1)
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    val_2 = val_0
+    len_2 = len_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    val_2 = val_1
+    len_2 = len_1
+    goto  L3
+L3:
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testSSA19()
+    {
+        String src = """
+func bug(N: Int)
+{
+    var p=2
+    while( p < N ) {
+        if (p) {
+            p = p + 1
+        }
+    }
+    while ( p < N ) {
+        p = p + 1
+    }
+}
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func bug
+Before SSA
+==========
+L0:
+    arg N
+    p = 2
+    goto  L2
+L2:
+    %t2 = p<N
+    if %t2 goto L3 else goto L4
+L3:
+    if p goto L5 else goto L6
+L5:
+    %t3 = p+1
+    p = %t3
+    goto  L6
+L6:
+    goto  L2
+L4:
+    goto  L7
+L7:
+    %t4 = p<N
+    if %t4 goto L8 else goto L9
+L8:
+    %t5 = p+1
+    p = %t5
+    goto  L7
+L9:
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg N_0
+    p_0 = 2
+    goto  L2
+L2:
+    p_1 = phi(p_0, p_5)
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    goto  L6
+L6:
+    p_5 = phi(p_1, p_4)
+    goto  L2
+L4:
+    goto  L7
+L7:
+    p_2 = phi(p_1, p_3)
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    goto  L7
+L9:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg N_0
+    p_0 = 2
+    p_1 = p_0
+    goto  L2
+L2:
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    p_5 = p_1
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    p_5 = p_4
+    goto  L6
+L6:
+    p_1 = p_5
+    goto  L2
+L4:
+    p_2 = p_1
+    goto  L7
+L7:
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    p_2 = p_3
+    goto  L7
+L9:
+    goto  L1
+L1:
+""", result);
+    }
+
+    @Test
+    public void testSSA20()
+    {
+        String src = """
+func sieve(N: Int)->[Int]
+{
+    // The main Sieve array
+    var ary = new [Int]{len=N,value=0}
+    // The primes less than N
+    var primes = new [Int]{len=N/2,value=0}
+    // Number of primes so far, searching at index p
+    var nprimes = 0
+    var p=2
+    // Find primes while p^2 < N
+    while( p*p < N ) {
+        // skip marked non-primes
+        while( ary[p] ) {
+            p = p + 1
+        }
+        // p is now a prime
+        primes[nprimes] = p
+        nprimes = nprimes+1
+        // Mark out the rest non-primes
+        var i = p + p
+        while( i < N ) {
+            ary[i] = 1
+            i = i + p
+        }
+        p = p + 1
+    }
+
+    // Now just collect the remaining primes, no more marking
+    while ( p < N ) {
+        if( !ary[p] ) {
+            primes[nprimes] = p
+            nprimes = nprimes + 1
+        }
+        p = p + 1
+    }
+
+    // Copy/shrink the result array
+    var rez = new [Int]{len=nprimes,value=0}
+    var j = 0
+    while( j < nprimes ) {
+        rez[j] = primes[j]
+        j = j + 1
+    }
+    return rez
+}
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func main()->Int
+{
+    var rez = sieve(20)
+    var expected = new [Int]{2,3,5,7,11,13,17,19}
+    return eq(rez,expected,8)
+}
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func sieve
+Before SSA
+==========
+L0:
+    arg N
+    %t8 = New([Int], len=N, initValue=0)
+    ary = %t8
+    %t10 = N/2
+    %t9 = New([Int], len=%t10, initValue=0)
+    primes = %t9
+    nprimes = 0
+    p = 2
+    goto  L2
+L2:
+    %t11 = p*p
+    %t12 = %t11<N
+    if %t12 goto L3 else goto L4
+L3:
+    goto  L5
+L5:
+    %t13 = ary[p]
+    if %t13 goto L6 else goto L7
+L6:
+    %t14 = p+1
+    p = %t14
+    goto  L5
+L7:
+    primes[nprimes] = p
+    %t15 = nprimes+1
+    nprimes = %t15
+    %t16 = p+p
+    i = %t16
+    goto  L8
+L8:
+    %t17 = i<N
+    if %t17 goto L9 else goto L10
+L9:
+    ary[i] = 1
+    %t18 = i+p
+    i = %t18
+    goto  L8
+L10:
+    %t19 = p+1
+    p = %t19
+    goto  L2
+L4:
+    goto  L11
+L11:
+    %t20 = p<N
+    if %t20 goto L12 else goto L13
+L12:
+    %t21 = ary[p]
+    %t22 = !%t21
+    if %t22 goto L14 else goto L15
+L14:
+    primes[nprimes] = p
+    %t23 = nprimes+1
+    nprimes = %t23
+    goto  L15
+L15:
+    %t24 = p+1
+    p = %t24
+    goto  L11
+L13:
+    %t25 = New([Int], len=nprimes, initValue=0)
+    rez = %t25
+    j = 0
+    goto  L16
+L16:
+    %t26 = j<nprimes
+    if %t26 goto L17 else goto L18
+L17:
+    %t27 = primes[j]
+    rez[j] = %t27
+    %t28 = j+1
+    j = %t28
+    goto  L16
+L18:
+    ret rez
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    arg N_0
+    %t8_0 = New([Int], len=N_0, initValue=0)
+    ary_0 = %t8_0
+    %t10_0 = N_0/2
+    %t9_0 = New([Int], len=%t10_0, initValue=0)
+    primes_0 = %t9_0
+    nprimes_0 = 0
+    p_0 = 2
+    goto  L2
+L2:
+    p_1 = phi(p_0, p_5)
+    nprimes_1 = phi(nprimes_0, nprimes_5)
+    %t11_0 = p_1*p_1
+    %t12_0 = %t11_0<N_0
+    if %t12_0 goto L3 else goto L4
+L3:
+    goto  L5
+L5:
+    p_4 = phi(p_1, p_6)
+    %t13_0 = ary_0[p_4]
+    if %t13_0 goto L6 else goto L7
+L6:
+    %t14_0 = p_4+1
+    p_6 = %t14_0
+    goto  L5
+L7:
+    primes_0[nprimes_1] = p_4
+    %t15_0 = nprimes_1+1
+    nprimes_5 = %t15_0
+    %t16_0 = p_4+p_4
+    i_0 = %t16_0
+    goto  L8
+L8:
+    i_1 = phi(i_0, i_2)
+    %t17_0 = i_1<N_0
+    if %t17_0 goto L9 else goto L10
+L9:
+    ary_0[i_1] = 1
+    %t18_0 = i_1+p_4
+    i_2 = %t18_0
+    goto  L8
+L10:
+    %t19_0 = p_4+1
+    p_5 = %t19_0
+    goto  L2
+L4:
+    goto  L11
+L11:
+    p_2 = phi(p_1, p_3)
+    nprimes_2 = phi(nprimes_1, nprimes_4)
+    %t20_0 = p_2<N_0
+    if %t20_0 goto L12 else goto L13
+L12:
+    %t21_0 = ary_0[p_2]
+    %t22_0 = !%t21_0
+    if %t22_0 goto L14 else goto L15
+L14:
+    primes_0[nprimes_2] = p_2
+    %t23_0 = nprimes_2+1
+    nprimes_3 = %t23_0
+    goto  L15
+L15:
+    nprimes_4 = phi(nprimes_2, nprimes_3)
+    %t24_0 = p_2+1
+    p_3 = %t24_0
+    goto  L11
+L13:
+    %t25_0 = New([Int], len=nprimes_2, initValue=0)
+    rez_0 = %t25_0
+    j_0 = 0
+    goto  L16
+L16:
+    j_1 = phi(j_0, j_2)
+    %t26_0 = j_1<nprimes_2
+    if %t26_0 goto L17 else goto L18
+L17:
+    %t27_0 = primes_0[j_1]
+    rez_0[j_1] = %t27_0
+    %t28_0 = j_1+1
+    j_2 = %t28_0
+    goto  L16
+L18:
+    ret rez_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg N_0
+    %t8_0 = New([Int], len=N_0, initValue=0)
+    ary_0 = %t8_0
+    %t10_0 = N_0/2
+    %t9_0 = New([Int], len=%t10_0, initValue=0)
+    primes_0 = %t9_0
+    nprimes_0 = 0
+    p_0 = 2
+    p_1 = p_0
+    nprimes_1 = nprimes_0
+    goto  L2
+L2:
+    %t11_0 = p_1*p_1
+    %t12_0 = %t11_0<N_0
+    if %t12_0 goto L3 else goto L4
+L3:
+    p_4 = p_1
+    goto  L5
+L5:
+    %t13_0 = ary_0[p_4]
+    if %t13_0 goto L6 else goto L7
+L6:
+    %t14_0 = p_4+1
+    p_6 = %t14_0
+    p_4 = p_6
+    goto  L5
+L7:
+    primes_0[nprimes_1] = p_4
+    %t15_0 = nprimes_1+1
+    nprimes_5 = %t15_0
+    %t16_0 = p_4+p_4
+    i_0 = %t16_0
+    i_1 = i_0
+    goto  L8
+L8:
+    %t17_0 = i_1<N_0
+    if %t17_0 goto L9 else goto L10
+L9:
+    ary_0[i_1] = 1
+    %t18_0 = i_1+p_4
+    i_2 = %t18_0
+    i_1 = i_2
+    goto  L8
+L10:
+    %t19_0 = p_4+1
+    p_5 = %t19_0
+    p_1 = p_5
+    nprimes_1 = nprimes_5
+    goto  L2
+L4:
+    p_2 = p_1
+    nprimes_2 = nprimes_1
+    goto  L11
+L11:
+    %t20_0 = p_2<N_0
+    if %t20_0 goto L12 else goto L13
+L12:
+    %t21_0 = ary_0[p_2]
+    %t22_0 = !%t21_0
+    nprimes_4 = nprimes_2
+    if %t22_0 goto L14 else goto L15
+L14:
+    primes_0[nprimes_2] = p_2
+    %t23_0 = nprimes_2+1
+    nprimes_3 = %t23_0
+    nprimes_4 = nprimes_3
+    goto  L15
+L15:
+    %t24_0 = p_2+1
+    p_3 = %t24_0
+    p_2 = p_3
+    nprimes_2 = nprimes_4
+    goto  L11
+L13:
+    %t25_0 = New([Int], len=nprimes_2, initValue=0)
+    rez_0 = %t25_0
+    j_0 = 0
+    j_1 = j_0
+    goto  L16
+L16:
+    %t26_0 = j_1<nprimes_2
+    if %t26_0 goto L17 else goto L18
+L17:
+    %t27_0 = primes_0[j_1]
+    rez_0[j_1] = %t27_0
+    %t28_0 = j_1+1
+    j_2 = %t28_0
+    j_1 = j_2
+    goto  L16
+L18:
+    ret rez_0
+    goto  L1
+L1:
+func eq
+Before SSA
+==========
+L0:
+    arg a
+    arg b
+    arg n
+    result = 1
+    i = 0
+    goto  L2
+L2:
+    %t5 = i<n
+    if %t5 goto L3 else goto L4
+L3:
+    %t6 = a[i]
+    %t7 = b[i]
+    %t8 = %t6!=%t7
+    if %t8 goto L5 else goto L6
+L5:
+    result = 0
+    goto  L4
+L4:
+    ret result
+    goto  L1
+L1:
+L6:
+    %t9 = i+1
+    i = %t9
+    goto  L2
+After SSA
+=========
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    goto  L2
+L2:
+    i_1 = phi(i_0, i_2)
+    %t5_0 = i_1<n_0
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    goto  L4
+L4:
+    result_2 = phi(result_0, result_1)
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    goto  L2
+After exiting SSA
+=================
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    i_1 = i_0
+    goto  L2
+L2:
+    %t5_0 = i_1<n_0
+    result_2 = result_0
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    result_2 = result_1
+    goto  L4
+L4:
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    i_1 = i_2
+    goto  L2
+func main
+Before SSA
+==========
+L0:
+    %t2 = 20
+    %t3 = call sieve params %t2
+    rez = %t3
+    %t4 = New([Int], len=8)
+    %t4[0] = 2
+    %t4[1] = 3
+    %t4[2] = 5
+    %t4[3] = 7
+    %t4[4] = 11
+    %t4[5] = 13
+    %t4[6] = 17
+    %t4[7] = 19
+    expected = %t4
+    %t5 = rez
+    %t6 = expected
+    %t7 = 8
+    %t8 = call eq params %t5, %t6, %t7
+    ret %t8
+    goto  L1
+L1:
+After SSA
+=========
+L0:
+    %t2_0 = 20
+    %t3_0 = call sieve params %t2_0
+    rez_0 = %t3_0
+    %t4_0 = New([Int], len=8)
+    %t4_0[0] = 2
+    %t4_0[1] = 3
+    %t4_0[2] = 5
+    %t4_0[3] = 7
+    %t4_0[4] = 11
+    %t4_0[5] = 13
+    %t4_0[6] = 17
+    %t4_0[7] = 19
+    expected_0 = %t4_0
+    %t5_0 = rez_0
+    %t6_0 = expected_0
+    %t7_0 = 8
+    %t8_0 = call eq params %t5_0, %t6_0, %t7_0
+    ret %t8_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    %t2_0 = 20
+    %t3_0 = call sieve params %t2_0
+    rez_0 = %t3_0
+    %t4_0 = New([Int], len=8)
+    %t4_0[0] = 2
+    %t4_0[1] = 3
+    %t4_0[2] = 5
+    %t4_0[3] = 7
+    %t4_0[4] = 11
+    %t4_0[5] = 13
+    %t4_0[6] = 17
+    %t4_0[7] = 19
+    expected_0 = %t4_0
+    %t5_0 = rez_0
+    %t6_0 = expected_0
+    %t7_0 = 8
+    %t8_0 = call eq params %t5_0, %t6_0, %t7_0
+    ret %t8_0
     goto  L1
 L1:
 """, result);

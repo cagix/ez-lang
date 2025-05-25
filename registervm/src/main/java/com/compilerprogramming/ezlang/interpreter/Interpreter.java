@@ -200,7 +200,19 @@ public class Interpreter {
                     }
                 }
                 case Instruction.NewArray newArrayInst -> {
-                    execStack.stack[base + newArrayInst.destOperand().frameSlot()] = new Value.ArrayValue(newArrayInst.type);
+                    long size = 0;
+                    Value initValue = null;
+                    if (newArrayInst.len() instanceof Operand.ConstantOperand constantOperand)
+                        size = constantOperand.value;
+                    else if (newArrayInst.len() instanceof Operand.RegisterOperand registerOperand) {
+                        Value.IntegerValue indexValue = (Value.IntegerValue) execStack.stack[base + registerOperand.frameSlot()];
+                        size = (long) indexValue.value;
+                    }
+                    if (newArrayInst.initValue() instanceof Operand.ConstantOperand constantOperand)
+                        initValue = new Value.IntegerValue(constantOperand.value);
+                    else if (newArrayInst.initValue() instanceof Operand.RegisterOperand registerOperand)
+                        initValue = execStack.stack[base + registerOperand.frameSlot()];
+                    execStack.stack[base + newArrayInst.destOperand().frameSlot()] = new Value.ArrayValue(newArrayInst.type, size, initValue);
                 }
                 case Instruction.NewStruct newStructInst -> {
                     execStack.stack[base + newStructInst.destOperand().frameSlot()] = new Value.StructValue(newStructInst.type);

@@ -383,7 +383,7 @@ public class CompiledFunction {
     }
 
     private boolean compileNewExpr(AST.NewExpr newExpr) {
-        codeNew(newExpr.type);
+        codeNew(newExpr.type,newExpr.len,newExpr.initValue);
         return false;
     }
 
@@ -603,13 +603,42 @@ public class CompiledFunction {
             code(new Instruction.Move(value, indexed));
     }
 
-    private void codeNew(Type type) {
-        var temp = createTemp(type);
+    private void codeNew(Type type, AST.Expr len, AST.Expr initVal) {
         if (type instanceof Type.TypeArray typeArray)
-            code(new Instruction.NewArray(typeArray, temp));
-        else if (type instanceof Type.TypeStruct typeStruct)
+            codeNewArray(typeArray, len, initVal);
+        else if (type instanceof Type.TypeStruct typeStruct) {
+            var temp = createTemp(type);
             code(new Instruction.NewStruct(typeStruct, temp));
+        }
         else
             throw new CompilerException("Unexpected type: " + type);
+    }
+
+    private void codeNewArray(Type.TypeArray typeArray, AST.Expr len, AST.Expr initVal) {
+        var temp = createTemp(typeArray);
+        Operand lenOperand = null;
+        Operand initValOperand = null;
+        if (len != null) {
+            boolean indexed = compileExpr(len);
+            if (indexed)
+                codeIndexedLoad();
+            if (initVal != null) {
+                indexed = compileExpr(initVal);
+                if (indexed)
+                    codeIndexedLoad();
+                initValOperand = pop();
+            }
+            lenOperand = pop();
+        }
+        Instruction insn;
+        if (lenOperand != null) {
+            if (initValOperand != null)
+                insn = new Instruction.NewArray(typeArray, temp, lenOperand, initValOperand);
+            else
+                insn = new Instruction.NewArray(typeArray, temp, lenOperand);
+        }
+        else
+            insn = new Instruction.NewArray(typeArray, temp);
+        code(insn);
     }
 }
