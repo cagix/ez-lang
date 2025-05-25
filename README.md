@@ -24,12 +24,12 @@ The project is under development and subject to change. At this point in time, w
 * [parser](./parser/README.md) - a recursive descent parser and AST.
 * [types](/types/README.md) - the type definitions.
 * [semantic](./semantic/README.md) - semantic analyzer.
-* [stackvm](./stackvm/README.md) - a compiler that generates IR for a stack based virtual machine.
+* [stackvm](./stackvm/README.md) - a compiler that generates IR for a stack based virtual machine. There is no interpreter for this instruction set yet.
 * [registervm](./registervm/README.md) - a compiler that generates a so called three-address IR and an interpreter that can execute the IR.
 * [optvm](./optvm/README.md) - WIP optimizing compiler with SSA transformation, constant propagation, graph coloring register allocation 
   targeting an abstract machine. Includes Interpreter to run the abstract machine.
-* [seaofnodes](./seaofnodes/README.md) - WIP compiler that generates Sea of Nodes IR, using SoN backend from [Simple](https://github.com/SeaOfNodes/Simple).
-  Will generate native code.
+* [seaofnodes](./seaofnodes/README.md) - WIP compiler that generates Sea of Nodes IR, using SoN backend from [Simple Chapter 21](https://github.com/SeaOfNodes/Simple).
+  Generate native code for X86-64, AArch64 and RISC-V.
 
 ## How can you contribute?
 
