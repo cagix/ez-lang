@@ -89,6 +89,8 @@ public class SSAEdges {
 
     public static void recordUse(Map<Register, SSADef> defUseChains, Instruction instruction, Register register) {
         SSADef def = defUseChains.get(register);
+        if (def == null)
+            throw new CompilerException("No def found for " + register);
         def.useList.add(instruction);
     }
 

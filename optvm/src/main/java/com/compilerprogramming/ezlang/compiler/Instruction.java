@@ -431,15 +431,18 @@ public abstract class Instruction {
             newUses[newUses.length-1] = new Operand.RegisterOperand(register);
             this.uses = newUses;
         }
-        public void replaceInput(Register oldReg, Register newReg) {
+        public boolean replaceInput(Register oldReg, Register newReg) {
+            boolean replaced = false;
             for (int i = 0; i < numInputs(); i++) {
                 if (isRegisterInput(i)) {
                     Register in = inputAsRegister(i);
                     if (in.equals(oldReg)) {
                         replaceInput(i, newReg);
+                        replaced = true;
                     }
                 }
             }
+            return replaced;
         }
     }
 

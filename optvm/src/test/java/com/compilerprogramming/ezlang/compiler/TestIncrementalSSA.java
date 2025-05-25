@@ -183,188 +183,189 @@ public class TestIncrementalSSA {
                 """;
         String result = compileSrc(src);
         Assert.assertEquals("""
-                func print(a: Int,b: Int,c: Int,d: Int)
-                Reg #0 a 0
-                Reg #1 b 1
-                Reg #2 c 2
-                Reg #3 d 3
-                L0:
-                    arg a
-                    arg b
-                    arg c
-                    arg d
-                    goto  L1
-                L1:
-                func example14_66(p: Int,q: Int,r: Int,s: Int,t: Int)
-                Reg #0 p 0
-                Reg #1 q 1
-                Reg #2 r 2
-                Reg #3 s 3
-                Reg #4 t 4
-                Reg #5 i 5
-                Reg #6 j 6
-                Reg #7 k 7
-                Reg #8 l 8
-                Reg #9 p_1 0
-                Reg #10 i_1 5
-                Reg #11 j_1 6
-                Reg #12 q_1 1
-                Reg #13 l_1 8
-                Reg #14 l_2 8
-                Reg #15 %t15 15
-                Reg #16 k_1 7
-                Reg #17 k_2 7
-                Reg #18 k_3 7
-                Reg #19 %t19 19
-                Reg #20 k_4 7
-                Reg #21 %t21 21
-                Reg #22 i_2 5
-                Reg #23 i_3 5
-                Reg #24 %t24 24
-                Reg #25 j_2 6
-                Reg #26 j_3 6
-                Reg #27 j_4 6
-                Reg #28 %t28 28
-                Reg #29 k_5 7
-                Reg #30 %t30 30
-                Reg #31 l_3 8
-                Reg #32 l_4 8
-                Reg #33 l_5 8
-                Reg #34 r_1 2
-                Reg #35 %t35 35
-                Reg #36 l_6 8
-                Reg #37 l_7 8
-                Reg #38 %t38 38
-                Reg #39 s_1 3
-                Reg #40 s_2 3
-                Reg #41 r_2 2
-                Reg #42 r_3 2
-                Reg #43 r_4 2
-                Reg #44 r_5 2
-                Reg #45 s_3 3
-                Reg #46 s_4 3
-                Reg #47 s_5 3
-                Reg #48 l_8 8
-                Reg #49 %t49 49
-                Reg #50 i_4 5
-                Reg #51 i_5 5
-                Reg #52 i_6 5
-                Reg #53 i_7 5
-                Reg #54 %t54 54
-                Reg #55 t_1 4
-                Reg #56 t_2 4
-                Reg #57 t_3 4
-                Reg #58 t_4 4
-                Reg #59 t_5 4
-                Reg #60 t_6 4
-                Reg #61 p_2 0
-                Reg #62 p_3 0
-                Reg #63 p_4 0
-                Reg #64 p_5 0
-                Reg #65 p_6 0
-                Reg #66 q_2 1
-                Reg #67 q_3 1
-                Reg #68 q_4 1
-                Reg #69 q_5 1
-                Reg #70 q_6 1
-                Reg #71 r_6 2
-                Reg #72 s_6 3
-                Reg #73 j_5 6
-                Reg #74 j_6 6
-                Reg #75 j_7 6
-                Reg #76 k_6 7
-                Reg #77 k_7 7
-                Reg #78 k_8 7
-                Reg #79 l_9 8
-                L0:
-                    arg p
-                    arg q
-                    arg r
-                    arg s
-                    arg t
-                    i = 1
-                    j = 1
-                    k = 1
-                    l = 1
-                    goto  L2
-                L2:
-                    t_5 = phi(t, t_1)
-                    s_5 = phi(s, s_2)
-                    r_4 = phi(r, r_1)
-                    l_5 = phi(l, l_9)
-                    j_4 = phi(j, j_5)
-                    k_2 = phi(k, k_6)
-                    q_1 = phi(q, q_2)
-                    i_1 = phi(i, i_7)
-                    p_1 = phi(p, p_2)
-                    if 1 goto L3 else goto L4
-                L3:
-                    if p_1 goto L5 else goto L6
-                L5:
-                    j_1 = i_1
-                    if q_1 goto L8 else goto L9
-                L8:
-                    l_1 = 2
-                    goto  L10
-                L10:
-                    l_4 = phi(l_1, l_2)
-                    %t15 = k_2+1
-                    k_3 = %t15
-                    goto  L7
-                L7:
-                    l_3 = phi(l_4, l_5)
-                    k_5 = phi(k_3, k_4)
-                    j_2 = phi(j_1, j_4)
-                    %t21 = i_1
-                    %t24 = j_2
-                    %t28 = k_5
-                    %t30 = l_3
-                    call print params %t21, %t24, %t28, %t30
-                    goto  L11
-                L11:
-                    l_6 = phi(l_3, l_8)
-                    if 1 goto L12 else goto L13
-                L12:
-                    if r_4 goto L14 else goto L15
-                L14:
-                    %t35 = l_6+4
-                    l_7 = %t35
-                    goto  L15
-                L15:
-                    l_8 = phi(l_6, l_7)
-                    %t38 = !s_5
-                    if %t38 goto L16 else goto L17
-                L16:
-                    goto  L13
-                L13:
-                    l_9 = phi(l_6, l_8)
-                    k_6 = phi(k_5, k_7)
-                    j_5 = phi(j_2, j_6)
-                    q_2 = phi(q_1, q_3)
-                    p_2 = phi(p_1, p_3)
-                    t_1 = phi(t_5, t_2)
-                    i_4 = phi(i_1, i_5)
-                    %t49 = i_4+6
-                    i_7 = %t49
-                    %t54 = !t_1
-                    if %t54 goto L18 else goto L19
-                L18:
-                    goto  L4
-                L4:
-                    goto  L1
-                L1:
-                L19:
-                    goto  L2
-                L17:
-                    goto  L11
-                L9:
-                    l_2 = 3
-                    goto  L10
-                L6:
-                    %t19 = k_2+2
-                    k_4 = %t19
-                    goto  L7
-                """, result);
+func print(a: Int,b: Int,c: Int,d: Int)
+Reg #0 a 0
+Reg #1 b 1
+Reg #2 c 2
+Reg #3 d 3
+L0:
+    arg a
+    arg b
+    arg c
+    arg d
+    goto  L1
+L1:
+func example14_66(p: Int,q: Int,r: Int,s: Int,t: Int)
+Reg #0 p 0
+Reg #1 q 1
+Reg #2 r 2
+Reg #3 s 3
+Reg #4 t 4
+Reg #5 i 5
+Reg #6 j 6
+Reg #7 k 7
+Reg #8 l 8
+Reg #9 p_1 0
+Reg #10 i_1 5
+Reg #11 j_1 6
+Reg #12 q_1 1
+Reg #13 l_1 8
+Reg #14 l_2 8
+Reg #15 %t15 15
+Reg #16 k_1 7
+Reg #17 k_2 7
+Reg #18 k_3 7
+Reg #19 %t19 19
+Reg #20 k_4 7
+Reg #21 %t21 21
+Reg #22 i_2 5
+Reg #23 i_3 5
+Reg #24 %t24 24
+Reg #25 j_2 6
+Reg #26 j_3 6
+Reg #27 j_4 6
+Reg #28 %t28 28
+Reg #29 k_5 7
+Reg #30 %t30 30
+Reg #31 l_3 8
+Reg #32 l_4 8
+Reg #33 l_5 8
+Reg #34 r_1 2
+Reg #35 %t35 35
+Reg #36 l_6 8
+Reg #37 l_7 8
+Reg #38 %t38 38
+Reg #39 s_1 3
+Reg #40 s_2 3
+Reg #41 r_2 2
+Reg #42 r_3 2
+Reg #43 r_4 2
+Reg #44 r_5 2
+Reg #45 s_3 3
+Reg #46 s_4 3
+Reg #47 s_5 3
+Reg #48 l_8 8
+Reg #49 %t49 49
+Reg #50 i_4 5
+Reg #51 i_5 5
+Reg #52 i_6 5
+Reg #53 i_7 5
+Reg #54 i_8 5
+Reg #55 %t55 55
+Reg #56 t_1 4
+Reg #57 t_2 4
+Reg #58 t_3 4
+Reg #59 t_4 4
+Reg #60 t_5 4
+Reg #61 t_6 4
+Reg #62 t_7 4
+Reg #63 p_2 0
+Reg #64 p_3 0
+Reg #65 p_4 0
+Reg #66 p_5 0
+Reg #67 p_6 0
+Reg #68 p_7 0
+Reg #69 q_2 1
+Reg #70 q_3 1
+Reg #71 q_4 1
+Reg #72 q_5 1
+Reg #73 q_6 1
+Reg #74 q_7 1
+Reg #75 r_6 2
+Reg #76 r_7 2
+Reg #77 r_8 2
+Reg #78 r_9 2
+Reg #79 s_6 3
+Reg #80 s_7 3
+Reg #81 s_8 3
+Reg #82 s_9 3
+Reg #83 j_5 6
+Reg #84 j_6 6
+Reg #85 j_7 6
+Reg #86 j_8 6
+Reg #87 k_6 7
+Reg #88 k_7 7
+Reg #89 k_8 7
+Reg #90 k_9 7
+Reg #91 l_9 8
+L0:
+    arg p
+    arg q
+    arg r
+    arg s
+    arg t
+    i = 1
+    j = 1
+    k = 1
+    l = 1
+    goto  L2
+L2:
+    l_5 = phi(l, l_9)
+    j_4 = phi(j, j_2)
+    k_2 = phi(k, k_5)
+    i_1 = phi(i, i_8)
+    if 1 goto L3 else goto L4
+L3:
+    if p goto L5 else goto L6
+L5:
+    j_1 = i_1
+    if q goto L8 else goto L9
+L8:
+    l_1 = 2
+    goto  L10
+L10:
+    l_4 = phi(l_1, l_2)
+    %t15 = k_2+1
+    k_3 = %t15
+    goto  L7
+L7:
+    l_3 = phi(l_4, l_5)
+    k_5 = phi(k_3, k_4)
+    j_2 = phi(j_1, j_4)
+    %t21 = i_1
+    %t24 = j_2
+    %t28 = k_5
+    %t30 = l_3
+    call print params %t21, %t24, %t28, %t30
+    goto  L11
+L11:
+    l_6 = phi(l_3, l_8)
+    if 1 goto L12 else goto L13
+L12:
+    if r goto L14 else goto L15
+L14:
+    %t35 = l_6+4
+    l_7 = %t35
+    goto  L15
+L15:
+    l_8 = phi(l_6, l_7)
+    %t38 = !s
+    if %t38 goto L16 else goto L17
+L16:
+    goto  L13
+L13:
+    l_9 = phi(l_6, l_8)
+    %t49 = i_1+6
+    i_8 = %t49
+    %t55 = !t
+    if %t55 goto L18 else goto L19
+L18:
+    goto  L4
+L4:
+    goto  L1
+L1:
+L19:
+    goto  L2
+L17:
+    goto  L11
+L9:
+    l_2 = 3
+    goto  L10
+L6:
+    %t19 = k_2+2
+    k_4 = %t19
+    goto  L7
+""", result);
     }
 
     @Test
@@ -658,6 +659,9 @@ Reg #24 i_3 1
 Reg #25 i_4 1
 Reg #26 %t26 26
 Reg #27 i_5 1
+Reg #28 i_6 1
+Reg #29 i_7 1
+Reg #30 i_8 1
 L0:
     a = 0
     i = 0
@@ -665,7 +669,7 @@ L0:
     goto  L2
 L2:
     a_4 = phi(a, a_1)
-    i_1 = phi(i, i_5)
+    i_1 = phi(i, i_8)
     %t3 = i_1<3
     if %t3 goto L3 else goto L4
 L3:
@@ -700,8 +704,8 @@ L12:
     a_6 = phi(a_1, a_3)
     goto  L10
 L7:
-    %t26 = i_2+1
-    i_5 = %t26
+    %t26 = i_1+1
+    i_8 = %t26
     goto  L2
 L4:
     ret a_4
@@ -859,6 +863,8 @@ Reg #10 p_4 1
 Reg #11 N_3 0
 Reg #12 %t12 12
 Reg #13 p_5 1
+Reg #14 N_4 0
+Reg #15 N_5 0
 L0:
     arg N
     p = 2
@@ -880,7 +886,7 @@ L4:
     goto  L7
 L7:
     p_4 = phi(p_1, p_5)
-    %t9 = p_4<N_1
+    %t9 = p_4<N
     if %t9 goto L8 else goto L9
 L8:
     %t12 = p_4+1
@@ -1003,36 +1009,52 @@ Reg #32 %t32 32
 Reg #33 p_4 4
 Reg #34 i_2 7
 Reg #35 N_3 0
-Reg #36 %t36 36
-Reg #37 p_5 4
-Reg #38 primes_3 2
-Reg #39 nprimes_4 3
-Reg #40 %t40 40
-Reg #41 p_6 4
-Reg #42 N_4 0
-Reg #43 %t43 43
-Reg #44 ary_4 1
-Reg #45 %t45 45
-Reg #46 primes_4 2
-Reg #47 nprimes_5 3
-Reg #48 %t48 48
-Reg #49 nprimes_6 3
-Reg #50 %t50 50
-Reg #51 p_7 4
-Reg #52 p_8 4
-Reg #53 N_5 0
-Reg #54 ary_5 1
-Reg #55 primes_5 2
-Reg #56 nprimes_7 3
-Reg #57 %t57 57
-Reg #58 %t58 58
-Reg #59 j_1 6
-Reg #60 nprimes_8 3
-Reg #61 %t61 61
-Reg #62 primes_6 2
-Reg #63 rez_1 5
-Reg #64 %t64 64
-Reg #65 j_2 6
+Reg #36 ary_4 1
+Reg #37 %t37 37
+Reg #38 p_5 4
+Reg #39 p_6 4
+Reg #40 N_4 0
+Reg #41 ary_5 1
+Reg #42 primes_3 2
+Reg #43 nprimes_4 3
+Reg #44 %t44 44
+Reg #45 p_7 4
+Reg #46 N_5 0
+Reg #47 %t47 47
+Reg #48 ary_6 1
+Reg #49 %t49 49
+Reg #50 primes_4 2
+Reg #51 nprimes_5 3
+Reg #52 %t52 52
+Reg #53 nprimes_6 3
+Reg #54 %t54 54
+Reg #55 p_8 4
+Reg #56 p_9 4
+Reg #57 N_6 0
+Reg #58 N_7 0
+Reg #59 N_8 0
+Reg #60 N_9 0
+Reg #61 ary_7 1
+Reg #62 ary_8 1
+Reg #63 ary_9 1
+Reg #64 ary_10 1
+Reg #65 primes_5 2
+Reg #66 primes_6 2
+Reg #67 primes_7 2
+Reg #68 primes_8 2
+Reg #69 nprimes_7 3
+Reg #70 %t70 70
+Reg #71 %t71 71
+Reg #72 j_1 6
+Reg #73 nprimes_8 3
+Reg #74 %t74 74
+Reg #75 primes_9 2
+Reg #76 rez_1 5
+Reg #77 %t77 77
+Reg #78 j_2 6
+Reg #79 primes_10 2
+Reg #80 primes_11 2
+Reg #81 rez_2 5
 L0:
     arg N
     %t8 = New([Int], len=N, initValue=0)
@@ -1045,17 +1067,15 @@ L0:
     goto  L2
 L2:
     nprimes_2 = phi(nprimes, nprimes_3)
-    ary_2 = phi(ary, ary_3)
-    N_1 = phi(N, N_2)
-    p_1 = phi(p, p_5)
+    p_1 = phi(p, p_6)
     %t11 = p_1*p_1
-    %t13 = %t11<N_1
+    %t13 = %t11<N
     if %t13 goto L3 else goto L4
 L3:
     goto  L5
 L5:
     p_2 = phi(p_1, p_3)
-    %t15 = ary_2[p_2]
+    %t15 = ary[p_2]
     if %t15 goto L6 else goto L7
 L6:
     %t18 = p_2+1
@@ -1070,55 +1090,55 @@ L7:
     goto  L8
 L8:
     i_1 = phi(i, i_2)
-    %t28 = i_1<N_1
+    %t28 = i_1<N
     if %t28 goto L9 else goto L10
 L9:
-    ary_1[i_1] = 1
+    ary[i_1] = 1
     %t32 = i_1+p_2
     i_2 = %t32
     goto  L8
 L10:
-    %t36 = p_4+1
-    p_5 = %t36
+    %t37 = p_2+1
+    p_6 = %t37
     goto  L2
 L4:
     goto  L11
 L11:
     nprimes_5 = phi(nprimes_2, nprimes_7)
-    p_6 = phi(p_1, p_8)
-    %t40 = p_6<N_1
-    if %t40 goto L12 else goto L13
+    p_7 = phi(p_1, p_9)
+    %t44 = p_7<N
+    if %t44 goto L12 else goto L13
 L12:
-    %t43 = ary_2[p_6]
-    %t45 = !%t43
-    if %t45 goto L14 else goto L15
+    %t47 = ary[p_7]
+    %t49 = !%t47
+    if %t49 goto L14 else goto L15
 L14:
-    primes_2[nprimes_5] = p_6
-    %t48 = nprimes_5+1
-    nprimes_6 = %t48
+    primes[nprimes_5] = p_7
+    %t52 = nprimes_5+1
+    nprimes_6 = %t52
     goto  L15
 L15:
     nprimes_7 = phi(nprimes_5, nprimes_6)
-    %t50 = p_6+1
-    p_8 = %t50
+    %t54 = p_7+1
+    p_9 = %t54
     goto  L11
 L13:
-    %t57 = New([Int], len=nprimes_5, initValue=0)
-    rez = %t57
+    %t70 = New([Int], len=nprimes_5, initValue=0)
+    rez = %t70
     j = 0
     goto  L16
 L16:
     j_1 = phi(j, j_2)
-    %t58 = j_1<nprimes_5
-    if %t58 goto L17 else goto L18
+    %t71 = j_1<nprimes_5
+    if %t71 goto L17 else goto L18
 L17:
-    %t61 = primes_4[j_1]
-    rez[j_1] = %t61
-    %t64 = j_1+1
-    j_2 = %t64
+    %t74 = primes[j_1]
+    rez[j_1] = %t74
+    %t77 = j_1+1
+    j_2 = %t77
     goto  L16
 L18:
-    ret rez_1
+    ret rez
     goto  L1
 L1:
 func eq(a: [Int],b: [Int],n: Int)->Int

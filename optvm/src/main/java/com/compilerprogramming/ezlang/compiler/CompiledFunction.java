@@ -965,6 +965,32 @@ public class CompiledFunction {
             return tryRemovingPhi(phi);
         }
 
+        // The Phi's def is dead so we need to remove
+        // all occurrences of this def from the memoized defs
+        // per Basic Block
+        private void clearDefs(Instruction.Phi phi) {
+            // TODO rethink the data structure for currentDef
+            var def = phi.value();
+            var defs = currentDef.get(def.nonSSAId());
+            // Make a list of block/reg that we need to delete
+            var bbList = new ArrayList<BasicBlock>();
+            var regList = new ArrayList<Register>();
+            for (var entries : defs.entrySet()) {
+                var bb = entries.getKey();
+                var reg = entries.getValue();
+                if (reg.equals(def)) {
+                    bbList.add(bb);
+                    regList.add(reg);
+                }
+            }
+            // Now delete them
+            for (int i = 0; i < bbList.size(); i++) {
+                var bb = bbList.get(i);
+                var reg = regList.get(i);
+                defs.remove(bb, reg);
+            }
+        }
+
         private Register tryRemovingPhi(Instruction.Phi phi) {
             Register same = null;
             // Check if phi has distinct inputs
@@ -991,6 +1017,9 @@ public class CompiledFunction {
             // remove all uses of phi to same and remove phi
             replacePhiValueAndUsers(phi, same);
             phi.block.deleteInstruction(phi);
+            // Since the phi is dead any references to its def
+            // must be removed; this is not mentioned in the paper
+            clearDefs(phi);
             // try to recursively remove all phi users, which might have become trivial
             for (var use: users) {
                 if (use instanceof Instruction.Phi phiuser)
@@ -1003,25 +1032,28 @@ public class CompiledFunction {
          * Reroute all uses of phi to new value
          */
         private void replacePhiValueAndUsers(Instruction.Phi phi, Register newValue) {
-            var oldDefUseChain = ssaDefUses.get(phi.value());
+            var oldValue = phi.value();
+            var oldDefUseChain = ssaDefUses.get(oldValue);
             var newDefUseChain = ssaDefUses.get(newValue);
             if (newDefUseChain == null) {
-                // Can be null because this may be existing def
-                newDefUseChain = SSAEdges.addDef(ssaDefUses, newValue, phi);
+                throw new CompilerException("Expected error: undefined var " + newValue);
             }
             if (oldDefUseChain != null) {
                 for (Instruction instruction: oldDefUseChain.useList) {
+                    boolean replaced;
                     if (instruction instanceof Instruction.Phi somePhi) {
-                        somePhi.replaceInput(phi.value(), newValue);
+                        replaced = somePhi.replaceInput(oldValue, newValue);
                     }
                     else {
-                        instruction.replaceUse(phi.value(), newValue);
+                        replaced = instruction.replaceUse(oldValue, newValue);
+                    }
+                    if (!replaced) {
+                        throw new CompilerException("Discrepancy between var use list and var definition");
                     }
                 }
                 // Users of phi old value become users of the new value
                 newDefUseChain.useList.addAll(oldDefUseChain.useList);
                 oldDefUseChain.useList.clear();
-                // FIXME remove old def from def-use chains
             }
         }
 
