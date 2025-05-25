@@ -250,44 +250,32 @@ Reg #50 i_4 5
 Reg #51 i_5 5
 Reg #52 i_6 5
 Reg #53 i_7 5
-Reg #54 i_8 5
-Reg #55 %t55 55
-Reg #56 t_1 4
-Reg #57 t_2 4
-Reg #58 t_3 4
-Reg #59 t_4 4
-Reg #60 t_5 4
-Reg #61 t_6 4
-Reg #62 t_7 4
-Reg #63 p_2 0
-Reg #64 p_3 0
-Reg #65 p_4 0
-Reg #66 p_5 0
-Reg #67 p_6 0
-Reg #68 p_7 0
-Reg #69 q_2 1
-Reg #70 q_3 1
-Reg #71 q_4 1
-Reg #72 q_5 1
-Reg #73 q_6 1
-Reg #74 q_7 1
-Reg #75 r_6 2
-Reg #76 r_7 2
-Reg #77 r_8 2
-Reg #78 r_9 2
-Reg #79 s_6 3
-Reg #80 s_7 3
-Reg #81 s_8 3
-Reg #82 s_9 3
-Reg #83 j_5 6
-Reg #84 j_6 6
-Reg #85 j_7 6
-Reg #86 j_8 6
-Reg #87 k_6 7
-Reg #88 k_7 7
-Reg #89 k_8 7
-Reg #90 k_9 7
-Reg #91 l_9 8
+Reg #54 %t54 54
+Reg #55 t_1 4
+Reg #56 t_2 4
+Reg #57 t_3 4
+Reg #58 t_4 4
+Reg #59 t_5 4
+Reg #60 t_6 4
+Reg #61 p_2 0
+Reg #62 p_3 0
+Reg #63 p_4 0
+Reg #64 p_5 0
+Reg #65 p_6 0
+Reg #66 q_2 1
+Reg #67 q_3 1
+Reg #68 q_4 1
+Reg #69 q_5 1
+Reg #70 q_6 1
+Reg #71 r_6 2
+Reg #72 s_6 3
+Reg #73 j_5 6
+Reg #74 j_6 6
+Reg #75 j_7 6
+Reg #76 k_6 7
+Reg #77 k_7 7
+Reg #78 k_8 7
+Reg #79 l_9 8
 L0:
     arg p
     arg q
@@ -303,7 +291,7 @@ L2:
     l_5 = phi(l, l_9)
     j_4 = phi(j, j_2)
     k_2 = phi(k, k_5)
-    i_1 = phi(i, i_8)
+    i_1 = phi(i, i_7)
     if 1 goto L3 else goto L4
 L3:
     if p goto L5 else goto L6
@@ -346,9 +334,9 @@ L16:
 L13:
     l_9 = phi(l_6, l_8)
     %t49 = i_1+6
-    i_8 = %t49
-    %t55 = !t
-    if %t55 goto L18 else goto L19
+    i_7 = %t49
+    %t54 = !t
+    if %t54 goto L18 else goto L19
 L18:
     goto  L4
 L4:
@@ -659,9 +647,6 @@ Reg #24 i_3 1
 Reg #25 i_4 1
 Reg #26 %t26 26
 Reg #27 i_5 1
-Reg #28 i_6 1
-Reg #29 i_7 1
-Reg #30 i_8 1
 L0:
     a = 0
     i = 0
@@ -669,7 +654,7 @@ L0:
     goto  L2
 L2:
     a_4 = phi(a, a_1)
-    i_1 = phi(i, i_8)
+    i_1 = phi(i, i_5)
     %t3 = i_1<3
     if %t3 goto L3 else goto L4
 L3:
@@ -705,7 +690,7 @@ L12:
     goto  L10
 L7:
     %t26 = i_1+1
-    i_8 = %t26
+    i_5 = %t26
     goto  L2
 L4:
     ret a_4
@@ -863,8 +848,6 @@ Reg #10 p_4 1
 Reg #11 N_3 0
 Reg #12 %t12 12
 Reg #13 p_5 1
-Reg #14 N_4 0
-Reg #15 N_5 0
 L0:
     arg N
     p = 2
@@ -1009,52 +992,36 @@ Reg #32 %t32 32
 Reg #33 p_4 4
 Reg #34 i_2 7
 Reg #35 N_3 0
-Reg #36 ary_4 1
-Reg #37 %t37 37
-Reg #38 p_5 4
-Reg #39 p_6 4
-Reg #40 N_4 0
-Reg #41 ary_5 1
-Reg #42 primes_3 2
-Reg #43 nprimes_4 3
-Reg #44 %t44 44
-Reg #45 p_7 4
-Reg #46 N_5 0
-Reg #47 %t47 47
-Reg #48 ary_6 1
-Reg #49 %t49 49
-Reg #50 primes_4 2
-Reg #51 nprimes_5 3
-Reg #52 %t52 52
-Reg #53 nprimes_6 3
-Reg #54 %t54 54
-Reg #55 p_8 4
-Reg #56 p_9 4
-Reg #57 N_6 0
-Reg #58 N_7 0
-Reg #59 N_8 0
-Reg #60 N_9 0
-Reg #61 ary_7 1
-Reg #62 ary_8 1
-Reg #63 ary_9 1
-Reg #64 ary_10 1
-Reg #65 primes_5 2
-Reg #66 primes_6 2
-Reg #67 primes_7 2
-Reg #68 primes_8 2
-Reg #69 nprimes_7 3
-Reg #70 %t70 70
-Reg #71 %t71 71
-Reg #72 j_1 6
-Reg #73 nprimes_8 3
-Reg #74 %t74 74
-Reg #75 primes_9 2
-Reg #76 rez_1 5
-Reg #77 %t77 77
-Reg #78 j_2 6
-Reg #79 primes_10 2
-Reg #80 primes_11 2
-Reg #81 rez_2 5
+Reg #36 %t36 36
+Reg #37 p_5 4
+Reg #38 primes_3 2
+Reg #39 nprimes_4 3
+Reg #40 %t40 40
+Reg #41 p_6 4
+Reg #42 N_4 0
+Reg #43 %t43 43
+Reg #44 ary_4 1
+Reg #45 %t45 45
+Reg #46 primes_4 2
+Reg #47 nprimes_5 3
+Reg #48 %t48 48
+Reg #49 nprimes_6 3
+Reg #50 %t50 50
+Reg #51 p_7 4
+Reg #52 p_8 4
+Reg #53 N_5 0
+Reg #54 ary_5 1
+Reg #55 primes_5 2
+Reg #56 nprimes_7 3
+Reg #57 %t57 57
+Reg #58 %t58 58
+Reg #59 j_1 6
+Reg #60 nprimes_8 3
+Reg #61 %t61 61
+Reg #62 primes_6 2
+Reg #63 rez_1 5
+Reg #64 %t64 64
+Reg #65 j_2 6
 L0:
     arg N
     %t8 = New([Int], len=N, initValue=0)
@@ -1067,7 +1034,7 @@ L0:
     goto  L2
 L2:
     nprimes_2 = phi(nprimes, nprimes_3)
-    p_1 = phi(p, p_6)
+    p_1 = phi(p, p_5)
     %t11 = p_1*p_1
     %t13 = %t11<N
     if %t13 goto L3 else goto L4
@@ -1098,44 +1065,44 @@ L9:
     i_2 = %t32
     goto  L8
 L10:
-    %t37 = p_2+1
-    p_6 = %t37
+    %t36 = p_2+1
+    p_5 = %t36
     goto  L2
 L4:
     goto  L11
 L11:
     nprimes_5 = phi(nprimes_2, nprimes_7)
-    p_7 = phi(p_1, p_9)
-    %t44 = p_7<N
-    if %t44 goto L12 else goto L13
+    p_6 = phi(p_1, p_8)
+    %t40 = p_6<N
+    if %t40 goto L12 else goto L13
 L12:
-    %t47 = ary[p_7]
-    %t49 = !%t47
-    if %t49 goto L14 else goto L15
+    %t43 = ary[p_6]
+    %t45 = !%t43
+    if %t45 goto L14 else goto L15
 L14:
-    primes[nprimes_5] = p_7
-    %t52 = nprimes_5+1
-    nprimes_6 = %t52
+    primes[nprimes_5] = p_6
+    %t48 = nprimes_5+1
+    nprimes_6 = %t48
     goto  L15
 L15:
     nprimes_7 = phi(nprimes_5, nprimes_6)
-    %t54 = p_7+1
-    p_9 = %t54
+    %t50 = p_6+1
+    p_8 = %t50
     goto  L11
 L13:
-    %t70 = New([Int], len=nprimes_5, initValue=0)
-    rez = %t70
+    %t57 = New([Int], len=nprimes_5, initValue=0)
+    rez = %t57
     j = 0
     goto  L16
 L16:
     j_1 = phi(j, j_2)
-    %t71 = j_1<nprimes_5
-    if %t71 goto L17 else goto L18
+    %t58 = j_1<nprimes_5
+    if %t58 goto L17 else goto L18
 L17:
-    %t74 = primes[j_1]
-    rez[j_1] = %t74
-    %t77 = j_1+1
-    j_2 = %t77
+    %t61 = primes[j_1]
+    rez[j_1] = %t61
+    %t64 = j_1+1
+    j_2 = %t64
     goto  L16
 L18:
     ret rez

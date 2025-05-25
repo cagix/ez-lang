@@ -965,14 +965,14 @@ public class CompiledFunction {
             return tryRemovingPhi(phi);
         }
 
-        // The Phi's def is dead so we need to remove
-        // all occurrences of this def from the memoized defs
+        // The Phi's def was replaced
+        // We must also replace all occurrences of the phi def from the memoized defs
         // per Basic Block
-        private void clearDefs(Instruction.Phi phi) {
+        private void replaceDefs(Instruction.Phi phi, Register newValue) {
             // TODO rethink the data structure for currentDef
             var def = phi.value();
             var defs = currentDef.get(def.nonSSAId());
-            // Make a list of block/reg that we need to delete
+            // Make a list of block/reg that we need to update
             var bbList = new ArrayList<BasicBlock>();
             var regList = new ArrayList<Register>();
             for (var entries : defs.entrySet()) {
@@ -983,14 +983,15 @@ public class CompiledFunction {
                     regList.add(reg);
                 }
             }
-            // Now delete them
+            // Now replace the phi def
             for (int i = 0; i < bbList.size(); i++) {
                 var bb = bbList.get(i);
                 var reg = regList.get(i);
-                defs.remove(bb, reg);
+                defs.replace(bb, reg, newValue);
             }
         }
 
+        // reference implementation https://github.com/dibyendumajumdar/libfirm/blob/master/ir/ir/ircons.c#L97
         private Register tryRemovingPhi(Instruction.Phi phi) {
             Register same = null;
             // Check if phi has distinct inputs
@@ -1017,9 +1018,6 @@ public class CompiledFunction {
             // remove all uses of phi to same and remove phi
             replacePhiValueAndUsers(phi, same);
             phi.block.deleteInstruction(phi);
-            // Since the phi is dead any references to its def
-            // must be removed; this is not mentioned in the paper
-            clearDefs(phi);
             // try to recursively remove all phi users, which might have become trivial
             for (var use: users) {
                 if (use instanceof Instruction.Phi phiuser)
@@ -1055,6 +1053,9 @@ public class CompiledFunction {
                 newDefUseChain.useList.addAll(oldDefUseChain.useList);
                 oldDefUseChain.useList.clear();
             }
+            // Since the phi is replaced by newvalue
+            // we must also update the memoized defs
+            replaceDefs(phi, newValue);
         }
 
         private List<Instruction> getUsesExcept(Instruction.Phi phi) {
