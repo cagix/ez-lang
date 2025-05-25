@@ -968,27 +968,10 @@ public class CompiledFunction {
         // The Phi's def was replaced
         // We must also replace all occurrences of the phi def from the memoized defs
         // per Basic Block
-        private void replaceDefs(Instruction.Phi phi, Register newValue) {
-            // TODO rethink the data structure for currentDef
-            var def = phi.value();
-            var defs = currentDef.get(def.nonSSAId());
-            // Make a list of block/reg that we need to update
-            var bbList = new ArrayList<BasicBlock>();
-            var regList = new ArrayList<Register>();
-            for (var entries : defs.entrySet()) {
-                var bb = entries.getKey();
-                var reg = entries.getValue();
-                if (reg.equals(def)) {
-                    bbList.add(bb);
-                    regList.add(reg);
-                }
-            }
-            // Now replace the phi def
-            for (int i = 0; i < bbList.size(); i++) {
-                var bb = bbList.get(i);
-                var reg = regList.get(i);
-                defs.replace(bb, reg, newValue);
-            }
+        private void replaceDefs(Register oldValue, Register newValue) {
+            var defs = currentDef.get(oldValue.nonSSAId());
+            for (var bb: defs.keySet())
+                defs.replace(bb, oldValue, newValue);
         }
 
         // reference implementation https://github.com/dibyendumajumdar/libfirm/blob/master/ir/ir/ircons.c#L97
@@ -1055,7 +1038,7 @@ public class CompiledFunction {
             }
             // Since the phi is replaced by newvalue
             // we must also update the memoized defs
-            replaceDefs(phi, newValue);
+            replaceDefs(oldValue, newValue);
         }
 
         private List<Instruction> getUsesExcept(Instruction.Phi phi) {
