@@ -824,6 +824,7 @@ L3:
 L1:
 """, result);
     }
+
     @Test
     public void testSSA19()
     {
@@ -888,5 +889,316 @@ L8:
 L9:
     goto  L1
 L1:
-""", result);    }
+""", result);
+    }
+
+    @Test
+    public void testSSA20()
+    {
+        String src = """
+func sieve(N: Int)->[Int]
+{
+    // The main Sieve array
+    var ary = new [Int]{len=N,value=0}
+    // The primes less than N
+    var primes = new [Int]{len=N/2,value=0}
+    // Number of primes so far, searching at index p
+    var nprimes = 0
+    var p=2
+    // Find primes while p^2 < N
+    while( p*p < N ) {
+        // skip marked non-primes
+        while( ary[p] ) {
+            p = p + 1
+        }
+        // p is now a prime
+        primes[nprimes] = p
+        nprimes = nprimes+1
+        // Mark out the rest non-primes
+        var i = p + p
+        while( i < N ) {
+            ary[i] = 1
+            i = i + p
+        }
+        p = p + 1
+    }
+
+    // Now just collect the remaining primes, no more marking
+    while ( p < N ) {
+        if( !ary[p] ) {
+            primes[nprimes] = p
+            nprimes = nprimes + 1
+        }
+        p = p + 1
+    }
+
+    // Copy/shrink the result array
+    var rez = new [Int]{len=nprimes,value=0}
+    var j = 0
+    while( j < nprimes ) {
+        rez[j] = primes[j]
+        j = j + 1
+    }
+    return rez
+}
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func main()->Int
+{
+    var rez = sieve(20)
+    var expected = new [Int]{2,3,5,7,11,13,17,19}
+    return eq(rez,expected,8)
+}
+""";
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func sieve(N: Int)->[Int]
+Reg #0 N 0
+Reg #1 ary 1
+Reg #2 primes 2
+Reg #3 nprimes 3
+Reg #4 p 4
+Reg #5 rez 5
+Reg #6 j 6
+Reg #7 i 7
+Reg #8 %t8 8
+Reg #9 %t9 9
+Reg #10 %t10 10
+Reg #11 %t11 11
+Reg #12 p_1 4
+Reg #13 %t13 13
+Reg #14 N_1 0
+Reg #15 %t15 15
+Reg #16 ary_1 1
+Reg #17 p_2 4
+Reg #18 %t18 18
+Reg #19 p_3 4
+Reg #20 ary_2 1
+Reg #21 primes_1 2
+Reg #22 primes_2 2
+Reg #23 nprimes_1 3
+Reg #24 nprimes_2 3
+Reg #25 %t25 25
+Reg #26 nprimes_3 3
+Reg #27 %t27 27
+Reg #28 %t28 28
+Reg #29 i_1 7
+Reg #30 N_2 0
+Reg #31 ary_3 1
+Reg #32 %t32 32
+Reg #33 p_4 4
+Reg #34 i_2 7
+Reg #35 N_3 0
+Reg #36 %t36 36
+Reg #37 p_5 4
+Reg #38 primes_3 2
+Reg #39 nprimes_4 3
+Reg #40 %t40 40
+Reg #41 p_6 4
+Reg #42 N_4 0
+Reg #43 %t43 43
+Reg #44 ary_4 1
+Reg #45 %t45 45
+Reg #46 primes_4 2
+Reg #47 nprimes_5 3
+Reg #48 %t48 48
+Reg #49 nprimes_6 3
+Reg #50 %t50 50
+Reg #51 p_7 4
+Reg #52 p_8 4
+Reg #53 N_5 0
+Reg #54 ary_5 1
+Reg #55 primes_5 2
+Reg #56 nprimes_7 3
+Reg #57 %t57 57
+Reg #58 %t58 58
+Reg #59 j_1 6
+Reg #60 nprimes_8 3
+Reg #61 %t61 61
+Reg #62 primes_6 2
+Reg #63 rez_1 5
+Reg #64 %t64 64
+Reg #65 j_2 6
+L0:
+    arg N
+    %t8 = New([Int], len=N, initValue=0)
+    ary = %t8
+    %t10 = N/2
+    %t9 = New([Int], len=%t10, initValue=0)
+    primes = %t9
+    nprimes = 0
+    p = 2
+    goto  L2
+L2:
+    nprimes_2 = phi(nprimes, nprimes_3)
+    ary_2 = phi(ary, ary_3)
+    N_1 = phi(N, N_2)
+    p_1 = phi(p, p_5)
+    %t11 = p_1*p_1
+    %t13 = %t11<N_1
+    if %t13 goto L3 else goto L4
+L3:
+    goto  L5
+L5:
+    p_2 = phi(p_1, p_3)
+    %t15 = ary_2[p_2]
+    if %t15 goto L6 else goto L7
+L6:
+    %t18 = p_2+1
+    p_3 = %t18
+    goto  L5
+L7:
+    primes[nprimes_2] = p_2
+    %t25 = nprimes_2+1
+    nprimes_3 = %t25
+    %t27 = p_2+p_2
+    i = %t27
+    goto  L8
+L8:
+    i_1 = phi(i, i_2)
+    %t28 = i_1<N_1
+    if %t28 goto L9 else goto L10
+L9:
+    ary_1[i_1] = 1
+    %t32 = i_1+p_2
+    i_2 = %t32
+    goto  L8
+L10:
+    %t36 = p_4+1
+    p_5 = %t36
+    goto  L2
+L4:
+    goto  L11
+L11:
+    nprimes_5 = phi(nprimes_2, nprimes_7)
+    p_6 = phi(p_1, p_8)
+    %t40 = p_6<N_1
+    if %t40 goto L12 else goto L13
+L12:
+    %t43 = ary_2[p_6]
+    %t45 = !%t43
+    if %t45 goto L14 else goto L15
+L14:
+    primes_2[nprimes_5] = p_6
+    %t48 = nprimes_5+1
+    nprimes_6 = %t48
+    goto  L15
+L15:
+    nprimes_7 = phi(nprimes_5, nprimes_6)
+    %t50 = p_6+1
+    p_8 = %t50
+    goto  L11
+L13:
+    %t57 = New([Int], len=nprimes_5, initValue=0)
+    rez = %t57
+    j = 0
+    goto  L16
+L16:
+    j_1 = phi(j, j_2)
+    %t58 = j_1<nprimes_5
+    if %t58 goto L17 else goto L18
+L17:
+    %t61 = primes_4[j_1]
+    rez[j_1] = %t61
+    %t64 = j_1+1
+    j_2 = %t64
+    goto  L16
+L18:
+    ret rez_1
+    goto  L1
+L1:
+func eq(a: [Int],b: [Int],n: Int)->Int
+Reg #0 a 0
+Reg #1 b 1
+Reg #2 n 2
+Reg #3 result 3
+Reg #4 i 4
+Reg #5 %t5 5
+Reg #6 i_1 4
+Reg #7 n_1 2
+Reg #8 %t8 8
+Reg #9 a_1 0
+Reg #10 %t10 10
+Reg #11 b_1 1
+Reg #12 %t12 12
+Reg #13 result_1 3
+Reg #14 %t14 14
+Reg #15 i_2 4
+Reg #16 result_2 3
+Reg #17 result_3 3
+L0:
+    arg a
+    arg b
+    arg n
+    result = 1
+    i = 0
+    goto  L2
+L2:
+    i_1 = phi(i, i_2)
+    %t5 = i_1<n
+    if %t5 goto L3 else goto L4
+L3:
+    %t8 = a[i_1]
+    %t10 = b[i_1]
+    %t12 = %t8!=%t10
+    if %t12 goto L5 else goto L6
+L5:
+    result_1 = 0
+    goto  L4
+L4:
+    result_2 = phi(result, result_1)
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t14 = i_1+1
+    i_2 = %t14
+    goto  L2
+func main()->Int
+Reg #0 rez 0
+Reg #1 expected 1
+Reg #2 %t2 2
+Reg #3 %t3 3
+Reg #4 %t4 4
+Reg #5 %t5 5
+Reg #6 %t6 6
+Reg #7 %t7 7
+Reg #8 %t8 8
+L0:
+    %t2 = 20
+    %t3 = call sieve params %t2
+    rez = %t3
+    %t4 = New([Int], len=8)
+    %t4[0] = 2
+    %t4[1] = 3
+    %t4[2] = 5
+    %t4[3] = 7
+    %t4[4] = 11
+    %t4[5] = 13
+    %t4[6] = 17
+    %t4[7] = 19
+    expected = %t4
+    %t5 = rez
+    %t6 = expected
+    %t7 = 8
+    %t8 = call eq params %t5, %t6, %t7
+    ret %t8
+    goto  L1
+L1:
+""", result);
+    }
 }
