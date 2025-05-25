@@ -794,4 +794,67 @@ func main()->Int
         Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
                 integerValue.value == 1);
     }
+
+    @Test
+    public void testFunction110() {
+        String src = """
+func swap(arr: [Int], i: Int, j: Int) {
+    var tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+func partition(arr: [Int], low: Int, high: Int)->Int {
+    var pivot = arr[high];
+    var i = low;
+    var j = low;
+    while (j < high) {
+        if (arr[j] < pivot) {
+            swap(arr, i, j);
+            i = i + 1;
+        }
+        j = j + 1;
+    }
+    swap(arr, i, high);
+    return i;
+}
+
+func quicksort(arr: [Int], low: Int, high: Int) {
+    if (low < high) {
+        var p = partition(arr, low, high);
+        quicksort(arr, low, p - 1);
+        quicksort(arr, p + 1, high);
+    }
+}
+
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func main()->Int
+{
+    var nums = new [Int]{33, 10, 55, 71, 29, 3};
+    var expected = new [Int]{3,10,29,33,55,71}
+    quicksort(nums, 0, 5);
+    return eq(nums,expected,6)
+}
+""";
+        var value = compileAndRun(src, "main");
+        Assert.assertNotNull(value);
+        Assert.assertTrue(value instanceof Value.IntegerValue integerValue &&
+                integerValue.value == 1);
+    }
+
 }
