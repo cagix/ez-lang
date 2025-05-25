@@ -965,15 +965,6 @@ public class CompiledFunction {
             return tryRemovingPhi(phi);
         }
 
-        // The Phi's def was replaced
-        // We must also replace all occurrences of the phi def from the memoized defs
-        // per Basic Block
-        private void replaceDefs(Register oldValue, Register newValue) {
-            var defs = currentDef.get(oldValue.nonSSAId());
-            for (var bb: defs.keySet())
-                defs.replace(bb, oldValue, newValue);
-        }
-
         // reference implementation https://github.com/dibyendumajumdar/libfirm/blob/master/ir/ir/ircons.c#L97
         private Register tryRemovingPhi(Instruction.Phi phi) {
             Register same = null;
@@ -1049,6 +1040,15 @@ public class CompiledFunction {
             var useList = new ArrayList<>(oldDefUseChain.useList);
             useList.remove(phi);
             return useList;
+        }
+
+        // The Phi's def was replaced
+        // We must also replace all occurrences of the phi def from the memoized defs
+        // per Basic Block
+        private void replaceDefs(Register oldValue, Register newValue) {
+            var defs = currentDef.get(oldValue.nonSSAId());
+            for (var bb: defs.keySet())
+                defs.replace(bb, oldValue, newValue);
         }
 
         @Override
