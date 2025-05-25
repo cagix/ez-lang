@@ -11,7 +11,7 @@ a physical machine. Therefore, all our optimization passes will work on the inst
 
 A VM / Interpreter is provided that can run the generated code.
 
-## Guide
+## Intermediate Representation
 
 * [Register](src/main/java/com/compilerprogramming/ezlang/compiler/Register.java) - implements a virtual register. Virtual registers
   have a name, type, id, frameSlot - the id is unique, but the name is not. Initially the compiler generates unique registers for every local
@@ -28,22 +28,43 @@ A VM / Interpreter is provided that can run the generated code.
   as operands. Instruction can have at most one definition; but an instruction can have multiple use operands. Operands can hold registers or
   constants or pointers to basic blocks.
 * [Instruction](src/main/java/com/compilerprogramming/ezlang/compiler/Instruction.java) - Instructions - sequential instructions reside in
-  basic blocks. Some instructions define variables (registers) and some use them. 
+  basic blocks. Some instructions define variables (registers) and some use them.
+
+## Dominators and Liveness Analysis
+
 * [DominatorTree](src/main/java/com/compilerprogramming/ezlang/compiler/DominatorTree.java) - Calculates dominator tree and dominance frontiers.
 * [LiveSet](src/main/java/com/compilerprogramming/ezlang/compiler/LiveSet.java) - Bitset used to track liveness of registers. We exploit the fact that 
   each register has a unique integer ID and these ids are allocated in a sequential manner.
 * [Liveness](src/main/java/com/compilerprogramming/ezlang/compiler/Liveness.java) - Liveness calculator, works for both SSA and non-SSA forms. Computes
   liveness data per basic block - mainly live-out. Note that the interference graph builder starts here and computes instruction level liveness as necessary.
-* [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using [algorithm by Preston Briggs](https://dl.acm.org/doi/10.5555/295545.295551). This is one of available mechanisms to transform the IR into SSA. 
-  The other alternative is to generate SSA IR directly from the AST, using [Braun's method](https://dl.acm.org/doi/10.1007/978-3-642-37051-9_6) - this option is integrated into the
-  [compiler]((src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java)) and enabled using an option.
+
+## Static Single Assignment Form
+
+* [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using [algorithm by Preston Briggs](https://dl.acm.org/doi/10.5555/295545.295551). This is the traditional method of constructing 
+  SSA Form using Dominator Trees. The input to this transformation is regular IR, output is SSA IR.
+* Incremental SSA - This method generate SSA IR directly from the AST, using [Braun's algorithm](https://dl.acm.org/doi/10.1007/978-3-642-37051-9_6) - this is integrated into the
+  [compiler]((src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java)) itself and can be enabled using an option.
 * [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form, using algorithm by Preston Briggs.
+
+## Optimizations on SSA Form
+
 * [SparseConditionalConstantPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/SparseConditionalConstantPropagation.java) - Conditional Constant Propagation on SSA form (SCCP)
 * [ConstantComparisonPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/ConstantComparisonPropagation.java) - Detects equals and not equals against constants within conditionals,
-   and inserts variables with appropriately specialized type within the dominated blocks, so that a second pass of SCCP can further optimize code.
+   and inserts scoped variables with appropriately specialized type within the dominated blocks, so that a second pass of SCCP can further optimize code.
 * [SSAEdges](src/main/java/com/compilerprogramming/ezlang/compiler/SSAEdges.java) - SSAEdges are def-use chains used by SCCP algorithm, and also generated during incremental SSA construction using Braun's method.
+
+## Loops 
+
+These components are not used yet
+
 * [LoopFinder](src/main/java/com/compilerprogramming/ezlang/compiler/LoopFinder.java) - Discovers loops. (Not used yet)
 * [LoopNest](src/main/java/com/compilerprogramming/ezlang/compiler/LoopNest.java) - Representation of loop nesting. (Not used yet)
+
+## Chaitin Graph Coloring Register Allocation
+
+Note that our goal is to target an abstract machine rather than a real CPU, so we optimize for minimum VM registers, but we have 
+unlimited amount of those.
+
 * [InterferenceGraph](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraph.java) - Representation of an Interference Graph
   required by the register allocator.
 * [InterferenceGraphBuilder](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraphBuilder.java) - Constructs an InterferenceGraph for a set
@@ -63,6 +84,6 @@ A VM / Interpreter is provided that can run the generated code.
 ## VM/Interpreter
 
 A simple VM / Interpreter is provided that can run the IR, both pre and post optimizations.
-The SSA form is not executable, it must be transformed out of SSA for execuation.
+The SSA form is not executable, hence the IR must be transformed out of SSA for execution.
 
 * [VM/Interpreter](src/main/java/com/compilerprogramming/ezlang/interpreter)

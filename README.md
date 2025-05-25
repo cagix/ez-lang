@@ -29,7 +29,7 @@ The project is under development and subject to change. At this point in time, w
 * [optvm](./optvm/README.md) - WIP optimizing compiler with SSA transformation, constant propagation, graph coloring register allocation 
   targeting an abstract machine. Includes Interpreter to run the abstract machine.
 * [seaofnodes](./seaofnodes/README.md) - WIP compiler that generates Sea of Nodes IR, using SoN backend from [Simple Chapter 21](https://github.com/SeaOfNodes/Simple).
-  Generate native code for X86-64, AArch64 and RISC-V.
+  Generates native code for X86-64, AArch64 and RISC-V.
 
 ## How can you contribute?
 
