@@ -43,7 +43,7 @@ A VM / Interpreter is provided that can run the generated code.
 * [EnterSSA](src/main/java/com/compilerprogramming/ezlang/compiler/EnterSSA.java) - Transforms into SSA, using [algorithm by Preston Briggs](https://dl.acm.org/doi/10.5555/295545.295551). This is the traditional method of constructing 
   SSA Form using Dominator Trees. The input to this transformation is regular IR, output is SSA IR.
 * Incremental SSA - This method generate SSA IR directly from the AST, using [Braun's algorithm](https://dl.acm.org/doi/10.1007/978-3-642-37051-9_6) - this is integrated into the
-  [compiler]((src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java)) itself and can be enabled using an option.
+  [compiler](src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java) itself and can be enabled using an option.
 * [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form, using algorithm by Preston Briggs.
 
 ## Optimizations on SSA Form
