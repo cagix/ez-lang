@@ -88,7 +88,8 @@ public class SparseConditionalConstantPropagation {
                         flowWorklist.push(s);
                     }
                 }
-            } else if (instruction.definesVar() || instruction instanceof Instruction.Phi) {
+            }
+            else if (instruction.definesVar() || instruction instanceof Instruction.Phi) {
                 var def = instruction instanceof Instruction.Phi phi ? phi.value() : instruction.def();
                 // Push all uses (instructions) of the def into the worklist
                 SSAEdges.SSADef ssaDef = ssaEdges.get(def);
@@ -207,7 +208,7 @@ public class SparseConditionalConstantPropagation {
                 // replace uses with constant
                 for (var usingInstruction: defUseChain.useList) {
                     if (executableBlocks.get(usingInstruction.block.bid))
-                        usingInstruction.replaceWithConstant(register, constant);
+                        usingInstruction.replaceUseWithConstant(register, constant);
                 }
                 defUseChain.useList.clear();
                 var block = defUseChain.instruction.block;

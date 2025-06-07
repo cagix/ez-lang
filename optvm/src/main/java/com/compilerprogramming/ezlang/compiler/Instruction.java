@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler;
 
+import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.types.Type;
 
 import java.util.ArrayList;
@@ -30,11 +31,10 @@ public abstract class Instruction {
     protected Operand[] uses;
     public BasicBlock block;
 
-    protected Instruction(int opcode, Operand... uses) {
+    protected Instruction(int opcode) {
         this.opcode = opcode;
         this.def = null;
-        this.uses = new Operand[uses.length];
-        System.arraycopy(uses, 0, this.uses, 0, uses.length);
+        this.uses = new Operand[0];
     }
     protected Instruction(int opcode, Operand.RegisterOperand def, Operand... uses) {
         this.opcode = opcode;
@@ -49,9 +49,23 @@ public abstract class Instruction {
         return toStr(new StringBuilder()).toString();
     }
 
+    /**
+     * Does this instruction define a var?
+     */
     public boolean definesVar() { return def != null; }
+    /**
+     * If the instruction defines a var then return the Register else null
+     */
     public Register def() { return def != null ? def.reg: null; }
+    public void replaceDef(Register newDef) {
+        if (def == null) throw new IllegalStateException();
+        def = def.copy(newDef);
+    }
 
+    /**
+     * Get the registers used by this instruction. Non register operands are
+     * not included.
+     */
     public List<Register> uses() {
         List<Register> useList = null;
         for (int i = 0; i < uses.length; i++) {
@@ -64,10 +78,14 @@ public abstract class Instruction {
         if (useList == null) useList = Collections.emptyList();
         return useList;
     }
-    public void replaceDef(Register newReg) {
-        if (def == null) throw new IllegalStateException();
-        def = def.copy(newReg);
-    }
+
+    /**
+     * Replaces existing register uses with new ones. This api is not great
+     * as it requires user to supply registers in the same order as returned by
+     * the method {@link #uses()}.
+     *
+     * FIXME replace this with a better api
+     */
     public void replaceUses(Register[] newUses) {
         int j = 0;
         for (int i = 0; i < uses.length; i++) {
@@ -76,7 +94,14 @@ public abstract class Instruction {
                 uses[i] = registerOperand.copy(newUses[j++]);
             }
         }
+        // Sanity check that we replaced the full set of registers
+        if (j != newUses.length)
+            throw new CompilerException("Error - supplied registers do not replace all uses");
     }
+
+    /**
+     * Replaces all occurrences of source with target in the uses list of the instruction
+     */
     public boolean replaceUse(Register source, Register target) {
         boolean replaced = false;
         for (int i = 0; i < uses.length; i++) {
@@ -88,21 +113,16 @@ public abstract class Instruction {
         }
         return replaced;
     }
-    public void replaceWithConstant(Register register, Operand.ConstantOperand constantOperand) {
+
+    /**
+     * Replaces all uses of given register with the constant operand
+     */
+    public void replaceUseWithConstant(Register register, Operand.ConstantOperand constantOperand) {
         for (int i = 0; i < uses.length; i++) {
             Operand operand = uses[i];
             if (operand != null && operand instanceof Operand.RegisterOperand registerOperand && registerOperand.reg.id == register.id) {
                 uses[i] = constantOperand;
             }
-        }
-    }
-    public static class NoOp extends Instruction {
-        public NoOp() {
-            super(I_NOOP);
-        }
-        @Override
-        public StringBuilder toStr(StringBuilder sb) {
-            return sb.append("noop");
         }
     }
 
@@ -384,7 +404,7 @@ public abstract class Instruction {
             throw new UnsupportedOperationException();
         }
         @Override
-        public void replaceDef(Register newReg) {
+        public void replaceDef(Register newDef) {
             throw new UnsupportedOperationException();
         }
         @Override
