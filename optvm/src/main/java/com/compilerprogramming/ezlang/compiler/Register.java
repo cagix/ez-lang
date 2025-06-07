@@ -78,13 +78,11 @@ public class Register {
     }
 
     /**
-     * The nonSSAID is valid as a frame slot prior to SSA conversion,
-     * and following register assignment.
-     * During SSA form this is not valid for registers that are instances of SSARegister.
+     * The ID shared by all versions of a Register.
+     * @see SSARegister
      */
     public int nonSSAId() {
-        //assert frameSlot >= 0; // assert inteferes with verbose display
-        return frameSlot;
+        return id;
     }
     public void updateSlot(int slot) {
         this.frameSlot = slot;
