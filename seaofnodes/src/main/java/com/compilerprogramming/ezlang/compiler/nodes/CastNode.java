@@ -2,6 +2,8 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMemPtr;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.BitSet;
@@ -37,6 +39,9 @@ public class CastNode extends Node {
 
     @Override
     public Type compute() {
+        // Cast array to int
+        if( _t == TypeInteger.BOT && in(1)._type instanceof TypeMemPtr tmp && tmp._obj.isAry() )
+            return _t;
         return in(1)._type.join(_t);
     }
 

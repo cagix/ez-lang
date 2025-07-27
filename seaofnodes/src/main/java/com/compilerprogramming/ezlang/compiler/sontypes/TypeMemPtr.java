@@ -60,8 +60,7 @@ public class TypeMemPtr extends TypeNil {
     public TypeMemPtr dual() { return TypeMemPtr.make( dual0(), _obj.dual()); }
 
     // RHS is NIL; do not deep-dual when crossing the centerline
-    @Override
-    Type meet0() { return _nil==3 ? this : make((byte)3,_obj); }
+    @Override Type meet0() { return _nil==3 ? this : make((byte)3,_obj); }
 
 
     // True if this "isa" t up to named structures
@@ -75,7 +74,7 @@ public class TypeMemPtr extends TypeNil {
         throw Utils.TODO(); // return _obj.shallowISA(that._obj);
     }
 
-    @Override public TypeMemPtr glb() { return make((byte)3,_obj.glb()); }
+    @Override public TypeMemPtr glb(boolean mem) { return make((byte)3,_obj.glb(true)); }
     // Is forward-reference
     @Override public boolean isFRef() { return _obj.isFRef(); }
 

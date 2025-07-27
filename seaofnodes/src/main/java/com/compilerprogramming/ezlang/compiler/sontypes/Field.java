@@ -28,7 +28,7 @@ public class Field extends Type {
         _final = xfinal;
     }
     // Make with existing alias
-    public static Field make(String fname, Type type, int alias, boolean xfinal ) {
+    public static Field make( String fname, Type type, int alias, boolean xfinal ) {
         return new Field(fname,type,alias,xfinal).intern();
     }
     public Field makeFrom( Type type ) {
@@ -37,8 +37,8 @@ public class Field extends Type {
     @Override public Field makeRO() { return _final ? this : make(_fname,_type.makeRO(),_alias,true);  }
     @Override public boolean isFinal() { return _final && _type.isFinal(); }
 
-    public static final Field TEST = make("test", Type.NIL,-2,false);
-    public static final Field TEST2= make("test", Type.NIL,-2,true);
+    public static final Field TEST = make("test",Type.NIL,-2,false);
+    public static final Field TEST2= make("test",Type.NIL,-2,true);
     public static void gather(ArrayList<Type> ts) { ts.add(TEST); ts.add(TEST2); }
 
     @Override Field xmeet( Type that ) {
@@ -51,8 +51,10 @@ public class Field extends Type {
     @Override
     public Field dual() { return make(_fname,_type.dual(),_alias,!_final); }
 
-    @Override public Field glb() {
-        Type glb = _type.glb();
+    @Override public boolean isConstant() { return _type.isConstant(); }
+
+    @Override public Field glb(boolean mem) {
+        Type glb = _type.glb(mem);
         return (glb==_type && _final) ? this : make(_fname,glb,_alias,true);
     }
 
@@ -70,5 +72,5 @@ public class Field extends Type {
         return _type.print(sb.p(_final?"":"!").p(_fname).p(":").p(_alias).p(" : "));
     }
 
-    @Override public String str() { return _fname; }
+    @Override public String str() { return (_final?"":"!")+_fname; }
 }

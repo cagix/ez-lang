@@ -26,6 +26,11 @@ public class CallEndNode extends CFGNode implements MultiNode {
 
     public CallNode call() { return (CallNode)in(0); }
 
+    @Override public CFGNode idom(Node dep) {
+        // Folding the idom is the one inlining Return
+        return _folding ? cfg(1) : super.idom(dep);
+    }
+
     @Override
     public StringBuilder _print1(StringBuilder sb, BitSet visited) {
         sb.append("cend( ");
@@ -41,7 +46,6 @@ public class CallEndNode extends CFGNode implements MultiNode {
         if( !(in(0) instanceof CallNode call) )
             return TypeTuple.RET.dual();
         Type ret = Type.BOTTOM;
-        TypeMem mem = TypeMem.BOT;
         if( addDep(call.fptr())._type instanceof TypeFunPtr tfp ) {
             ret = tfp.ret();
             // Here, if I can figure out I've found *all* callers, then I can meet
@@ -51,7 +55,7 @@ public class CallEndNode extends CFGNode implements MultiNode {
                 ret = ((TypeTuple)in(1)._type).ret(); // Return type
             }
         }
-        return TypeTuple.make(call._type, TypeMem.BOT,ret);
+        return TypeTuple.make(call._type,TypeMem.BOT,ret);
     }
 
     @Override
@@ -59,7 +63,7 @@ public class CallEndNode extends CFGNode implements MultiNode {
 
         // Trivial inlining: call site calls a single function; single function
         // is only called by this call site.
-        if( false && !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
+        if( !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
             Node fptr = call.fptr();
             if( fptr.nOuts() == 1 && // Only user is this call
                 fptr instanceof ConstantNode && // We have an immediate call
@@ -106,33 +110,4 @@ public class CallEndNode extends CFGNode implements MultiNode {
         return _folding ? in(1).in(idx) : null;
     }
 
-    // ------------
-    // MachNode specifics, shared across all CPUs
-    public int _xslot;
-    private RegMask _retMask;
-    private RegMask _kills;
-    public void cacheRegs(CodeGen code) {
-        // Return mask depends on TFP (either GPR or FPR)
-        _retMask = code._mach.retMask(call().tfp());
-        // Kill mask is all caller-saves, and any mirror stack slots for args
-        // in registers.
-        RegMaskRW kills = code._callerSave.copy();
-        // Start of stack slots
-        int maxReg = code._mach.regs().length;
-        // Incoming function arg slots, all low numbered in the RA
-        int fslot = fun()._maxArgSlot;
-        // Killed slots for this calls outgoing args
-        int xslot = code._mach.maxArgSlot(call().tfp());
-        _xslot = (maxReg+fslot)+xslot;
-        for( int i=0; i<xslot; i++ )
-            kills.set((maxReg+fslot)+i);
-        _kills = kills;
-    }
-    public String op() { return "cend"; }
-    public RegMask regmap(int i) { return null; }
-    public RegMask outregmap() { return null; }
-    public RegMask outregmap(int idx) { return idx==2  ? _retMask : null; }
-    public RegMask killmap() { return _kills; }
-    public void encoding( Encoding enc ) { }
-    public void asm(CodeGen code, SB sb) {  }
 }

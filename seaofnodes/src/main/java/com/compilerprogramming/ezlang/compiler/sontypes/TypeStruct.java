@@ -138,18 +138,18 @@ public class TypeStruct extends Type {
     }
 
     // Keeps the same struct, but lower-bounds all fields.
-    @Override public TypeStruct glb() {
-        if( _glb() ) return this;
+    @Override public TypeStruct glb(boolean mem) {
+        if( _glb(mem) ) return this;
         // Need to glb each field
         Field[] flds = new Field[_fields.length];
         for( int i=0; i<_fields.length; i++ )
-            flds[i] = _fields[i].glb();
+            flds[i] = _fields[i].glb(mem);
         return make(_name,flds);
     }
-    private boolean _glb() {
+    private boolean _glb(boolean mem) {
         if( _fields!=null )
           for( Field f : _fields )
-              if( f.glb() != f )
+              if( f.glb(mem) != f )
                  return false;
         return true;
     }
@@ -231,14 +231,12 @@ public class TypeStruct extends Type {
         // Compute a layout for a collection of fields
         assert _fields != null; // No forward refs
 
-        // Array layout is different: len,[pad],body...
-        if( isAry() )
-            return _offs = new int[]{ 0, _fields[1]._type.log_size() < 3 ? 4 : 8 };
-
         // Compute a layout
-        int[] cnts = new int[4]; // Count of fields at log field size
-        for( Field f : _fields )
-            cnts[f._type.log_size()]++; // Log size is 0(byte), 1(i16/u16), 2(i32/f32), 3(i64/dbl)
+        int[] cnts = new int[5]; // Count of fields at log field size
+        int flen = _fields.length;
+        if( isAry() ) flen--;   // Array field is aligned differently
+        for( int i=0; i<flen; i++ )
+            cnts[_fields[i]._type.log_size()]++; // Log size is 0(byte), 1(i16/u16), 2(i32/f32), 3(i64/dbl)
         int off = 0, idx = 0; // Base common struct fields go here, e.g. Mark/Klass
         // Compute offsets to the start of each power-of-2 aligned fields.
         int[] offs = new int[4];
@@ -249,14 +247,36 @@ public class TypeStruct extends Type {
         // Assign offsets to all fields.
         // Really a hidden radix sort.
         _offs = new int[_fields.length+1];
-        for( Field f : _fields ) {
-            int log = f._type.log_size();
+        for( int i=0; i<flen; i++ ) {
+            int log = _fields[i]._type.log_size();
             _offs[idx++] = offs[log]; // Field offset
             offs[log] += 1<<log;      // Next field offset at same alignment
             cnts[log]--;              // Count down, should be all zero at end
         }
-        _offs[_fields.length] = (off+7)& ~7; // Round out to max alignment
+
+        // Array bits
+        if( isAry() ) {
+            // Pad out to the element alignment
+            int align = _fields[flen]._type.alignment();
+            off = (off + ((1<<align)-1)) & -(1<<align);
+            _offs[flen] = off;
+        } else
+            _offs[flen] = off; // Max struct size, no trailing padding
         return _offs;
+    }
+
+    // Field order with increasing offset
+    public int[] layout() {
+        offset(0);
+        int len = _offs.length;
+        int[] is = new int[len];
+        for( int i=0; i<len; i++ ) is[i] = i;
+        // Stoopid hand rolled bubble sort
+        for( int i=0; i<len; i++ )
+            for( int j=i+1; j<len; j++ )
+                if( _offs[is[j]] < _offs[is[i]] )
+                    { int tmp = is[i]; is[i] = is[j]; is[j] = tmp; }
+        return is;
     }
 
 }

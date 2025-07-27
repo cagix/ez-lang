@@ -30,10 +30,6 @@ public class Var {
         Type def = Compiler.TYPES.get(((TypeMemPtr)_type)._obj._name);
         return (_type=_type.meet(def));
     }
-    public Type lazyGLB() {
-        Type t = type();
-        return t instanceof TypeMemPtr ? t : t.glb();
-    }
 
     // Forward reference variables (not types) must be BOTTOM and
     // distinct from inferred variables

@@ -31,8 +31,7 @@ public class TypePtr extends TypeNil {
     @Override public TypePtr dual() { return PTRS[dual0()]; }
 
     // High scalar loses, low scalar wins
-    @Override
-    TypeNil nmeet(TypeNil tn) {
+    @Override TypeNil nmeet(TypeNil tn) {
         if( _nil==0 ) return tn; // High scalar loses
         if( _nil==1 ) return tn.makeFrom(xmeet0(tn)); // High scalar loses
         if( _nil==2 ) return tn._nil==3 ? PTR : NPTR; // Low scalar wins
@@ -41,14 +40,12 @@ public class TypePtr extends TypeNil {
 
 
     // RHS is  NIL
-    @Override
-    Type meet0() { return isHigh() ? NIL : PTR; }
+    @Override Type meet0() { return isHigh() ? NIL : PTR; }
     // RHS is XNIL
     // 0->xscalar, 1->nscalar, 2->nscalar, 3->scalar
-    @Override
-    Type meetX() { return _nil==0 ? XNIL : (_nil==3 ? PTR : NPTR); }
+    @Override Type meetX() { return _nil==0 ? XNIL : (_nil==3 ? PTR : NPTR); }
 
-    @Override public TypePtr glb() { return PTR; }
+    @Override public TypePtr glb(boolean mem) { return PTR; }
 
     private static final String[] STRS = new String[]{"~ptr","~nptr","nptr","ptr"};
     @Override public String str() { return STRS[_nil]; }

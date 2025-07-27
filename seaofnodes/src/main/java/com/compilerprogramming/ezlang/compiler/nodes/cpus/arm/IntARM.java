@@ -20,7 +20,7 @@ public class IntARM extends ConstantNode implements MachNode {
 
     @Override public void encoding( Encoding enc ) {
         short self = enc.reg(this);
-        long x = _con== Type.NIL ? 0 : ((TypeInteger)_con).value();
+        long x = _con==Type.NIL ? 0 : ((TypeInteger)_con).value();
         int nb0 = 0;
         int nb1 = 0;
         // Count number of 0000 and FFFF blocks

@@ -25,9 +25,9 @@ public class NewNode extends Node implements MultiNode {
         _ptr = ptr;
         _len = ptr._obj._fields.length;
         // Control in slot 0
-        assert nodes[0]._type== Type.CONTROL || nodes[0]._type == Type.XCONTROL;
+        assert nodes[0]._type==Type.CONTROL || nodes[0]._type == Type.XCONTROL;
         // Malloc-length in slot 1
-        assert nodes[1]._type instanceof TypeInteger || nodes[1]._type== Type.NIL;
+        assert nodes[1]._type instanceof TypeInteger || nodes[1]._type==Type.NIL;
         for( int i=0; i<_len; i++ )
             // Memory slices for all fields.
             assert nodes[2+i]._type.isa(TypeMem.BOT);
@@ -68,7 +68,7 @@ public class NewNode extends Node implements MultiNode {
         ts[1] = _ptr;
         for( int i=0; i<fs.length; i++ ) {
             Type mt = in(i+2)._type;
-            TypeMem mem = mt== Type.TOP ? TypeMem.TOP : (TypeMem)mt;
+            TypeMem mem = mt==Type.TOP ? TypeMem.TOP : (TypeMem)mt;
             Type tfld = mem._t.meet(mem._t.makeZero());
             Type tfld2 = tfld.join(fs[i]._type);
             ts[i+2] = TypeMem.make(fs[i]._alias,tfld2);

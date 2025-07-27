@@ -51,7 +51,7 @@ public class StoreX86 extends MemOpX86 {
     }
 
     // Non-immediate encoding
-    static void encVal(Encoding enc, Type decl, short ptr, short idx, short src, int off, int scale ) {
+    static void encVal( Encoding enc, Type decl, short ptr, short idx, short src, int off, int scale ) {
         int log = decl.log_size();
         // Float reg being stored
         if( src >= x86_64_v2.XMM_OFFSET ) {

@@ -44,7 +44,7 @@ public class StartNode extends LoopNode implements MultiNode {
 
 
     @Override public TypeTuple compute() {
-        return TypeTuple.make(Type.CONTROL, TypeMem.TOP,_arg);
+        return TypeTuple.make(Type.CONTROL,TypeMem.TOP,_arg);
     }
 
     @Override public Node idealize() { return null; }

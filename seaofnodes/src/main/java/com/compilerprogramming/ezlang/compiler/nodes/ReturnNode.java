@@ -53,7 +53,6 @@ public class ReturnNode extends CFGNode {
     @Override
     public Type compute() {
         if( inProgress () ) return TypeTuple.RET; // In progress
-        if( _fun.isDead() ) return TypeTuple.RET.dual(); // Dead another way
         return TypeTuple.make(ctrl()._type,mem()._type,expr()._type);
     }
 
@@ -98,9 +97,9 @@ public class ReturnNode extends CFGNode {
         Type t = expr._type;
         mt = mt.meet(t);
         ti |= t instanceof TypeInteger x;
-        tf |= t instanceof TypeFloat x;
-        tp |= t instanceof TypeMemPtr x;
-        tn |= t== Type.NIL;
+        tf |= t instanceof TypeFloat   x;
+        tp |= t instanceof TypeMemPtr  x;
+        tn |= t==Type.NIL;
 
         // Merge path into the One True Return
         RegionNode r = (RegionNode)ctrl();

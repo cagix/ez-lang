@@ -656,7 +656,7 @@ public class Compiler {
         if( expr._type == Type.NIL )
             throw error("Calling a null function pointer");
         if( !(expr instanceof FRefNode) && !expr._type.isa(TypeFunPtr.BOT) )
-            throw error("Expected a function but got "+expr._type.glb().str());
+            throw error("Expected a function but got "+expr._type.glb(false).str());
         expr.keep();            // Keep while parsing args
 
         Ary<Node> args = new Ary<Node>(Node.class);

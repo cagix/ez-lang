@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.print;
 
+import com.compilerprogramming.ezlang.compiler.Ary;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
@@ -20,53 +21,70 @@ public abstract class ASMPrinter {
             if( code._cfg.at(i) instanceof FunNode fun )
                 iadr = print(iadr,sb,code,fun,i);
 
-        // Skip padding
-        while( ((iadr+7) & -8) > iadr )
-            iadr++;
-
         // constant pool
+        iadr = (iadr+15)&-16; // pad to 16
         Encoding enc = code._encoding;
-        if(  enc!=null && !enc._bigCons.isEmpty() ) {
-            iadr = (iadr+15)&-16; // pad to 16
+        if(  enc!=null && !enc._bigCons.isEmpty() && iadr < enc._bits.size() ) {
+            // radix sort the big constants by alignment
+            Ary<Encoding.Relo>[] raligns = new Ary[5];
+            for( Node op : enc._bigCons.keySet() ) {
+                Encoding.Relo relo = enc._bigCons.get(op);
+                int align = relo._t.alignment();
+                Ary<Encoding.Relo> relos = raligns[align]==null ? (raligns[align]=new Ary<>( Encoding.Relo.class)) : raligns[align];
+                relos.add(relo);
+            }
+
             HashSet<Type> targets = new HashSet<>();
             sb.p("--- Constant Pool ------").nl();
-            // By log size
-            for( int log = 3; log >= 0; log-- ) {
-                for( Node op : enc._bigCons.keySet() ) {
-                    Encoding.Relo relo = enc._bigCons.get(op);
+
+            // By alignment
+            for( int align = 4; align >= 0; align-- ) {
+                Ary<Encoding.Relo> relos = raligns[align];
+                if( relos == null ) continue;
+                for( Encoding.Relo relo : relos ) {
                     if( targets.contains(relo._t) ) continue;
                     targets.add(relo._t);
-                    if( relo._t.log_size()==log ) {
-                        sb.hex2(iadr).p("  ");
-                        if( relo._t instanceof TypeTuple tt ) {
-                            for( Type tx : tt._types ) {
-                                switch( log ) {
-                                case 0: sb.hex1(enc.read1(iadr)); break;
-                                case 1: sb.hex2(enc.read2(iadr)); break;
-                                case 2: sb.hex4(enc.read4(iadr)); break;
-                                case 3: sb.hex8(enc.read8(iadr)); break;
-                                }
-                                iadr += (1<<log);
-                                sb.p(" ");
-                            }
-                        } else {
-                            switch( log ) {
-                            case 0: sb.hex1(enc.read1(iadr)).fix(9-1,""); break;
-                            case 1: sb.hex2(enc.read2(iadr)).fix(9-2,""); break;
-                            case 2: sb.hex4(enc.read4(iadr)).fix(9-4,""); break;
-                            case 3: sb.hex8(enc.read8(iadr)).p(" "); break;
-                            }
-                            iadr += (1<<log);
+                    sb.hex2(iadr).p("  ");
+                    switch( relo._t ) {
+                    case TypeTuple  tt -> {
+                        for( Type tx : tt._types ) {
+                            pN(enc,sb,iadr,align).p(" ");
+                            iadr += (1<<align);
                         }
-                        relo._t.print(sb).nl();
                     }
+
+                    case TypeStruct ts -> {
+                        int sz = ts.size();
+                        int log = 1<<align;
+                        sz = (sz + (log -1)) & -log; // Round up final padding
+                        for( int i=0; i<sz; i++ )
+                            sb.hex1(enc.read1(iadr++));
+                    }
+
+                    // Simple primitive (e.g. larger int, float)
+                    default -> {
+                        pN(enc,sb,iadr,align).fix(9-(1<<align),"");
+                        iadr += (1<<align);
+                    }
+                    }
+                    relo._t.print(sb).nl();
                 }
             }
         }
 
-
         return sb;
     }
+
+    private static SB pN( Encoding enc, SB sb, int iadr, int log ) {
+        switch( log ) {
+        case 0: sb.hex1(enc.read1(iadr)); break;
+        case 1: sb.hex2(enc.read2(iadr)); break;
+        case 2: sb.hex4(enc.read4(iadr)); break;
+        case 3: sb.hex8(enc.read8(iadr)); break;
+        }
+        return sb;
+    }
+
 
     private static int print(int iadr, SB sb, CodeGen code, FunNode fun, int cfgidx) {
         FunNode old=null;
@@ -109,7 +127,7 @@ public abstract class ASMPrinter {
         boolean once=false;
         for( Node n : bb.outs() ) {
             if( !(n instanceof PhiNode phi) ) continue;
-            if( phi._type instanceof TypeMem || phi._type instanceof TypeRPC) continue; // Nothing for the hidden ones
+            if( phi._type instanceof TypeMem || phi._type instanceof TypeRPC ) continue; // Nothing for the hidden ones
             // Post-RegAlloc phi prints all on one line
             if( postAlloc ) {
                 if( !once ) { once=true; sb.fix(4," ").p(" ").fix(encWidth,"").p("  "); }
@@ -164,7 +182,7 @@ public abstract class ASMPrinter {
         // ProjNodes following a multi (e.g. Call or New results),
         // get indent slightly and just print their index & node#
         if( n instanceof ProjNode proj ) {
-            if( proj._type instanceof TypeMem) return iadr; // Nothing for the hidden ones
+            if( proj._type instanceof TypeMem ) return iadr; // Nothing for the hidden ones
             sb.fix(4," ").p(" ").fix(encWidth,"").p("    ").fix(opWidth,proj._label==null ? "---" : proj._label).p(" ").p(code.reg(n,fun)).nl();
             return iadr;
         }
@@ -175,7 +193,7 @@ public abstract class ASMPrinter {
 
         // Encoding
         int fatEncoding = 0;
-        if( code._encoding != null ) {
+        if( code._encoding != null && code._encoding._opLen!=null ) {
             int size = code._encoding._opLen[n._nid];
             if( code._asmLittle )
                 for( int i=0; i<Math.min(size,dopz); i++ )
@@ -224,7 +242,7 @@ public abstract class ASMPrinter {
         sb.nl();
 
         // Printing more op bits than fit
-        if( isMultiOp != null && code._encoding != null ) {
+        if( isMultiOp != null && code._encoding != null && code._encoding._opLen!=null ) {
             // Multiple ops, template style, no RA, no scheduling.  Print out
             // one-line-per-newline, with encoding bits up front.
             int size = code._encoding._opLen[n._nid];

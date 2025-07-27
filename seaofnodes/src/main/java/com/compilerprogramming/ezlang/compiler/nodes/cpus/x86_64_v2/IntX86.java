@@ -24,7 +24,7 @@ public class IntX86 extends ConstantNode implements MachNode {
     @Override public void encoding( Encoding enc ) {
         short dst = enc.reg(this);
         // Short form for zero
-        if( _con== Type.NIL || _con== TypeInteger.ZERO ) {
+        if( _con==Type.NIL || _con==TypeInteger.ZERO ) {
             // XOR dst,dst.  Can skip REX is dst is low 8, makes this a 32b
             // xor, which will also zero the high bits.
             if( dst >= 8 ) enc.add1(x86_64_v2.rex(dst, dst, 0));

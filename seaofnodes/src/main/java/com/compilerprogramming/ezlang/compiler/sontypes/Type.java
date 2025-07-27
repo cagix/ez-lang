@@ -160,6 +160,7 @@ public class Type {
         // RHS TypeNil vs NIL/XNIL
         if( _type==  TNIL ) return t instanceof TypeNil ptr ? ptr.meet0() : (t._type==TXNIL ? TypePtr.PTR : BOTTOM);
         if( _type== TXNIL ) return t instanceof TypeNil ptr ? ptr.meetX() : (t._type== TNIL ? TypePtr.PTR : BOTTOM);
+
         // 'this' is only {TCTRL,TXCTRL}
         // Other non-simple RHS things bottom out
         if( !t.is_simple() ) return BOTTOM;
@@ -200,8 +201,9 @@ public class Type {
     // Make a zero version of this type, 0 for integers and null for pointers.
     public Type makeZero() { return Type.NIL; }
 
-    /** Compute greatest lower bound in the lattice */
-    public Type glb() { return Type.BOTTOM; }
+    /** Compute greatest lower bound in the lattice.  If values are in memory,
+     *  ints and floats cannot widen. */
+    public Type glb(boolean mem) { return Type.BOTTOM; }
 
     // Is forward-reference
     public boolean isFRef() { return false; }
@@ -218,7 +220,9 @@ public class Type {
     // Sizes are expected to be between 1 and 64 bits.
     // Size 0 means this either takes no space (such as a known-zero field)
     // or isn't a scalar to be stored in memory.
-    public int log_size() { return 3; }
+    public int log_size () { return 3; } // log-size of a type; log_size for a struct is usually undefined
+    public int size() { return 1<<log_size(); }
+    public int alignment() { return log_size(); } // alignment; for structs, max align of Fields
 
     // ----------------------------------------------------------
     // Useful in the debugger, which calls toString everywhere.

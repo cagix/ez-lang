@@ -25,7 +25,7 @@ public class LoadX86 extends MemOpX86 {
         enc(enc, _declaredType, dst, ptr, idx, _off, _scale);
     }
 
-    static void enc(Encoding enc, Type decl, short dst, short ptr, short idx, int off, int scale ) {
+    static void enc( Encoding enc, Type decl, short dst, short ptr, short idx, int off, int scale ) {
         if( decl == TypeFloat.F32) enc.add1(0xF3);
         if( decl == TypeFloat.F64) enc.add1(0xF2);
 

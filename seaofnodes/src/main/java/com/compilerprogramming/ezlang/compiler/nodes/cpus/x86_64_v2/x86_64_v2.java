@@ -43,6 +43,8 @@ public class x86_64_v2 extends Machine {
     static RegMask XMASK = new RegMask(FP_BITS);
     static RegMask FLAGS_MASK = new RegMask(FLAGS);
     static RegMask RPC_MASK = new RegMask(RPC);
+    // Divide mask: exclude RDX:RAX
+    static RegMask DIV_MASK = new RegMask(RD_BITS & ~(1L<<RAX) & ~(1L<<RDX));
 
     static final long SPILLS = -(1L << MAX_REG);
     static final RegMask SPLIT_MASK = new RegMask(WR_BITS | FP_BITS /* | (1L<<FLAGS)*/ | SPILLS, -1L );
@@ -61,7 +63,7 @@ public class x86_64_v2 extends Machine {
     public static RegMask XMM0_MASK = new RegMask(XMM0);
 
     // Encoding
-    public static int REX = 0x40;
+    public static int REX    = 0x40;
     public static int REX_W  = 0x48;
     public static int REX_WR = 0x4C;
     public static int REX_WRB= 0x4D;
@@ -185,10 +187,11 @@ public class x86_64_v2 extends Machine {
 
     // Map from function signature and argument index to register.
     // Used to set input registers to CallNodes, and ParmNode outputs.
-    @Override public RegMask callArgMask(TypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
-    static RegMask callInMask(TypeFunPtr tfp, int idx, int maxArgSlot ) {
+    @Override public RegMask callArgMask( TypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
+    static RegMask callInMask( TypeFunPtr tfp, int idx, int maxArgSlot ) {
         if( idx==0 ) return RPC_MASK;
         if( idx==1 ) return null;
+        if( idx-2 >= tfp.nargs() ) return null; // Anti-dependence
         return switch( CodeGen.CODE._callingConv ) {
         case "SystemV" -> callSys5 (tfp,idx,maxArgSlot);
         case "Win64"   -> callWin64(tfp,idx,maxArgSlot);
@@ -276,7 +279,7 @@ public class x86_64_v2 extends Machine {
         // First 8 floats passed in registers: xmm0-xmm7
         int icnt=0, fcnt=0;     // Count of ints, floats
         for( int i=2; i<idx; i++ ) {
-            if( tfp.arg(i-2) instanceof TypeFloat) fcnt++;
+            if( tfp.arg(i-2) instanceof TypeFloat ) fcnt++;
             else icnt++;
         }
         int nstk = Math.max(icnt-6,0)+Math.max(fcnt-8,0);
@@ -287,7 +290,7 @@ public class x86_64_v2 extends Machine {
     static short maxArgSlotSys5(TypeFunPtr tfp) {
         int icnt=0, fcnt=0;     // Count of ints, floats
         for( int i=0; i<tfp.nargs(); i++ ) {
-            if( tfp.arg(i) instanceof TypeFloat) fcnt++;
+            if( tfp.arg(i) instanceof TypeFloat ) fcnt++;
             else icnt++;
         }
         int nstk = Math.max(icnt-6,0)+Math.max(fcnt-8,0);
@@ -343,9 +346,9 @@ public class x86_64_v2 extends Machine {
         case AndNode      and -> and(and);
         case BoolNode    bool -> cmp(bool);
         case CProjNode      c -> new CProjNode(c);
-        case CallEndNode cend -> new CallEndX86(cend);
+        case CallEndNode cend -> new CallEndMach(cend);
         case CallNode    call -> call(call);
-        case CastNode    cast -> new CastX86(cast);
+        case CastNode    cast -> new CastMach(cast);
         case ConstantNode con -> con(con);
         case DivFNode    divf -> new DivFX86(divf);
         case DivNode      div -> new DivX86(div);
@@ -362,7 +365,7 @@ public class x86_64_v2 extends Machine {
         case ParmNode    parm -> new ParmX86(parm);
         case PhiNode      phi -> new PhiNode(phi);
         case ProjNode     prj -> prj(prj);
-        case ReadOnlyNode read-> new ReadOnlyNode(read);
+        case ReadOnlyNode read-> new ReadOnlyMach(read);
         case ReturnNode   ret -> new RetX86(ret, ret.fun());
         case SarNode      sar -> sar(sar);
         case ShlNode      shl -> shl(shl);
@@ -499,15 +502,16 @@ public class x86_64_v2 extends Machine {
     }
 
     private Node con( ConstantNode con ) {
-        if(!con._con.isConstant()) return new ConstantNode(con); // Default unknown caller inputs
+        if( !con._con.isConstant() )
+            return new ConstantNode(con); // Default unknown caller inputs
         return switch (con._con) {
-            case TypeInteger ti -> new IntX86(con);
-            case TypeFloat tf -> new FltX86(con);
-            case TypeFunPtr tfp -> new TFPX86(con);
-            case TypeMemPtr tmp -> throw Utils.TODO();
-            case TypeNil tn -> throw Utils.TODO();
-            // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
-            case Type t -> t == Type.NIL ? new IntX86(con) : new ConstantNode(con);
+        case TypeInteger ti -> new IntX86(con);
+        case TypeFloat   tf -> new FltX86(con);
+        case TypeFunPtr tfp -> new TFPX86(con);
+        case TypeMemPtr tmp -> new TMPX86(con);
+        case TypeNil tn -> throw Utils.TODO();
+        // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
+        case Type t -> t == Type.NIL ? new IntX86(con) : new ConstantNode(con);
         };
     }
 

@@ -29,8 +29,8 @@ public class ConstantNode extends Node {
     public ConstantNode( ConstantNode con ) { this(con,con._type);  }
 
     public static Node make( Type type ) {
-        if( type== Type. CONTROL ) return new CtrlNode();
-        if( type== Type.XCONTROL ) return new XCtrlNode();
+        if( type==Type. CONTROL ) return new CtrlNode();
+        if( type==Type.XCONTROL ) return new XCtrlNode();
         return new ConstantNode(type);
     }
 

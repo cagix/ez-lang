@@ -3,27 +3,16 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
-public class ShrNode extends LogicalNode {
+public class ShrNode extends ArithNode {
     public ShrNode(Node lhs, Node rhs) { super(lhs, rhs); }
 
     @Override public String label() { return "Shr"; }
     @Override public String op() { return ">>>"; }
-
     @Override public String glabel() { return "&gt;&gt;&gt;"; }
 
-    @Override
-    public Type compute() {
-        Type t1 = in(1)._type, t2 = in(2)._type;
-        if( t1.isHigh() || t2.isHigh() )
-            return TypeInteger.TOP;
-        if (t1 instanceof TypeInteger i0 &&
-            t2 instanceof TypeInteger i1 ) {
-            if( i0 == TypeInteger.ZERO )
-                return TypeInteger.ZERO;
-            if( i0.isConstant() && i1.isConstant() )
-                return TypeInteger.constant(i0.value()>>>i1.value());
-        }
-        return TypeInteger.BOT;
+    @Override long doOp( long x, long y ) { return x >>> y; }
+    @Override TypeInteger doOp( TypeInteger x, TypeInteger y ) {
+        return x == TypeInteger.ZERO ? x : TypeInteger.BOT;
     }
 
     @Override
@@ -38,7 +27,7 @@ public class ShrNode extends LogicalNode {
 
         // TODO: x >>> 3 >>> (y ? 1 : 2) ==> x >>> (y ? 4 : 5)
 
-        return null;
+        return super.idealize();
     }
     @Override Node copy(Node lhs, Node rhs) { return new ShrNode(lhs,rhs); }
 }

@@ -1,6 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.sontypes;
 
 import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.Utils;
 
 import java.util.ArrayList;
 
@@ -19,7 +20,7 @@ public class TypeMem extends Type {
 
     private TypeMem(int alias, Type t) {
         super(TMEM);
-        assert alias!=0 || (t== Type.TOP || t== Type.BOTTOM);
+        assert alias!=0 || (t==Type.TOP || t==Type.BOTTOM);
         _alias = alias;
         _t = t;
     }
@@ -28,7 +29,7 @@ public class TypeMem extends Type {
     public static final TypeMem TOP = make(0, Type.TOP   );
     public static final TypeMem BOT = make(0, Type.BOTTOM);
 
-    public static void gather(ArrayList<Type> ts) { ts.add(make(1, Type.NIL)); ts.add(make(1, TypeInteger.ZERO)); ts.add(BOT); }
+    public static void gather(ArrayList<Type> ts) { ts.add(make(1,Type.NIL)); ts.add(make(1,TypeInteger.ZERO)); ts.add(BOT); }
 
     @Override
     TypeMem xmeet(Type t) {
@@ -48,7 +49,8 @@ public class TypeMem extends Type {
     }
 
     @Override public boolean isHigh() { return _t.isHigh(); }
-    @Override public Type glb() { return make(_alias,_t.glb()); }
+    @Override public int log_size() { throw Utils.TODO(); }
+    @Override public Type glb(boolean mem) { return make(_alias,_t.glb(true)); }
 
     @Override int hash() { return 9876543 + _alias + _t.hashCode(); }
 

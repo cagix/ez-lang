@@ -7,32 +7,14 @@ import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.BitSet;
 
-public class MulNode extends Node {
-    public MulNode(Node lhs, Node rhs) { super(null, lhs, rhs); }
+public class MulNode extends ArithNode {
+    public MulNode(Node lhs, Node rhs) { super(lhs, rhs); }
 
     @Override public String label() { return "Mul"; }
+    @Override public String op() { return "*"; }
 
-    @Override public String glabel() { return "*"; }
-
-    @Override
-    public StringBuilder _print1(StringBuilder sb, BitSet visited) {
-        in(1)._print0(sb.append("("), visited);
-        in(2)._print0(sb.append("*"), visited);
-        return sb.append(")");
-    }
-
-    @Override
-    public Type compute() {
-        Type t1 = in(1)._type, t2 = in(2)._type;
-        if( t1.isHigh() || t2.isHigh() )
-            return TypeInteger.TOP;
-        if( t1 instanceof TypeInteger i1 &&
-            t2 instanceof TypeInteger i2 ) {
-            if( i1== TypeInteger.ZERO || i2== TypeInteger.ZERO)
-                return TypeInteger.ZERO;
-            if (i1.isConstant() && i2.isConstant())
-                return TypeInteger.constant(i1.value()*i2.value());
-        }
+    @Override long doOp( long x, long y ) { return x * y; }
+    @Override TypeInteger doOp(TypeInteger x, TypeInteger y) {
         return TypeInteger.BOT;
     }
 
@@ -76,14 +58,8 @@ public class MulNode extends Node {
         Node phicon = AddNode.phiCon(this,true);
         if( phicon!=null ) return phicon;
 
-        return null;
+        return super.idealize();
     }
     @Override Node copy(Node lhs, Node rhs) { return new MulNode(lhs,rhs); }
     @Override Node copyF() { return new MulFNode(null,null); }
-    @Override public CompilerException err() {
-        if( in(1)._type.isHigh() || in(2)._type.isHigh() ) return null;
-        if( !(in(1)._type instanceof TypeInteger) ) return Compiler.error("Cannot '"+label()+"' " + in(1)._type.glb());
-        if( !(in(2)._type instanceof TypeInteger) ) return Compiler.error("Cannot '"+label()+"' " + in(2)._type.glb());
-        return null;
-    }
 }

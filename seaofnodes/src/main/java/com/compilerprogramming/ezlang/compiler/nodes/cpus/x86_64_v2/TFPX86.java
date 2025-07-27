@@ -23,7 +23,7 @@ public class TFPX86 extends ConstantNode implements MachNode, RIPRelSize {
     @Override public void encoding( Encoding enc ) {
         short dst = enc.reg(this);
         // Short form for zero
-        if( _con== Type.NIL ) {
+        if( _con==Type.NIL ) {
             // XOR dst,dst.  Can skip REX is dst is low 8, makes this a 32b
             // xor, which will also zero the high bits.
             if( dst >= 8 ) enc.add1(x86_64_v2.rex(dst, dst, 0));
@@ -61,4 +61,5 @@ public class TFPX86 extends ConstantNode implements MachNode, RIPRelSize {
         else
             _con.print(sb.p(reg).p(" = #"));
     }
+    @Override public boolean eq(Node n) { return this==n; }
 }
