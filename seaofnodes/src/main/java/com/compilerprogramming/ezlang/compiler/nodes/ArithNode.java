@@ -10,7 +10,7 @@ import java.util.BitSet;
 public abstract class ArithNode extends Node {
     // Source location for late reported errors
 
-    public ArithNode(Node lhs, Node rhs) { super(lhs, rhs); }
+    public ArithNode(Node lhs, Node rhs) { super(null, lhs, rhs); }
     @Override public String glabel() { return op(); }
     abstract String op();
 
