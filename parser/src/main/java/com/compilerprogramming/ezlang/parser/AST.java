@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.parser;
 import com.compilerprogramming.ezlang.lexer.Token;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -162,7 +162,7 @@ public abstract class AST {
     }
 
     public abstract static class Expr extends AST {
-        public Type type;
+        public EZType type;
     }
 
     public abstract static class TypeExpr extends Expr {

@@ -12,7 +12,7 @@ import com.compilerprogramming.ezlang.semantic.SemaAssignTypes;
 import com.compilerprogramming.ezlang.semantic.SemaDefineTypes;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
@@ -105,10 +105,10 @@ public class Compiler {
         // First process struct types
         for (var symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.TypeSymbol typeSymbol) {
-                if (typeSymbol.type instanceof Type.TypeStruct typeStruct) {
+                if (typeSymbol.type instanceof EZType.EZTypeStruct typeStruct) {
                     createSONStructType(structTypes,typeSymbol.name, typeStruct);
                 }
-                else if (typeSymbol.type instanceof Type.TypeArray typeArray) {
+                else if (typeSymbol.type instanceof EZType.EZTypeArray typeArray) {
                     getSONType(structTypes, typeArray);
                 }
             }
@@ -130,7 +130,7 @@ public class Compiler {
     }
 
     private void createFunctionType(Map<String, SONType> structTypes, Symbol.FunctionTypeSymbol functionSymbol) {
-        Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
+        EZType.EZTypeFunction functionType = (EZType.EZTypeFunction) functionSymbol.type;
         Ary<SONType> params = new Ary<>(SONType.class);
         for (var symbol: functionType.args) {
             if (symbol instanceof Symbol.ParameterSymbol parameterSymbol) {
@@ -143,11 +143,11 @@ public class Compiler {
         structTypes.put(functionSymbol.name, tfp);
     }
 
-    private void createSONStructType(Map<String, SONType> structTypes, String typeName, Type.TypeStruct typeStruct) {
+    private void createSONStructType(Map<String, SONType> structTypes, String typeName, EZType.EZTypeStruct typeStruct) {
         Ary<Field> fs = new Ary<>(Field.class);
         for (int i = 0; i < typeStruct.numFields(); i++) {
             String name = typeStruct.getFieldName(i);
-            Type type = typeStruct.getField(name); // FIXME
+            EZType type = typeStruct.getField(name); // FIXME
             fs.push(new Field(name,getSONType(structTypes,type),_code.getALIAS(),false));
         }
         // A Struct type may have been created before because of
@@ -169,33 +169,33 @@ public class Compiler {
         }
     }
 
-    private String getSONTypeName(Type type) {
-        if (type instanceof Type.TypeFunction typeFunction) {
+    private String getSONTypeName(EZType type) {
+        if (type instanceof EZType.EZTypeFunction typeFunction) {
             return typeFunction.name;
         }
-        else if (type instanceof Type.TypeArray typeArray) {
+        else if (type instanceof EZType.EZTypeArray typeArray) {
             return "*[" + getSONTypeName(typeArray.getElementType()) + "]";
         }
-        else if (type instanceof Type.TypeStruct typeStruct) {
+        else if (type instanceof EZType.EZTypeStruct typeStruct) {
             return "*" + typeStruct.name;
         }
-        else if (type instanceof Type.TypeInteger ||
-                 type instanceof Type.TypeVoid) {
+        else if (type instanceof EZType.EZTypeInteger ||
+                 type instanceof EZType.EZTypeVoid) {
             return SONTypeInteger.BOT.str();
         }
-        else if (type instanceof Type.TypeNull) {
+        else if (type instanceof EZType.EZTypeNull) {
             return SONTypeNil.NIL.str();
         }
-        else if (type instanceof Type.TypeNullable typeNullable) {
+        else if (type instanceof EZType.EZTypeNullable typeNullable) {
             return getSONTypeName(typeNullable.baseType)+"?";
         }
         else throw new CompilerException("Not yet implemented " + type.name());
     }
 
-    private SONType getSONType(Map<String, SONType> structTypes, Type type) {
+    private SONType getSONType(Map<String, SONType> structTypes, EZType type) {
         SONType t = structTypes.get(type.name());
         if (t != null) return t;
-        if (type instanceof Type.TypeStruct) {
+        if (type instanceof EZType.EZTypeStruct) {
             // For struct types in EeZee language a reference
             // to T means *T in SoN
             // Create SON struct type
@@ -206,7 +206,7 @@ public class Compiler {
             structTypes.put(type.name(), ptr);
             return ptr;
         }
-        else if (type instanceof Type.TypeArray typeArray) {
+        else if (type instanceof EZType.EZTypeArray typeArray) {
             // A reference to array in EeZee means
             // *array in SoN
             SONType elementType = getSONType(structTypes,typeArray.getElementType());
@@ -215,7 +215,7 @@ public class Compiler {
             structTypes.put(typeArray.name(), ptr); // Array type name is not same as ptr str()
             return ptr;
         }
-        else if (type instanceof Type.TypeNullable typeNullable) {
+        else if (type instanceof EZType.EZTypeNullable typeNullable) {
             SONType baseType = getSONType(structTypes,typeNullable.baseType);
             SONTypeMemPtr ptr = null;
             if (baseType instanceof SONTypeMemPtr ptr1) {
@@ -229,7 +229,7 @@ public class Compiler {
             structTypes.put(typeNullable.name(), ptr);
             return ptr;
         }
-        else if (type instanceof Type.TypeVoid) {
+        else if (type instanceof EZType.EZTypeVoid) {
             return structTypes.get("Int"); // Only allowed in return types
         }
         throw new CompilerException("Count not find type " + type.name());
@@ -551,12 +551,12 @@ public class Compiler {
     }
 
     private Node compileNewExpr(AST.NewExpr newExpr) {
-        Type type = newExpr.type;
-        if (type instanceof Type.TypeArray typeArray) {
+        EZType type = newExpr.type;
+        if (type instanceof EZType.EZTypeArray typeArray) {
             SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(typeArray.name());
             return newArray(tarray._obj,newExpr.len==null?ZERO:compileExpr(newExpr.len));
         }
-        else if (type instanceof Type.TypeStruct typeStruct) {
+        else if (type instanceof EZType.EZTypeStruct typeStruct) {
             SONTypeMemPtr tptr = (SONTypeMemPtr) TYPES.get(typeStruct.name());
             return newStruct(tptr._obj,con(tptr._obj.offset(tptr._obj._fields.length)));
         }
@@ -625,15 +625,15 @@ public class Compiler {
     }
 
     private Node compileConstantExpr(AST.LiteralExpr constantExpr) {
-        if (constantExpr.type instanceof Type.TypeInteger)
+        if (constantExpr.type instanceof EZType.EZTypeInteger)
             return con(constantExpr.value.num.intValue());
-        else if (constantExpr.type instanceof Type.TypeNull)
+        else if (constantExpr.type instanceof EZType.EZTypeNull)
             return NIL;
         else throw new CompilerException("Invalid constant type");
     }
 
     private Node compileSymbolExpr(AST.NameExpr symbolExpr) {
-        if (symbolExpr.type instanceof Type.TypeFunction functionType)
+        if (symbolExpr.type instanceof EZType.EZTypeFunction functionType)
             return con(TYPES.get(functionType.name));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;

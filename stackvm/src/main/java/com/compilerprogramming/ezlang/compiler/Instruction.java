@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 public class Instruction {
 
@@ -98,8 +98,8 @@ public class Instruction {
     }
 
     public static class LoadFunction extends Instruction {
-        public Type.TypeFunction functionType;
-        public LoadFunction(Type.TypeFunction typeFunction) {
+        public EZType.EZTypeFunction functionType;
+        public LoadFunction(EZType.EZTypeFunction typeFunction) {
             super(LOAD_FUNC);
             this.functionType = typeFunction;
         }
@@ -122,8 +122,8 @@ public class Instruction {
     }
 
     public static class New extends Instruction {
-        public final Type type;
-        public New(Type type) {
+        public final EZType type;
+        public New(EZType type) {
             super(NEW);
             this.type = type;
         }

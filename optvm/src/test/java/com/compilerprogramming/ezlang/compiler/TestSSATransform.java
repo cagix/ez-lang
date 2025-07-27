@@ -1,10 +1,9 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -628,7 +627,7 @@ L3:
      */
     static CompiledFunction buildLostCopyTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         var argSymbol = new Symbol.ParameterSymbol("p", typeDictionary.INT);
         functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.INT);
@@ -699,7 +698,7 @@ L1:
      */
     static CompiledFunction buildSwapTest() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         var argSymbol = new Symbol.ParameterSymbol("p", typeDictionary.INT);
         functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.VOID);

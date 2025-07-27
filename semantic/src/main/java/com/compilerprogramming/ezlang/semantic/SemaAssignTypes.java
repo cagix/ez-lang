@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.lexer.Token;
 import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.parser.ASTVisitor;
 import com.compilerprogramming.ezlang.types.Scope;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 /**
@@ -71,17 +71,17 @@ public class SemaAssignTypes implements ASTVisitor {
                 return this;
             validType(binaryExpr.expr1.type, true);
             validType(binaryExpr.expr2.type, true);
-            if (binaryExpr.expr1.type instanceof Type.TypeInteger &&
-                binaryExpr.expr2.type instanceof Type.TypeInteger) {
+            if (binaryExpr.expr1.type instanceof EZType.EZTypeInteger &&
+                binaryExpr.expr2.type instanceof EZType.EZTypeInteger) {
                 // booleans are int too
                 binaryExpr.type = typeDictionary.INT;
             }
-            else if (((binaryExpr.expr1.type instanceof Type.TypeNull &&
-                     binaryExpr.expr2.type instanceof Type.TypeNullable) ||
-                    (binaryExpr.expr1.type instanceof Type.TypeNullable &&
-                     binaryExpr.expr2.type instanceof Type.TypeNull) ||
-                    (binaryExpr.expr1.type instanceof Type.TypeNull &&
-                     binaryExpr.expr2.type instanceof Type.TypeNull)) &&
+            else if (((binaryExpr.expr1.type instanceof EZType.EZTypeNull &&
+                     binaryExpr.expr2.type instanceof EZType.EZTypeNullable) ||
+                    (binaryExpr.expr1.type instanceof EZType.EZTypeNullable &&
+                     binaryExpr.expr2.type instanceof EZType.EZTypeNull) ||
+                    (binaryExpr.expr1.type instanceof EZType.EZTypeNull &&
+                     binaryExpr.expr2.type instanceof EZType.EZTypeNull)) &&
                     (binaryExpr.op.str.equals("==") || binaryExpr.op.str.equals("!="))) {
                 binaryExpr.type = typeDictionary.INT;
             }
@@ -98,7 +98,7 @@ public class SemaAssignTypes implements ASTVisitor {
             return this;
         }
         validType(unaryExpr.expr.type, false);
-        if (unaryExpr.expr.type instanceof Type.TypeInteger ti) {
+        if (unaryExpr.expr.type instanceof EZType.EZTypeInteger ti) {
             unaryExpr.type = unaryExpr.expr.type;
         }
         else {
@@ -114,12 +114,12 @@ public class SemaAssignTypes implements ASTVisitor {
         if (fieldExpr.type != null)
             return this;
         validType(fieldExpr.object.type, false);
-        Type.TypeStruct structType = null;
-        if (fieldExpr.object.type instanceof Type.TypeStruct ts) {
+        EZType.EZTypeStruct structType = null;
+        if (fieldExpr.object.type instanceof EZType.EZTypeStruct ts) {
             structType = ts;
         }
-        else if (fieldExpr.object.type instanceof Type.TypeNullable ptr &&
-                ptr.baseType instanceof Type.TypeStruct ts) {
+        else if (fieldExpr.object.type instanceof EZType.EZTypeNullable ptr &&
+                ptr.baseType instanceof EZType.EZTypeStruct ts) {
             structType = ts;
         }
         else
@@ -138,15 +138,15 @@ public class SemaAssignTypes implements ASTVisitor {
         if (fieldExpr.type != null)
             return this;
         validType(fieldExpr.object.type, true);
-        Type.TypeStruct structType = null;
-        if (fieldExpr.object.type instanceof Type.TypeStruct ts) {
+        EZType.EZTypeStruct structType = null;
+        if (fieldExpr.object.type instanceof EZType.EZTypeStruct ts) {
             structType = ts;
         }
-        else if (fieldExpr.object.type instanceof Type.TypeNullable ptr &&
-                ptr.baseType instanceof Type.TypeStruct ts) {
+        else if (fieldExpr.object.type instanceof EZType.EZTypeNullable ptr &&
+                ptr.baseType instanceof EZType.EZTypeStruct ts) {
             structType = ts;
         }
-        else if (fieldExpr.object.type instanceof Type.TypeArray typeArray) {
+        else if (fieldExpr.object.type instanceof EZType.EZTypeArray typeArray) {
             if (fieldExpr.fieldName.equals("len"))
                 checkAssignmentCompatible(typeDictionary.INT,fieldExpr.value.type);
             else if (fieldExpr.fieldName.equals("value"))
@@ -174,7 +174,7 @@ public class SemaAssignTypes implements ASTVisitor {
             if (callExpr.type != null)
                 return this;
             validType(callExpr.callee.type, false);
-            if (callExpr.callee.type instanceof Type.TypeFunction f) {
+            if (callExpr.callee.type instanceof EZType.EZTypeFunction f) {
                 callExpr.type = f.returnType;
             }
             else
@@ -232,17 +232,17 @@ public class SemaAssignTypes implements ASTVisitor {
             if (arrayIndexExpr.type != null)
                 return this;
             validType(arrayIndexExpr.array.type, false);
-            Type.TypeArray arrayType = null;
-            if (arrayIndexExpr.array.type instanceof Type.TypeArray ta) {
+            EZType.EZTypeArray arrayType = null;
+            if (arrayIndexExpr.array.type instanceof EZType.EZTypeArray ta) {
                 arrayType = ta;
             }
-            else if (arrayIndexExpr.array.type instanceof Type.TypeNullable ptr &&
-                    ptr.baseType instanceof Type.TypeArray ta) {
+            else if (arrayIndexExpr.array.type instanceof EZType.EZTypeNullable ptr &&
+                    ptr.baseType instanceof EZType.EZTypeArray ta) {
                 arrayType = ta;
             }
             else
                 throw new CompilerException("Unexpected array type " + arrayIndexExpr.array.type);
-            if (!(arrayIndexExpr.expr.type instanceof Type.TypeInteger))
+            if (!(arrayIndexExpr.expr.type instanceof EZType.EZTypeInteger))
                 throw new CompilerException("Array index must be integer type");
             arrayIndexExpr.type = arrayType.getElementType();
             validType(arrayIndexExpr.type, false);
@@ -256,17 +256,17 @@ public class SemaAssignTypes implements ASTVisitor {
             if (arrayIndexExpr.type != null)
                 return this;
             validType(arrayIndexExpr.array.type, false);
-            Type.TypeArray arrayType = null;
-            if (arrayIndexExpr.array.type instanceof Type.TypeArray ta) {
+            EZType.EZTypeArray arrayType = null;
+            if (arrayIndexExpr.array.type instanceof EZType.EZTypeArray ta) {
                 arrayType = ta;
             }
-            else if (arrayIndexExpr.array.type instanceof Type.TypeNullable ptr &&
-                    ptr.baseType instanceof Type.TypeArray ta) {
+            else if (arrayIndexExpr.array.type instanceof EZType.EZTypeNullable ptr &&
+                    ptr.baseType instanceof EZType.EZTypeArray ta) {
                 arrayType = ta;
             }
             else
                 throw new CompilerException("Unexpected array type " + arrayIndexExpr.array.type);
-            if (!(arrayIndexExpr.expr.type instanceof Type.TypeInteger))
+            if (!(arrayIndexExpr.expr.type instanceof EZType.EZTypeInteger))
                 throw new CompilerException("Array index must be integer type");
             arrayIndexExpr.type = arrayType.getElementType();
             validType(arrayIndexExpr.type, false);
@@ -285,15 +285,15 @@ public class SemaAssignTypes implements ASTVisitor {
         if (newExpr.typeExpr.type == null)
             throw new CompilerException("Unresolved type in new expression");
         validType(newExpr.typeExpr.type, false);
-        if (newExpr.typeExpr.type instanceof Type.TypeNullable)
+        if (newExpr.typeExpr.type instanceof EZType.EZTypeNullable)
             throw new CompilerException("new cannot be used to create a Nullable type");
-        if (newExpr.typeExpr.type instanceof Type.TypeStruct typeStruct) {
+        if (newExpr.typeExpr.type instanceof EZType.EZTypeStruct typeStruct) {
             newExpr.type = newExpr.typeExpr.type;
         }
-        else if (newExpr.typeExpr.type instanceof Type.TypeArray arrayType) {
+        else if (newExpr.typeExpr.type instanceof EZType.EZTypeArray arrayType) {
             newExpr.type = newExpr.typeExpr.type;
             if (newExpr.len != null) {
-                if (!(newExpr.len.type instanceof Type.TypeInteger))
+                if (!(newExpr.len.type instanceof EZType.EZTypeInteger))
                     throw new CompilerException("Array len must be integer type");
                 if (newExpr.initValue != null) {
                     if (!arrayType.getElementType().isAssignable(newExpr.initValue.type))
@@ -315,9 +315,9 @@ public class SemaAssignTypes implements ASTVisitor {
         if (initExpr.type != null)
             return this;
         validType(initExpr.newExpr.type, false);
-        if (initExpr.newExpr.type instanceof Type.TypeNullable)
+        if (initExpr.newExpr.type instanceof EZType.EZTypeNullable)
             throw new CompilerException("new cannot be used to create a Nullable type");
-        if (initExpr.newExpr.type instanceof Type.TypeStruct typeStruct) {
+        if (initExpr.newExpr.type instanceof EZType.EZTypeStruct typeStruct) {
             for (AST.Expr expr: initExpr.initExprList) {
                 if (expr instanceof AST.SetFieldExpr setFieldExpr) {
                     var fieldType = typeStruct.getField(setFieldExpr.fieldName);
@@ -325,7 +325,7 @@ public class SemaAssignTypes implements ASTVisitor {
                 }
             }
         }
-        else if (initExpr.newExpr.type instanceof Type.TypeArray arrayType) {
+        else if (initExpr.newExpr.type instanceof EZType.EZTypeArray arrayType) {
             if (initExpr.initExprList.size() > 0)
                 initExpr.initExprList.removeIf(e->e instanceof AST.InitFieldExpr);
             for (AST.Expr expr: initExpr.initExprList) {
@@ -368,12 +368,12 @@ public class SemaAssignTypes implements ASTVisitor {
     public ASTVisitor visit(AST.ReturnStmt returnStmt, boolean enter) {
         if (enter)
             return this;
-        Type.TypeFunction functionType = (Type.TypeFunction) currentFuncDecl.symbol.type;
+        EZType.EZTypeFunction functionType = (EZType.EZTypeFunction) currentFuncDecl.symbol.type;
         if (returnStmt.expr != null) {
             validType(returnStmt.expr.type, true);
             checkAssignmentCompatible(functionType.returnType, returnStmt.expr.type);
         }
-        else if (!(functionType.returnType instanceof Type.TypeVoid)) {
+        else if (!(functionType.returnType instanceof EZType.EZTypeVoid)) {
             throw new CompilerException("A return value of type " + functionType.returnType + " is expected");
         }
         return this;
@@ -436,7 +436,7 @@ public class SemaAssignTypes implements ASTVisitor {
         program.accept(this);
     }
 
-    private void validType(Type t, boolean allowNull) {
+    private void validType(EZType t, boolean allowNull) {
         if (t == null)
             throw new CompilerException("Undefined type");
         if (t == typeDictionary.UNKNOWN)
@@ -445,7 +445,7 @@ public class SemaAssignTypes implements ASTVisitor {
             throw new CompilerException("Null type not allowed");
     }
 
-    private void checkAssignmentCompatible(Type var, Type value) {
+    private void checkAssignmentCompatible(EZType var, EZType value) {
         if (!var.isAssignable(value))
             throw new CompilerException("Value of type " + value + " cannot be assigned to type " + var);
     }

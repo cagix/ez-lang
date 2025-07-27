@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.parser.Parser;
 import com.compilerprogramming.ezlang.semantic.SemaAssignTypes;
 import com.compilerprogramming.ezlang.semantic.SemaDefineTypes;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.BitSet;
@@ -15,7 +15,7 @@ public class Compiler {
     private void compile(TypeDictionary typeDictionary) {
         for (Symbol symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.FunctionTypeSymbol functionSymbol) {
-                Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
+                EZType.EZTypeFunction functionType = (EZType.EZTypeFunction) functionSymbol.type;
                 functionType.code = new CompiledFunction(functionSymbol);
             }
         }

@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,7 +10,7 @@ public class TestInterferenceGraph {
 
     private CompiledFunction buildTest1() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         var argSymbol = new Symbol.ParameterSymbol("a", typeDictionary.INT);
         functionType.addArg(argSymbol);
         functionType.setReturnType(typeDictionary.INT);
@@ -81,7 +81,7 @@ public class TestInterferenceGraph {
      */
     private CompiledFunction buildTest2() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         functionType.setReturnType(typeDictionary.VOID);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;
@@ -159,7 +159,7 @@ public class TestInterferenceGraph {
     /* Test move does not interfere with uses */
     public static CompiledFunction buildTest4() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         functionType.setReturnType(typeDictionary.VOID);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;

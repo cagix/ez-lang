@@ -1,15 +1,15 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 public class Operand {
 
-    Type type;
+    EZType type;
 
     public static class ConstantOperand extends Operand {
         public final long value;
-        public ConstantOperand(long value, Type type) {
+        public ConstantOperand(long value, EZType type) {
             this.value = value;
             this.type = type;
         }
@@ -20,7 +20,7 @@ public class Operand {
     }
 
     public static class NullConstantOperand extends Operand {
-        public NullConstantOperand(Type type) {
+        public NullConstantOperand(EZType type) {
             this.type = type;
         }
         @Override
@@ -61,8 +61,8 @@ public class Operand {
     }
 
     public static class LocalFunctionOperand extends Operand {
-        public final Type.TypeFunction functionType;
-        public LocalFunctionOperand(Type.TypeFunction functionType) {
+        public final EZType.EZTypeFunction functionType;
+        public LocalFunctionOperand(EZType.EZTypeFunction functionType) {
             this.functionType = functionType;
         }
         @Override
