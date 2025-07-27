@@ -11,10 +11,10 @@ public class PhiNode extends Node {
 
     // The Phi type we compute must stay within the domain of the Phi.
     // Example Int stays Int, Ptr stays Ptr, Control stays Control, Mem stays Mem.
-    final SONType _declaredType;
+    final Type _declaredType;
 
-    public PhiNode(String label, SONType declaredType, Node... inputs) { super(inputs); _label = label;  assert declaredType!=null; _declaredType = declaredType; }
-    public PhiNode(PhiNode phi, String label, SONType declaredType) { super(phi); _label = label; _type = _declaredType = declaredType; }
+    public PhiNode(String label, Type declaredType, Node... inputs) { super(inputs); _label = label;  assert declaredType!=null; _declaredType = declaredType; }
+    public PhiNode(PhiNode phi, String label, Type declaredType) { super(phi); _label = label; _type = _declaredType = declaredType; }
     public PhiNode(PhiNode phi) { super(phi); _label = phi._label; _declaredType = phi._declaredType;  }
 
     public PhiNode(RegionNode r, Node sample) {
@@ -45,21 +45,21 @@ public class PhiNode extends Node {
     }
 
     public CFGNode region() { return (CFGNode)in(0); }
-    @Override public boolean isMem() { return _declaredType instanceof SONTypeMem; }
+    @Override public boolean isMem() { return _declaredType instanceof TypeMem; }
     @Override public boolean isPinned() { return true; }
 
     @Override
-    public SONType compute() {
+    public Type compute() {
         if( !(region() instanceof RegionNode r) )
-            return region()._type== SONType.XCONTROL ? (_type instanceof SONTypeMem ? SONTypeMem.TOP : SONType.TOP) : _type;
+            return region()._type== Type.XCONTROL ? (_type instanceof TypeMem ? TypeMem.TOP : Type.TOP) : _type;
         // During parsing Phis have to be computed type pessimistically.
         if( r.inProgress() ) return _declaredType;
         // Set type to local top of the starting type
-        SONType t = _declaredType.glb().dual();//Type.TOP;
+        Type t = _declaredType.glb().dual();//Type.TOP;
         for (int i = 1; i < nIns(); i++)
             // If the region's control input is live, add this as a dependency
             // to the control because we can be peeped should it become dead.
-            if( addDep(r.in(i))._type != SONType.XCONTROL )
+            if( addDep(r.in(i))._type != Type.XCONTROL )
                 t = t.meet(in(i)._type);
         return t;
     }
@@ -78,7 +78,7 @@ public class PhiNode extends Node {
 
         // No bother if region is going to fold dead paths soon
         for( int i=1; i<nIns(); i++ )
-            if( r.in(i)._type == SONType.XCONTROL )
+            if( r.in(i)._type == Type.XCONTROL )
                 return null;
 
         // Generic "pull down op"
@@ -165,13 +165,13 @@ public class PhiNode extends Node {
      * If only single unique input, return it
      */
     private Node singleUniqueInput() {
-        if( region() instanceof LoopNode loop && loop.entry()._type == SONType.XCONTROL )
+        if( region() instanceof LoopNode loop && loop.entry()._type == Type.XCONTROL )
             return null;    // Dead entry loops just ignore and let the loop collapse
         Node live = null;
         for( int i=1; i<nIns(); i++ ) {
             // If the region's control input is live, add this as a dependency
             // to the control because we can be peeped should it become dead.
-            if( addDep(region().in(i))._type != SONType.XCONTROL && in(i) != this )
+            if( addDep(region().in(i))._type != Type.XCONTROL && in(i) != this )
                 if( live == null || live == in(i) ) live = in(i);
                 else return null;
         }
@@ -200,22 +200,22 @@ public class PhiNode extends Node {
 
     @Override
     public CompilerException err() {
-        if( _type != SONType.BOTTOM ) return null;
+        if( _type != Type.BOTTOM ) return null;
 
         // BOTTOM means we mixed e.g. int and ptr
         for( int i=1; i<nIns(); i++ )
             // Already an error, but better error messages come from elsewhere
-            if( in(i)._type == SONType.BOTTOM )
+            if( in(i)._type == Type.BOTTOM )
                 return null;
 
         // Gather a minimal set of types that "cover" all the rest
         boolean ti=false, tf=false, tp=false, tn=false;
         for( int i=1; i<nIns(); i++ ) {
-            SONType t = in(i)._type;
-            ti |= t instanceof SONTypeInteger x;
-            tf |= t instanceof SONTypeFloat x;
-            tp |= t instanceof SONTypeMemPtr x;
-            tn |= t== SONType.NIL;
+            Type t = in(i)._type;
+            ti |= t instanceof TypeInteger x;
+            tf |= t instanceof TypeFloat x;
+            tp |= t instanceof TypeMemPtr x;
+            tn |= t== Type.NIL;
         }
         return ReturnNode.mixerr(ti,tf,tp,tn);
     }

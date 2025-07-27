@@ -4,8 +4,8 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 // Integer constants
 public class IntARM extends ConstantNode implements MachNode {
@@ -20,7 +20,7 @@ public class IntARM extends ConstantNode implements MachNode {
 
     @Override public void encoding( Encoding enc ) {
         short self = enc.reg(this);
-        long x = _con==SONType.NIL ? 0 : ((SONTypeInteger)_con).value();
+        long x = _con== Type.NIL ? 0 : ((TypeInteger)_con).value();
         int nb0 = 0;
         int nb1 = 0;
         // Count number of 0000 and FFFF blocks

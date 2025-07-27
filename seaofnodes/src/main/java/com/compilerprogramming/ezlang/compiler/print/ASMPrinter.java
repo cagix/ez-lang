@@ -28,7 +28,7 @@ public abstract class ASMPrinter {
         Encoding enc = code._encoding;
         if(  enc!=null && !enc._bigCons.isEmpty() ) {
             iadr = (iadr+15)&-16; // pad to 16
-            HashSet<SONType> targets = new HashSet<>();
+            HashSet<Type> targets = new HashSet<>();
             sb.p("--- Constant Pool ------").nl();
             // By log size
             for( int log = 3; log >= 0; log-- ) {
@@ -38,8 +38,8 @@ public abstract class ASMPrinter {
                     targets.add(relo._t);
                     if( relo._t.log_size()==log ) {
                         sb.hex2(iadr).p("  ");
-                        if( relo._t instanceof SONTypeTuple tt ) {
-                            for( SONType tx : tt._types ) {
+                        if( relo._t instanceof TypeTuple tt ) {
+                            for( Type tx : tt._types ) {
                                 switch( log ) {
                                 case 0: sb.hex1(enc.read1(iadr)); break;
                                 case 1: sb.hex2(enc.read2(iadr)); break;
@@ -109,7 +109,7 @@ public abstract class ASMPrinter {
         boolean once=false;
         for( Node n : bb.outs() ) {
             if( !(n instanceof PhiNode phi) ) continue;
-            if( phi._type instanceof SONTypeMem || phi._type instanceof SONTypeRPC ) continue; // Nothing for the hidden ones
+            if( phi._type instanceof TypeMem || phi._type instanceof TypeRPC) continue; // Nothing for the hidden ones
             // Post-RegAlloc phi prints all on one line
             if( postAlloc ) {
                 if( !once ) { once=true; sb.fix(4," ").p(" ").fix(encWidth,"").p("  "); }
@@ -164,7 +164,7 @@ public abstract class ASMPrinter {
         // ProjNodes following a multi (e.g. Call or New results),
         // get indent slightly and just print their index & node#
         if( n instanceof ProjNode proj ) {
-            if( proj._type instanceof SONTypeMem ) return iadr; // Nothing for the hidden ones
+            if( proj._type instanceof TypeMem) return iadr; // Nothing for the hidden ones
             sb.fix(4," ").p(" ").fix(encWidth,"").p("    ").fix(opWidth,proj._label==null ? "---" : proj._label).p(" ").p(code.reg(n,fun)).nl();
             return iadr;
         }
@@ -204,7 +204,7 @@ public abstract class ASMPrinter {
             isMultiOp = isMultiOp(sb,old,len);
             sb.fix(argWidth-(len-old),""); // Pad out
 
-        } else if( !(n._type instanceof SONTypeMem) ) {
+        } else if( !(n._type instanceof TypeMem) ) {
             // Room for some inputs
             sb.fix(5, n._nid+":" );
             int off = 0;

@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import java.util.BitSet;
 
 public class StopNode extends CFGNode {
@@ -40,8 +40,8 @@ public class StopNode extends CFGNode {
     }
 
     @Override
-    public SONType compute() {
-        return SONType.BOTTOM;
+    public Type compute() {
+        return Type.BOTTOM;
     }
 
     @Override

@@ -3,9 +3,9 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.print.IRPrinter;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.*;
@@ -51,7 +51,7 @@ public abstract class Node implements Cloneable {
      * Current computed type for this Node.  This value changes as the graph
      * changes and more knowledge is gained about the program.
      */
-    public SONType _type;
+    public Type _type;
 
 
     Node(Node... inputs) {
@@ -71,7 +71,7 @@ public abstract class Node implements Cloneable {
         _nid = CODE.getUID(); // allocate unique dense ID
         _inputs  = new Ary<>(n==null ? new Node[0] : n._inputs.asAry());
         _outputs = new Ary<>(Node.class);
-        _type = n==null ? SONType.BOTTOM : n._type;
+        _type = n==null ? Type.BOTTOM : n._type;
         _deps = null;
         _hash = 0;
     }
@@ -386,9 +386,9 @@ public abstract class Node implements Cloneable {
 
     /**
      * Try to peephole at this node and return a better replacement Node if
-     * possible.  We compute a {@link SONType} and then check and replace:
+     * possible.  We compute a {@link Type} and then check and replace:
      * <ul>
-     * <li>if the Type {@link SONType#isConstant}, we replace with a {@link ConstantNode}</li>
+     * <li>if the Type {@link Type#isConstant}, we replace with a {@link ConstantNode}</li>
      * <li>in a future chapter we will look for a
      * <a href="https://en.wikipedia.org/wiki/Common_subexpression_elimination">Common Subexpression</a>
      * to eliminate.</li>
@@ -405,7 +405,7 @@ public abstract class Node implements Cloneable {
     public final Node peepholeOpt( ) {
         CODE.iterCnt();
         // Compute initial or improved Type
-        SONType old = setType(compute());
+        Type old = setType(compute());
 
         // Replace constant computations from non-constants with a constant
         // node.  If peeps are disabled, still allow high Phis to collapse;
@@ -473,12 +473,12 @@ public abstract class Node implements Cloneable {
      * infinitely recurse until stack overflow.  Instead, compute typically
      * computes a new type from the {@link #_type} field of its inputs.
      */
-    public abstract SONType compute();
+    public abstract Type compute();
 
     // Set the type.  Assert monotonic progress.
     // If changing, add users to worklist.
-    public SONType setType(SONType type) {
-        SONType old = _type;
+    public Type setType(Type type) {
+        Type old = _type;
         assert old==null || type.isa(old); // Since _type not set, can just re-run this in assert in the debugger
         if( old == type ) return old;
         _type = type;       // Set _type late for easier assert debugging
@@ -634,13 +634,13 @@ public abstract class Node implements Cloneable {
         Node flt = copyF();
         if( flt==null ) return this;
         for( int i=1; i<nIns(); i++ )
-            flt.setDef(i, in(i)._type instanceof SONTypeFloat ? in(i) : new ToFloatNode(in(i)).peephole());
+            flt.setDef(i, in(i)._type instanceof TypeFloat ? in(i) : new ToFloatNode(in(i)).peephole());
         kill();
         return flt;
     }
     private boolean hasFloatInput() {
         for( int i=1; i<nIns(); i++ )
-            if( in(i)._type instanceof SONTypeFloat)
+            if( in(i)._type instanceof TypeFloat)
                 return true;
         return false;
     }
@@ -695,7 +695,7 @@ public abstract class Node implements Cloneable {
     public CompilerException err() { return null; }
 
     // Common integer constants
-    public static ConstantNode con(long x) { return (ConstantNode)(new ConstantNode(SONTypeInteger.constant(x)).peephole()); }
+    public static ConstantNode con(long x) { return (ConstantNode)(new ConstantNode(TypeInteger.constant(x)).peephole()); }
 
     // Utility to walk the entire graph applying a function; return the first
     // not-null result.

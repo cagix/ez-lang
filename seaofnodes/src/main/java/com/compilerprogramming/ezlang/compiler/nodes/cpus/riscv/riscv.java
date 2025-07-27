@@ -253,17 +253,17 @@ public class riscv extends Machine {
         };
     }
 
-    @Override public RegMask callArgMask( SONTypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
-    static RegMask callInMask( SONTypeFunPtr tfp, int idx, int maxArgSlot ) {
+    @Override public RegMask callArgMask(TypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
+    static RegMask callInMask(TypeFunPtr tfp, int idx, int maxArgSlot ) {
         if( idx==0 ) return RPC_MASK;
         if( idx==1 ) return null;
         // Count floats in signature up to index
         int fcnt=0;
         for( int i=2; i<idx; i++ )
-            if( tfp.arg(i-2) instanceof SONTypeFloat )
+            if( tfp.arg(i-2) instanceof TypeFloat)
                 fcnt++;
         // Floats up to XMMS in XMM registers
-        if( tfp.arg(idx-2) instanceof SONTypeFloat ) {
+        if( tfp.arg(idx-2) instanceof TypeFloat) {
             if( fcnt < XMMS.length )
                 return XMMS[fcnt];
         } else {
@@ -276,10 +276,10 @@ public class riscv extends Machine {
         return new RegMask(MAX_REG + 1 + (idx - 2));
     }
 
-    @Override public short maxArgSlot( SONTypeFunPtr tfp ) {
+    @Override public short maxArgSlot( TypeFunPtr tfp ) {
         int icnt=0, fcnt=0;     // Count of ints, floats
         for( int i=0; i<tfp.nargs(); i++ ) {
-            if( tfp.arg(i) instanceof SONTypeFloat ) fcnt++;
+            if( tfp.arg(i) instanceof TypeFloat) fcnt++;
             else icnt++;
         }
         int nstk = Math.max(icnt-8,0)+Math.max(fcnt-8,0);
@@ -296,8 +296,8 @@ public class riscv extends Machine {
 
     @Override public long callerSave() { return CALLER_SAVE; }
     @Override public long  neverSave() { return (1L<<RSP) | (1L<<ZERO); }
-    @Override public RegMask retMask( SONTypeFunPtr tfp ) {
-        return tfp.ret() instanceof SONTypeFloat ? FA0_MASK : A0_MASK;
+    @Override public RegMask retMask( TypeFunPtr tfp ) {
+        return tfp.ret() instanceof TypeFloat ? FA0_MASK : A0_MASK;
     }
     @Override public int rpc() { return RPC; }
 
@@ -309,12 +309,12 @@ public class riscv extends Machine {
     @Override  public SplitNode split(String kind, byte round, LRG lrg) { return new SplitRISC(kind,round);  }
 
     // True if signed 12-bit immediate
-    public static boolean imm12(SONTypeInteger ti) {
+    public static boolean imm12(TypeInteger ti) {
         // 52 = 64-12
         return ti.isConstant() && ((ti.value()<<52)>>52) == ti.value();
     }
     // True if HIGH 20-bit signed immediate, with all zeros low.
-    public static boolean imm20Exact(SONTypeInteger ti) {
+    public static boolean imm20Exact(TypeInteger ti) {
         // shift left 32 to clear out the upper 32 bits.
         // shift right SIGNED to sign-extend upper 32 bits; then shift 12 more to clear out lower 12 bits.
         // shift left 12 to re-center the bits.
@@ -371,13 +371,13 @@ public class riscv extends Machine {
     }
 
     private Node add(AddNode add) {
-        if( add.in(2) instanceof ConstantNode off2 && off2._con instanceof SONTypeInteger ti && imm12(ti) )
+        if( add.in(2) instanceof ConstantNode off2 && off2._con instanceof TypeInteger ti && imm12(ti) )
             return new AddIRISC(add, (int)ti.value(),true);
         return new AddRISC(add);
     }
 
     private Node and(AndNode and) {
-        if( and.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti ) {
+        if( and.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti ) {
             if( imm12(ti) )
                 return new AndIRISC(and, (int)ti.value());
             // Could be any size low bit mask
@@ -388,7 +388,7 @@ public class riscv extends Machine {
     }
 
     private Node call(CallNode call) {
-        return call.fptr() instanceof ConstantNode con && con._con instanceof SONTypeFunPtr tfp
+        return call.fptr() instanceof ConstantNode con && con._con instanceof TypeFunPtr tfp
             ? new CallRISC(call, tfp)
             : new CallRRISC(call);
     }
@@ -416,7 +416,7 @@ public class riscv extends Machine {
         // we can remove the double XOR in the encodings.
 
         return switch( bool.op() ) {
-        case "<" -> bool.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti)
+        case "<" -> bool.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti)
             ? new SetIRISC(bool, (int)ti.value(),false)
             : new  SetRISC(bool, false);
         // x <= y - flip and negate; !(y < x); `slt tmp=y,x; xori dst=tmp,#1`
@@ -430,7 +430,7 @@ public class riscv extends Machine {
     private Node con( ConstantNode con ) {
         if( !con._con.isConstant() ) return new ConstantNode( con ); // Default unknown caller inputs
         return switch( con._con ) {
-        case SONTypeInteger ti -> {
+        case TypeInteger ti -> {
             if( imm12(ti) ) yield new IntRISC(con);
             long x = ti.value();
             if( imm20Exact(ti) ) yield new LUI((int)x);
@@ -446,12 +446,12 @@ public class riscv extends Machine {
             throw Utils.TODO();
         }
         // Load from constant pool
-        case SONTypeFloat   tf  -> new FltRISC(con);
-        case SONTypeFunPtr  tfp -> new TFPRISC(con);
-        case SONTypeMemPtr  tmp -> throw Utils.TODO();
-        case SONTypeNil     tn  -> throw Utils.TODO();
+        case TypeFloat tf  -> new FltRISC(con);
+        case TypeFunPtr tfp -> new TFPRISC(con);
+        case TypeMemPtr tmp -> throw Utils.TODO();
+        case TypeNil tn  -> throw Utils.TODO();
         // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
-        case SONType t -> t==SONType.NIL ? new IntRISC(con) : new ConstantNode(con);
+        case Type t -> t== Type.NIL ? new IntRISC(con) : new ConstantNode(con);
         };
     }
 
@@ -468,43 +468,43 @@ public class riscv extends Machine {
     }
 
     private Node or(OrNode or) {
-        if( or.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti))
+        if( or.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti))
             return new OrIRISC(or, (int)ti.value());
         return new OrRISC(or);
     }
 
     private Node xor(XorNode xor) {
-        if( xor.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti))
+        if( xor.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti))
             return new XorIRISC(xor, (int)ti.value());
         return new XorRISC(xor);
     }
 
     private Node sra(SarNode sar) {
-        if( sar.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti))
+        if( sar.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti))
             return new SraIRISC(sar, (int)ti.value());
         return new SraRISC(sar);
     }
 
     private Node srl(ShrNode shr) {
-        if( shr.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti))
+        if( shr.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti))
             return new SrlIRISC(shr, (int)ti.value(),true);
         return new SrlRISC(shr);
     }
 
     private Node sll(ShlNode sll) {
-        if( sll.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti))
+        if( sll.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti))
             return new SllIRISC(sll, (int)ti.value());
         return new SllRISC(sll);
     }
 
     private Node sub(SubNode sub) {
-        return sub.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti)
+        return sub.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti)
             ? new AddIRISC(sub, (int)(-ti.value()),true)
             : new SubRISC(sub);
     }
 
     private Node i2f8(ToFloatNode tfn) {
-        assert tfn.in(1)._type instanceof SONTypeInteger ti;
+        assert tfn.in(1)._type instanceof TypeInteger ti;
         return new I2F8RISC(tfn);
     }
 
@@ -517,7 +517,7 @@ public class riscv extends Machine {
     }
 
     private Node st(StoreNode st) {
-        Node xval = st.val() instanceof ConstantNode con && con._con == SONTypeInteger.ZERO ? null : st.val();
+        Node xval = st.val() instanceof ConstantNode con && con._con == TypeInteger.ZERO ? null : st.val();
         return new StoreRISC(st,address(st), off, xval);
     }
 
@@ -530,8 +530,8 @@ public class riscv extends Machine {
         Node base = mop.ptr();
         // Skip/throw-away a ReadOnly, only used to typecheck
         if( base instanceof ReadOnlyNode read ) base = read.in(1);
-        assert !(base instanceof AddNode) && base._type instanceof SONTypeMemPtr; // Base ptr always, not some derived
-        if( mop.off() instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti) ) {
+        assert !(base instanceof AddNode) && base._type instanceof TypeMemPtr; // Base ptr always, not some derived
+        if( mop.off() instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti) ) {
             off = (int)ti.value();
         } else {
             base = new AddRISC(base,mop.off());

@@ -16,9 +16,9 @@ public class CallEndNode extends CFGNode implements MultiNode {
 
     // When set true, this Call/CallEnd/Fun/Return is being trivially inlined
     private boolean _folding;
-    public final SONTypeRPC _rpc;
+    public final TypeRPC _rpc;
 
-    public CallEndNode(CallNode call) { super(new Node[]{call}); _rpc = SONTypeRPC.constant(_nid); }
+    public CallEndNode(CallNode call) { super(new Node[]{call}); _rpc = TypeRPC.constant(_nid); }
     public CallEndNode(CallEndNode cend) { super(cend); _rpc = cend._rpc; }
 
     @Override public String label() { return "CallEnd"; }
@@ -37,21 +37,21 @@ public class CallEndNode extends CFGNode implements MultiNode {
     }
 
     @Override
-    public SONType compute() {
+    public Type compute() {
         if( !(in(0) instanceof CallNode call) )
-            return SONTypeTuple.RET.dual();
-        SONType ret = SONType.BOTTOM;
-        SONTypeMem mem = SONTypeMem.BOT;
-        if( addDep(call.fptr())._type instanceof SONTypeFunPtr tfp ) {
+            return TypeTuple.RET.dual();
+        Type ret = Type.BOTTOM;
+        TypeMem mem = TypeMem.BOT;
+        if( addDep(call.fptr())._type instanceof TypeFunPtr tfp ) {
             ret = tfp.ret();
             // Here, if I can figure out I've found *all* callers, then I can meet
             // across the linked returns and join with the function return type.
             if( tfp.isConstant() && nIns()>1 ) {
                 assert nIns()==2;     // Linked exactly once for a constant
-                ret = ((SONTypeTuple)in(1)._type).ret(); // Return type
+                ret = ((TypeTuple)in(1)._type).ret(); // Return type
             }
         }
-        return SONTypeTuple.make(call._type, SONTypeMem.BOT,ret);
+        return TypeTuple.make(call._type, TypeMem.BOT,ret);
     }
 
     @Override
@@ -64,7 +64,7 @@ public class CallEndNode extends CFGNode implements MultiNode {
             if( fptr.nOuts() == 1 && // Only user is this call
                 fptr instanceof ConstantNode && // We have an immediate call
                 // Function is being called, and its not-null
-                fptr._type instanceof SONTypeFunPtr tfp && tfp.notNull() &&
+                fptr._type instanceof TypeFunPtr tfp && tfp.notNull() &&
                 // Arguments are correct
                 call.err()==null ) {
                 ReturnNode ret = (ReturnNode)in(1);

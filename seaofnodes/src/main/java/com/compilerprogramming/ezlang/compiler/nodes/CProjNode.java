@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeTuple;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeTuple;
 import java.util.BitSet;
 
 public class CProjNode extends CFGNode {
@@ -29,17 +29,17 @@ public class CProjNode extends CFGNode {
     public CFGNode ctrl() { return cfg(0); }
 
     @Override
-    public SONType compute() {
-        SONType t = ctrl()._type;
-        return t instanceof SONTypeTuple tt ? tt._types[_idx] : SONType.BOTTOM;
+    public Type compute() {
+        Type t = ctrl()._type;
+        return t instanceof TypeTuple tt ? tt._types[_idx] : Type.BOTTOM;
     }
 
     @Override
     public Node idealize() {
-        if( ctrl()._type instanceof SONTypeTuple tt ) {
-            if( tt._types[_idx]== SONType.XCONTROL )
+        if( ctrl()._type instanceof TypeTuple tt ) {
+            if( tt._types[_idx]== Type.XCONTROL )
                 return Compiler.XCTRL; // We are dead
-            if( ctrl() instanceof IfNode && tt._types[1-_idx]== SONType.XCONTROL ) // Only true for IfNodes
+            if( ctrl() instanceof IfNode && tt._types[1-_idx]== Type.XCONTROL ) // Only true for IfNodes
                 return ctrl().in(0);               // We become our input control
         }
 

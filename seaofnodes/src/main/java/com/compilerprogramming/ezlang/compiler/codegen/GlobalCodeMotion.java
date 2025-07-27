@@ -166,11 +166,11 @@ public abstract class GlobalCodeMotion {
                             // New makes new memory, never crushes load memory
                             !(memuse instanceof NewNode) &&
                             // Load-use directly defines memory
-                            (memuse._type instanceof SONTypeMem ||
+                            (memuse._type instanceof TypeMem ||
                              // Load-use directly defines memory
                              memuse instanceof CallNode ||
                              // Load-use indirectly defines memory
-                             (memuse._type instanceof SONTypeTuple tt && tt._types[ld._alias] instanceof SONTypeMem)) )
+                             (memuse._type instanceof TypeTuple tt && tt._types[ld._alias] instanceof TypeMem)) )
                             continue outer;
 
                 // All uses done, schedule

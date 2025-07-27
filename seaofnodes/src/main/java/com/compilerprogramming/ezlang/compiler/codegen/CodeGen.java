@@ -36,11 +36,11 @@ public class CodeGen {
     // Compilation source code
     public final String _src;
     // Compile-time known initial argument type
-    public final SONTypeInteger _arg;
+    public final TypeInteger _arg;
 
     // ---------------------------
-    public CodeGen( String src ) { this(src, SONTypeInteger.BOT, 123L ); }
-    public CodeGen( String src, SONTypeInteger arg, long workListSeed ) {
+    public CodeGen( String src ) { this(src, TypeInteger.BOT, 123L ); }
+    public CodeGen(String src, TypeInteger arg, long workListSeed ) {
         CODE = this;
         _phase = null;
         _callingConv = null;
@@ -122,39 +122,39 @@ public class CodeGen {
 
     // Compute "function indices": FIDX.
     // Each new request at the same signature gets a new FIDX.
-    private final HashMap<SONTypeTuple,Integer> FIDXS = new HashMap<>();
-    public SONTypeFunPtr makeFun( SONTypeTuple sig, SONType ret ) {
+    private final HashMap<TypeTuple,Integer> FIDXS = new HashMap<>();
+    public TypeFunPtr makeFun(TypeTuple sig, Type ret ) {
         Integer i = FIDXS.get(sig);
         int fidx = i==null ? 0 : i;
         FIDXS.put(sig,fidx+1);  // Track count per sig
         assert fidx<64;         // TODO: need a larger FIDX space
-        return SONTypeFunPtr.make((byte)2,sig,ret, 1L<<fidx );
+        return TypeFunPtr.make((byte)2,sig,ret, 1L<<fidx );
     }
-    public SONTypeFunPtr makeFun2( SONTypeTuple sig, SONType ret ) {
+    public TypeFunPtr makeFun2(TypeTuple sig, Type ret ) {
         Integer i = FIDXS.get(sig);
         int fidx = i==null ? 0 : i;
         FIDXS.put(sig,fidx+1);  // Track count per sig
         assert fidx<64;         // TODO: need a larger FIDX space
-        return new SONTypeFunPtr((byte)2,sig,ret, 1L<<fidx );
+        return new TypeFunPtr((byte)2,sig,ret, 1L<<fidx );
     }
     // Signature for MAIN
-    public SONTypeFunPtr _main = makeFun(SONTypeTuple.MAIN,SONType.BOTTOM);
+    public TypeFunPtr _main = makeFun(TypeTuple.MAIN, Type.BOTTOM);
     // Reverse from a constant function pointer to the IR function being called
-    public FunNode link( SONTypeFunPtr tfp ) {
+    public FunNode link( TypeFunPtr tfp ) {
         assert tfp.isConstant();
-        return _linker.get(tfp.makeFrom(SONType.BOTTOM));
+        return _linker.get(tfp.makeFrom(Type.BOTTOM));
     }
 
     // Insert linker mapping from constant function signature to the function
     // being called.
     public void link(FunNode fun) {
-        _linker.put(fun.sig().makeFrom(SONType.BOTTOM),fun);
+        _linker.put(fun.sig().makeFrom(Type.BOTTOM),fun);
     }
 
     // "Linker" mapping from constant TypeFunPtrs to heads of function.  These
     // TFPs all have exact single fidxs and their return is wiped to BOTTOM (so
     // the return is not part of the match).
-    private final HashMap<SONTypeFunPtr,FunNode> _linker = new HashMap<>();
+    private final HashMap<TypeFunPtr,FunNode> _linker = new HashMap<>();
 
     // Parser object
     public final Compiler P;

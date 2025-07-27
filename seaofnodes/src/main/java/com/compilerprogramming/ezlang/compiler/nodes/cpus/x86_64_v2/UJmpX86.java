@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import java.util.BitSet;
 
 // unconditional jump
@@ -16,7 +16,7 @@ public class UJmpX86 extends CFGNode implements MachNode, RIPRelSize {
     }
     @Override public RegMask regmap(int i) {return null; }
     @Override public RegMask outregmap() { return null; }
-    @Override public SONType compute() { throw Utils.TODO(); }
+    @Override public Type compute() { throw Utils.TODO(); }
     @Override public Node idealize() { throw Utils.TODO(); }
     @Override public void encoding( Encoding enc ) {
         enc.jump(this,uctrl());

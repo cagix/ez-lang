@@ -3,14 +3,14 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 // Integer constants
 public class IntX86 extends ConstantNode implements MachNode {
     IntX86( ConstantNode con ) { super(con); }
     @Override public String op() {
-        return _con == SONType.NIL || _con == SONTypeInteger.ZERO ? "xor" : "ldi";
+        return _con == Type.NIL || _con == TypeInteger.ZERO ? "xor" : "ldi";
     }
     @Override public boolean isClone() { return true; }
     @Override public Node copy() { return new IntX86(this); }
@@ -18,13 +18,13 @@ public class IntX86 extends ConstantNode implements MachNode {
     @Override public RegMask outregmap() { return x86_64_v2.WMASK; }
     // Zero-set uses XOR kills flags
     @Override public RegMask killmap() {
-        return _con == SONType.NIL || _con == SONTypeInteger.ZERO ? x86_64_v2.FLAGS_MASK : null;
+        return _con == Type.NIL || _con == TypeInteger.ZERO ? x86_64_v2.FLAGS_MASK : null;
     }
 
     @Override public void encoding( Encoding enc ) {
         short dst = enc.reg(this);
         // Short form for zero
-        if( _con==SONType.NIL || _con==SONTypeInteger.ZERO ) {
+        if( _con== Type.NIL || _con== TypeInteger.ZERO ) {
             // XOR dst,dst.  Can skip REX is dst is low 8, makes this a 32b
             // xor, which will also zero the high bits.
             if( dst >= 8 ) enc.add1(x86_64_v2.rex(dst, dst, 0));
@@ -37,7 +37,7 @@ public class IntX86 extends ConstantNode implements MachNode {
         // Conditional encoding based on 64 or 32 bits
         //REX.W + C7 /0 id	MOV r/m64, imm32
 
-        long imm = ((SONTypeInteger)_con).value();
+        long imm = ((TypeInteger)_con).value();
         if (Integer.MIN_VALUE <= imm && imm < 0) {
             // We need sign extension, so use imm32 into 64 bit register
             // REX.W + C7 /0 id    MOV r/m64, imm32
@@ -68,7 +68,7 @@ public class IntX86 extends ConstantNode implements MachNode {
     // General form: "op\tdst=src+src"
     @Override public void asm(CodeGen code, SB sb) {
         String reg = code.reg(this);
-        if( _con == SONType.NIL || _con == SONTypeInteger.ZERO )
+        if( _con == Type.NIL || _con == TypeInteger.ZERO )
             sb.p(reg).p(",").p(reg);
         else
             _con.print(sb.p(reg).p(" = #"));

@@ -4,12 +4,12 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.CallNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 
 public class CallX86 extends CallNode implements MachNode, RIPRelSize {
-    final SONTypeFunPtr _tfp;
+    final TypeFunPtr _tfp;
     final String _name;
-    CallX86( CallNode call, SONTypeFunPtr tfp ) {
+    CallX86( CallNode call, TypeFunPtr tfp ) {
         super(call);
         _inputs.pop(); // Pop constant target
         assert tfp.isConstant();
@@ -19,7 +19,7 @@ public class CallX86 extends CallNode implements MachNode, RIPRelSize {
     @Override public String op() { return "call"; }
     @Override public String label() { return op(); }
     @Override public String name() { return _name; }
-    @Override public SONTypeFunPtr tfp() { return _tfp; }
+    @Override public TypeFunPtr tfp() { return _tfp; }
     @Override public RegMask regmap(int i) { return x86_64_v2.callInMask(_tfp,i,fun()._maxArgSlot);  }
     @Override public RegMask outregmap() { return null; }
     @Override public int nargs() { return nIns()-2; } // Minus control, memory, fptr

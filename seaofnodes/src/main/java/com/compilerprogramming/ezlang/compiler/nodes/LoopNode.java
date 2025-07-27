@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMem;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMem;
 
 public class LoopNode extends RegionNode {
     public LoopNode( Node entry ) { super(null,entry,null); }
@@ -15,8 +15,8 @@ public class LoopNode extends RegionNode {
     public String label() { return "Loop"; }
 
     @Override
-    public SONType compute() {
-        if( inProgress() ) return SONType.CONTROL;
+    public Type compute() {
+        if( inProgress() ) return Type.CONTROL;
         return entry()._type;
     }
 
@@ -53,15 +53,15 @@ public class LoopNode extends RegionNode {
 
         // Now fold control into the exit.  Might have 1 valid exit, or an
         // XCtrl or a bunch of prior NeverNode exits.
-        Node top = new ConstantNode(SONType.TOP).peephole();
+        Node top = new ConstantNode(Type.TOP).peephole();
         Node memout = new MemMergeNode(false);
         memout.addDef(f); // placeholder for control
         for( Node u : _outputs )
-            if( u instanceof PhiNode phi && phi._type.isa(SONTypeMem.BOT) )
+            if( u instanceof PhiNode phi && phi._type.isa(TypeMem.BOT) )
                 memout.addDef(phi);
 
         Node ctrl = ret.ctrl(), mem = ret.mem(), expr = ret.expr();
-        if( ctrl!=null && ctrl._type != SONType.XCONTROL ) {
+        if( ctrl!=null && ctrl._type != Type.XCONTROL ) {
             // Perfect aligned exit?
             if( !(ctrl instanceof RegionNode r &&
                   mem  instanceof PhiNode pmem && pmem.region()==r &&

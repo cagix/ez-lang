@@ -3,8 +3,8 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 public class CmpMemX86 extends MemOpX86 {
     final boolean _swap;      // Op switched LHS, RHS
@@ -45,10 +45,10 @@ public class CmpMemX86 extends MemOpX86 {
         }
     }
 
-    static void encVal(Encoding enc, SONType decl, short ptr, short idx, short src, int off, int scale, boolean _swap) {
-        if(decl instanceof SONTypeFloat) {
+    static void encVal(Encoding enc, Type decl, short ptr, short idx, short src, int off, int scale, boolean _swap) {
+        if(decl instanceof TypeFloat) {
             src -= (short)x86_64_v2.XMM_OFFSET;
-            enc.add1(decl==SONTypeFloat.F32 ? 0xF3 : 0xF2).add1(0x0F).add1(0xC2);
+            enc.add1(decl== TypeFloat.F32 ? 0xF3 : 0xF2).add1(0x0F).add1(0xC2);
         } else {
             int log = decl.log_size();
             x86_64_v2.rexF(src, ptr, idx, log == 3, enc);

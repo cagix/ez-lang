@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 public class ShlNode extends LogicalNode {
     public ShlNode(Node lhs, Node rhs) { super(lhs, rhs); }
@@ -13,18 +13,18 @@ public class ShlNode extends LogicalNode {
     @Override public String glabel() { return "&lt;&lt;"; }
 
     @Override
-    public SONType compute() {
-        SONType t1 = in(1)._type, t2 = in(2)._type;
+    public Type compute() {
+        Type t1 = in(1)._type, t2 = in(2)._type;
         if( t1.isHigh() || t2.isHigh() )
-            return SONTypeInteger.TOP;
-        if (t1 instanceof SONTypeInteger i0 &&
-            t2 instanceof SONTypeInteger i1 ) {
-            if( i0 == SONTypeInteger.ZERO )
-                return SONTypeInteger.ZERO;
+            return TypeInteger.TOP;
+        if (t1 instanceof TypeInteger i0 &&
+            t2 instanceof TypeInteger i1 ) {
+            if( i0 == TypeInteger.ZERO )
+                return TypeInteger.ZERO;
             if( i0.isConstant() && i1.isConstant() )
-                return SONTypeInteger.constant(i0.value()<<i1.value());
+                return TypeInteger.constant(i0.value()<<i1.value());
         }
-        return SONTypeInteger.BOT;
+        return TypeInteger.BOT;
     }
 
     @Override
@@ -32,12 +32,12 @@ public class ShlNode extends LogicalNode {
         Node lhs = in(1);
         Node rhs = in(2);
 
-        if( rhs._type instanceof SONTypeInteger shl && shl.isConstant() ) {
+        if( rhs._type instanceof TypeInteger shl && shl.isConstant() ) {
             // Shl of 0.
             if( (shl.value()&63)==0 )
                 return lhs;
             // (x + c) << i  =>  (x << i) + (c << i)
-            if( lhs instanceof AddNode add && addDep(add).in(2)._type instanceof SONTypeInteger c && c.isConstant() ) {
+            if( lhs instanceof AddNode add && addDep(add).in(2)._type instanceof TypeInteger c && c.isConstant() ) {
                 long sum = c.value() << shl.value();
                 if( Integer.MIN_VALUE <= sum  && sum <= Integer.MAX_VALUE )
                     return new AddNode(new ShlNode(add.in(1),rhs).peephole(), Compiler.con(sum) );

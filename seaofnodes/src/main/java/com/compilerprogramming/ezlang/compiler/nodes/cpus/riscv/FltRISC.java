@@ -1,11 +1,9 @@
 package com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
 
 public class FltRISC extends ConstantNode implements MachNode, RIPRelSize {
     FltRISC(ConstantNode con) { super(con); }

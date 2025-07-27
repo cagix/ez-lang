@@ -18,7 +18,7 @@ public class MemMergeNode extends Node {
      */
     public final boolean _inProgress;
 
-    public MemMergeNode( boolean inProgress) { _type = SONTypeMem.BOT; _inProgress = inProgress; }
+    public MemMergeNode( boolean inProgress) { _type = TypeMem.BOT; _inProgress = inProgress; }
     public MemMergeNode(MemMergeNode mem) { super(mem); _inProgress = false; }
 
 
@@ -59,7 +59,7 @@ public class MemMergeNode extends Node {
     }
 
 
-    @Override public SONType compute() { return SONTypeMem.BOT; }
+    @Override public Type compute() { return TypeMem.BOT; }
 
     @Override public Node idealize() {
         if( inProgress() ) return null;
@@ -106,7 +106,7 @@ public class MemMergeNode extends Node {
                 // Set real Phi in the loop head
                 // The phi takes its one input (no backedge yet) from a recursive
                 // lookup, which might have insert a Phi in every loop nest.
-                : loopmem.alias(alias, new PhiNode(Compiler.memName(alias), SONTypeMem.BOT,loop.ctrl(),loopmem._mem(alias,null),null).peephole() );
+                : loopmem.alias(alias, new PhiNode(Compiler.memName(alias), TypeMem.BOT,loop.ctrl(),loopmem._mem(alias,null),null).peephole() );
             alias(alias,old);
         }
         // Memory projections are made lazily; expand as needed

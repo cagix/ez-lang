@@ -1,11 +1,10 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.IterPeeps;
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.BitSet;
@@ -31,7 +30,7 @@ public class CallNode extends CFGNode {
         return sb.append(")");
     }
     public String name() {
-        if( fptr()._type instanceof SONTypeFunPtr tfp && tfp.isConstant() )
+        if( fptr()._type instanceof TypeFunPtr tfp && tfp.isConstant() )
             return CodeGen.CODE.link(tfp)._name;
         return null;
     }
@@ -47,7 +46,7 @@ public class CallNode extends CFGNode {
     // args from input 2 to last; last is function input
     public Node fptr() { return _inputs.last(); }
     // Error if not a TFP
-    public SONTypeFunPtr tfp() { return (SONTypeFunPtr)fptr()._type; }
+    public TypeFunPtr tfp() { return (TypeFunPtr)fptr()._type; }
 
     // Call is to an externally supplied code
     public boolean external() { return false; }
@@ -78,7 +77,7 @@ public class CallNode extends CFGNode {
 
 
     @Override
-    public SONType compute() {
+    public Type compute() {
         return ctrl()._type;
     }
 
@@ -91,15 +90,15 @@ public class CallNode extends CFGNode {
         // point to this Call, and all his Parms point to the call arguments;
         // also the CallEnd points to the Return.
         Node progress = null;
-        if( fptr()._type instanceof SONTypeFunPtr tfp && tfp.nargs() == nargs() ) {
+        if( fptr()._type instanceof TypeFunPtr tfp && tfp.nargs() == nargs() ) {
             // If fidxs is negative, then infinite unknown functions
             long fidxs = tfp.fidxs();
             if( fidxs > 0 ) {
                 // Wipe out the return which matching in the linker table
                 // Walk the (63 max) bits and link
-                for( ; fidxs!=0; fidxs = SONTypeFunPtr.nextFIDX(fidxs) ) {
+                for( ; fidxs!=0; fidxs = TypeFunPtr.nextFIDX(fidxs) ) {
                     int fidx = Long.numberOfTrailingZeros(fidxs);
-                    SONTypeFunPtr tfp0 = tfp.makeFrom(fidx);
+                    TypeFunPtr tfp0 = tfp.makeFrom(fidx);
                     FunNode fun = CodeGen.CODE.link(tfp0);
                     if( fun!=null && !fun._folding && !linked(fun) )
                         progress = link(fun);
@@ -149,7 +148,7 @@ public class CallNode extends CFGNode {
 
     @Override
     public CompilerException err() {
-        if( !(fptr()._type instanceof SONTypeFunPtr tfp) )
+        if( !(fptr()._type instanceof TypeFunPtr tfp) )
             throw Utils.TODO();
         if( !tfp.notNull() )
             return Compiler.error( "Might be null calling "+tfp);

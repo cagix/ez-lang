@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 import java.util.BitSet;
 
 public class SubNode extends Node {
@@ -19,25 +19,25 @@ public class SubNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        SONType t1 = in(1)._type, t2 = in(2)._type;
+    public Type compute() {
+        Type t1 = in(1)._type, t2 = in(2)._type;
         if( t1.isHigh() || t2.isHigh() )
-            return SONTypeInteger.TOP;
+            return TypeInteger.TOP;
         // Sub of same is 0
         if( in(1)==in(2) )
-            return SONTypeInteger.ZERO;
-        if( t1 instanceof SONTypeInteger i1 &&
-            t2 instanceof SONTypeInteger i2 ) {
+            return TypeInteger.ZERO;
+        if( t1 instanceof TypeInteger i1 &&
+            t2 instanceof TypeInteger i2 ) {
             if (i1.isConstant() && i2.isConstant())
-                return SONTypeInteger.constant(i1.value()-i2.value());
+                return TypeInteger.constant(i1.value()-i2.value());
             // Fold ranges like {2-3} - {0-1} into {1-3}.
             if( !AddNode.overflow(i1._min,-i2._max) &&
                 !AddNode.overflow(i1._max,-i2._min) &&
                 i2._min != Long.MIN_VALUE  )
-                return SONTypeInteger.make(i1._min-i2._max,i1._max-i2._min);
+                return TypeInteger.make(i1._min-i2._max,i1._max-i2._min);
         }
 
-        return SONTypeInteger.BOT;
+        return TypeInteger.BOT;
     }
 
     @Override

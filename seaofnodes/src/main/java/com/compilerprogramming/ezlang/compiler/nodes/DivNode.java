@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 import java.util.BitSet;
 
 public class DivNode extends Node {
@@ -19,24 +19,24 @@ public class DivNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        SONType t1 = in(1)._type, t2 = in(2)._type;
+    public Type compute() {
+        Type t1 = in(1)._type, t2 = in(2)._type;
         if( t1.isHigh() || t2.isHigh() )
-            return SONTypeInteger.TOP;
-        if( t1 instanceof SONTypeInteger i1 &&
-            t2 instanceof SONTypeInteger i2 ) {
+            return TypeInteger.TOP;
+        if( t1 instanceof TypeInteger i1 &&
+            t2 instanceof TypeInteger i2 ) {
             if (i1.isConstant() && i2.isConstant())
                 return i2.value() == 0
-                    ? SONTypeInteger.ZERO
-                    : SONTypeInteger.constant(i1.value()/i2.value());
+                    ? TypeInteger.ZERO
+                    : TypeInteger.constant(i1.value()/i2.value());
         }
-        return SONTypeInteger.BOT;
+        return TypeInteger.BOT;
     }
 
     @Override
     public Node idealize() {
         // Div of 1.
-        if( in(2)._type == SONTypeInteger.TRUE )
+        if( in(2)._type == TypeInteger.TRUE )
             return in(1);
         return null;
     }

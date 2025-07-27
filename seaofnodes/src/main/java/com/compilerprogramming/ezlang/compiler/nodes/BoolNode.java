@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 import java.util.BitSet;
-import static com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger.*;
+import static com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger.*;
 
 abstract public class BoolNode extends Node {
 
@@ -28,26 +28,26 @@ abstract public class BoolNode extends Node {
     }
 
     @Override
-    public SONTypeInteger compute() {
-        SONType t1 = in(1)._type;
-        SONType t2 = in(2)._type;
+    public TypeInteger compute() {
+        Type t1 = in(1)._type;
+        Type t2 = in(2)._type;
         // Exactly equals?
         if( t1.isHigh() || t2.isHigh() )
             return BOOL.dual();
         if( in(1)==in(2) )
             // LT fails, both EQ and LE succeed
             return this instanceof LT ? FALSE : TRUE;
-        if( t1 instanceof SONTypeInteger i1 &&
-            t2 instanceof SONTypeInteger i2 )
+        if( t1 instanceof TypeInteger i1 &&
+            t2 instanceof TypeInteger i2 )
             return doOp(i1,i2);
-        if( t1 instanceof SONTypeFloat f1 &&
-            t2 instanceof SONTypeFloat f2 &&
+        if( t1 instanceof TypeFloat f1 &&
+            t2 instanceof TypeFloat f2 &&
             f1.isConstant() && f2.isConstant() )
             return doOp(f1.value(), f2.value()) ? TRUE : FALSE;
         return BOOL;
     }
 
-    SONTypeInteger doOp(SONTypeInteger t1, SONTypeInteger t2) { throw Utils.TODO(); }
+    TypeInteger doOp(TypeInteger t1, TypeInteger t2) { throw Utils.TODO(); }
     boolean doOp(double lhs, double rhs) { throw Utils.TODO(); }
     Node copyF(Node lhs, Node rhs) { return null; }
     public boolean isFloat() { return false; }
@@ -64,10 +64,10 @@ abstract public class BoolNode extends Node {
                 // con==noncon becomes noncon==con
                 if( in(1) instanceof ConstantNode || in(1)._nid > in(2)._nid )
                 // Equals sorts by NID otherwise: non.high == non.low becomes non.low == non.high
-                    return in(1)._type instanceof SONTypeFloat ? new EQF(in(2),in(1)) : new EQ(in(2),in(1));
+                    return in(1)._type instanceof TypeFloat ? new EQF(in(2),in(1)) : new EQ(in(2),in(1));
             }
             // Equals X==0 becomes a !X
-            if( (in(2)._type == ZERO || in(2)._type == SONType.NIL) )
+            if( (in(2)._type == ZERO || in(2)._type == Type.NIL) )
                 return new NotNode(in(1));
         }
 
@@ -83,7 +83,7 @@ abstract public class BoolNode extends Node {
     public static class EQ extends BoolNode {
         public EQ(Node lhs, Node rhs) { super(lhs,rhs); }
         public String op() { return "=="; }
-        SONTypeInteger doOp(SONTypeInteger i1, SONTypeInteger i2) {
+        TypeInteger doOp(TypeInteger i1, TypeInteger i2) {
             if( i1==i2 && i1.isConstant() ) return TRUE;
             if( i1._max < i2._min || i1._min > i2._max ) return FALSE;
             return BOOL;
@@ -95,7 +95,7 @@ abstract public class BoolNode extends Node {
     public static class NE extends BoolNode {
         public NE(Node lhs, Node rhs) { super(lhs,rhs); }
         public String op() { return "!="; }
-        SONTypeInteger doOp(SONTypeInteger i1, SONTypeInteger i2) {
+        TypeInteger doOp(TypeInteger i1, TypeInteger i2) {
             if( i1==i2 && i1.isConstant() ) return TRUE;
             if( i1._max < i2._min || i1._min > i2._max ) return FALSE;
             return BOOL;
@@ -108,7 +108,7 @@ abstract public class BoolNode extends Node {
         public LT(Node lhs, Node rhs) { super(lhs,rhs); }
         public String op() { return "<" ; }
         public String glabel() { return "&lt;"; }
-        SONTypeInteger doOp(SONTypeInteger i1, SONTypeInteger i2) {
+        TypeInteger doOp(TypeInteger i1, TypeInteger i2) {
             if( i1._max <  i2._min ) return TRUE;
             if( i1._min >= i2._max ) return FALSE;
             return BOOL;
@@ -120,7 +120,7 @@ abstract public class BoolNode extends Node {
         public LE(Node lhs, Node rhs) { super(lhs,rhs); }
         public String op() { return "<="; }
         public String glabel() { return "&lt;="; }
-        SONTypeInteger doOp(SONTypeInteger i1, SONTypeInteger i2) {
+        TypeInteger doOp(TypeInteger i1, TypeInteger i2) {
             if( i1._max <= i2._min ) return TRUE;
             if( i1._min >  i2._max ) return FALSE;
             return BOOL;
@@ -138,7 +138,7 @@ abstract public class BoolNode extends Node {
         public ULT(Node lhs, Node rhs) { super(lhs,rhs); }
         public String op() { return "u<" ; }
         public String glabel() { return "u&lt;"; }
-        SONTypeInteger doOp(SONTypeInteger i1, SONTypeInteger i2) {
+        TypeInteger doOp(TypeInteger i1, TypeInteger i2) {
             if( Long.compareUnsigned(i1._max,i2._min) <  0 ) return TRUE;
             if( Long.compareUnsigned(i1._min,i2._max) >= 0 ) return FALSE;
             return BOOL;

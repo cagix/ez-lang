@@ -3,12 +3,12 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 
 public class CallRISC extends CallNode implements MachNode, RIPRelSize {
-    final SONTypeFunPtr _tfp;
+    final TypeFunPtr _tfp;
     final String _name;
-    CallRISC( CallNode call, SONTypeFunPtr tfp ) {
+    CallRISC( CallNode call, TypeFunPtr tfp ) {
         super(call);
         assert tfp.isConstant();
         _inputs.pop(); // Pop constant target
@@ -23,7 +23,7 @@ public class CallRISC extends CallNode implements MachNode, RIPRelSize {
     }
     @Override public RegMask outregmap() { return null; }
     @Override public String name() { return _name; }
-    @Override public SONTypeFunPtr tfp() { return _tfp; }
+    @Override public TypeFunPtr tfp() { return _tfp; }
 
     @Override public void encoding( Encoding enc ) {
         // Short form +/-4K:  beq r0,r0,imm12

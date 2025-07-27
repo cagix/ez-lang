@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 import java.util.BitSet;
 
 abstract public class ImmRISC extends MachConcreteNode implements MachNode {
@@ -49,6 +49,6 @@ abstract public class ImmRISC extends MachConcreteNode implements MachNode {
         int imm12 = (_imm12<<20)>>20; // Sign extend 12 bits
         sb.p(code.reg(this)).p(" = ").p(code.reg(in(1))).p(" ").p(glabel()).p(" #").p(imm12);
         if( in(1) instanceof LUI lui )
-            sb.p(" // #").hex4((int)(((SONTypeInteger)lui._con).value()) + imm12);
+            sb.p(" // #").hex4((int)(((TypeInteger)lui._con).value()) + imm12);
     }
 }

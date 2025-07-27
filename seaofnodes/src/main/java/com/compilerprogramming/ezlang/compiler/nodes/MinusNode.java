@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 import java.util.BitSet;
 
@@ -19,12 +19,12 @@ public class MinusNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if( in(1)._type.isHigh() ) return SONTypeInteger.TOP;
-        if( in(1)._type instanceof SONTypeInteger i0 &&
-            !(i0== SONTypeInteger.BOT || i0._min == Long.MIN_VALUE || i0._max == Long.MIN_VALUE) )
-            return SONTypeInteger.make(-i0._max,-i0._min);
-        return SONTypeInteger.BOT;
+    public Type compute() {
+        if( in(1)._type.isHigh() ) return TypeInteger.TOP;
+        if( in(1)._type instanceof TypeInteger i0 &&
+            !(i0== TypeInteger.BOT || i0._min == Long.MIN_VALUE || i0._max == Long.MIN_VALUE) )
+            return TypeInteger.make(-i0._max,-i0._min);
+        return TypeInteger.BOT;
     }
 
     @Override

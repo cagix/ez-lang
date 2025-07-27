@@ -26,7 +26,7 @@ public abstract class MemOpX86 extends MemOpNode implements MachNode {
     final char _sz;             // Handy print name
     MemOpX86( Node op, MemOpNode mop, Node base, Node idx, int off, int scale, int imm ) {
         super(op,mop);
-        assert base._type instanceof SONTypeMemPtr && !(base instanceof AddNode);
+        assert base._type instanceof TypeMemPtr && !(base instanceof AddNode);
         assert (idx==null && scale==0) || (idx!=null && 0<= scale && scale<=3);
 
         // Copy memory parts from e.g. the LoadNode over the opcode, e.g. an Add
@@ -58,7 +58,7 @@ public abstract class MemOpX86 extends MemOpNode implements MachNode {
     }
 
     @Override public String label() { return op(); }
-    @Override public SONType compute() { throw Utils.TODO(); }
+    @Override public Type compute() { throw Utils.TODO(); }
     @Override public Node idealize() { throw Utils.TODO(); }
 
     // Register mask allowed on input i.

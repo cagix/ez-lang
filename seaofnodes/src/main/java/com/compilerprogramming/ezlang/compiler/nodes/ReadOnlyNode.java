@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMemPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMemPtr;
 
 import java.util.BitSet;
 
@@ -17,13 +17,13 @@ public class ReadOnlyNode extends Node {
     public StringBuilder _print1(StringBuilder sb, BitSet visited) {
         return in(1)._print0(sb.append("(const)"),visited);
     }
-    @Override public SONType compute() {
-        SONType t = in(1)._type;
-        return t instanceof SONTypeMemPtr tmp ? tmp.makeRO() : t;
+    @Override public Type compute() {
+        Type t = in(1)._type;
+        return t instanceof TypeMemPtr tmp ? tmp.makeRO() : t;
     }
 
     @Override public Node idealize() {
-        if( in(1)._type instanceof SONTypeMemPtr tmp && tmp.isFinal() )
+        if( in(1)._type instanceof TypeMemPtr tmp && tmp.isFinal() )
             return in(1);
         return null;
     }

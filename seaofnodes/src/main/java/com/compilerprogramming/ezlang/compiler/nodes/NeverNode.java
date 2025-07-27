@@ -1,8 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.Compiler;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeTuple;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeTuple;
 
 import java.util.BitSet;
 
@@ -15,7 +14,7 @@ public class NeverNode extends IfNode {
 
     @Override public StringBuilder _print1(StringBuilder sb, BitSet visited) { return sb.append("Never"); }
 
-    @Override public SONType compute() { return SONTypeTuple.IF_BOTH; }
+    @Override public Type compute() { return TypeTuple.IF_BOTH; }
 
     @Override public Node idealize() { return null; }
 }

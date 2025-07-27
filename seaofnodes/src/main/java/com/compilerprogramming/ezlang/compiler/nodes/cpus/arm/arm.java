@@ -252,12 +252,12 @@ public class arm extends Machine {
     }
 
     // True if signed 9-bit immediate
-    private static boolean imm9(SONTypeInteger ti) {
+    private static boolean imm9(TypeInteger ti) {
         // 55 = 64-9
         return ti.isConstant() && ((ti.value()<<55)>>55) == ti.value();
     }
     // True if signed 12-bit immediate
-    private static boolean imm12(SONTypeInteger ti) {
+    private static boolean imm12(TypeInteger ti) {
         // 52 = 64-12
         return ti.isConstant() && ((ti.value()<<52)>>52) == ti.value();
     }
@@ -265,7 +265,7 @@ public class arm extends Machine {
 
     // Can we encode this in ARM's 12-bit LOGICAL immediate form?
     // Some combination of shifted bit-masks.
-    private static int imm12Logical(SONTypeInteger ti) {
+    private static int imm12Logical(TypeInteger ti) {
         if( !ti.isConstant() ) return -1;
         if( !ti.isConstant() ) return -1;
         long val = ti.value();
@@ -563,17 +563,17 @@ public class arm extends Machine {
         return (opcode << 26) | delta;
     }
 
-    @Override public RegMask callArgMask(SONTypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
-    static RegMask callInMask(SONTypeFunPtr tfp, int idx, int maxArgSlot ) {
+    @Override public RegMask callArgMask(TypeFunPtr tfp, int idx, int maxArgSlot ) { return callInMask(tfp,idx,maxArgSlot); }
+    static RegMask callInMask(TypeFunPtr tfp, int idx, int maxArgSlot ) {
         if( idx==0 ) return CodeGen.CODE._rpcMask;
         if( idx==1 ) return null;
         // Count floats in signature up to index
         int fcnt=0;
         for( int i=2; i<idx; i++ )
-            if( tfp.arg(i-2) instanceof SONTypeFloat)
+            if( tfp.arg(i-2) instanceof TypeFloat)
                 fcnt++;
         // Floats up to XMMS in XMM registers
-        if( tfp.arg(idx-2) instanceof SONTypeFloat ) {
+        if( tfp.arg(idx-2) instanceof TypeFloat) {
             if( fcnt < XMMS.length )
                 return XMMS[fcnt];
         } else {
@@ -608,10 +608,10 @@ public class arm extends Machine {
     }
 
     // Return the max stack slot used by this signature, or 0
-    @Override public short maxArgSlot( SONTypeFunPtr tfp ) {
+    @Override public short maxArgSlot( TypeFunPtr tfp ) {
         int icnt=0, fcnt=0;     // Count of ints, floats
         for( int i=0; i<tfp.nargs(); i++ ) {
-            if( tfp.arg(i) instanceof SONTypeFloat ) fcnt++;
+            if( tfp.arg(i) instanceof TypeFloat) fcnt++;
             else icnt++;
         }
         int nstk = Math.max(icnt-8,0)+Math.max(fcnt-8,0);
@@ -628,8 +628,8 @@ public class arm extends Machine {
     static final long CALLER_SAVE = ~CALLEE_SAVE & ~(1L<<RSP);
     @Override public long callerSave() { return CALLER_SAVE; }
     @Override public long neverSave() { return 1L<<RSP; }
-    @Override public RegMask retMask( SONTypeFunPtr tfp ) {
-        return tfp.ret() instanceof SONTypeFloat ? D0_MASK : X0_MASK;
+    @Override public RegMask retMask( TypeFunPtr tfp ) {
+        return tfp.ret() instanceof TypeFloat ? D0_MASK : X0_MASK;
     }
     @Override public int rpc() { return X30; }
 
@@ -694,7 +694,7 @@ public class arm extends Machine {
     private Node _cmp(BoolNode bool) {
         if( bool.isFloat() )
             return new CmpFARM(bool);
-        return bool.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti
+        return bool.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti
                 ? new CmpIARM(bool, (int)ti.value())
                 : new CmpARM(bool);
     }
@@ -710,18 +710,18 @@ public class arm extends Machine {
         String op = "!=";
         if( iff.in(1) instanceof BoolNode bool ) op = bool.op();
         else if( iff.in(1)==null ) op = "=="; // Never-node cutout
-        else iff.setDef(1, new BoolNode.NE(iff.in(1), new ConstantNode(SONTypeInteger.ZERO)));
+        else iff.setDef(1, new BoolNode.NE(iff.in(1), new ConstantNode(TypeInteger.ZERO)));
         return new BranchARM(iff, op);
     }
 
     private Node add(AddNode add) {
-        return add.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && imm12(ti)
+        return add.in(2) instanceof ConstantNode off && off._con instanceof TypeInteger ti && imm12(ti)
                 ? new AddIARM(add, (int)ti.value())
                 : new AddARM(add);
     }
 
     private Node sub(SubNode sub) {
-        return sub.in(2) instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm12(ti)
+        return sub.in(2) instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm12(ti)
                 ? new SubIARM(sub, (int)(ti.value()))
                 : new SubARM(sub);
     }
@@ -729,57 +729,57 @@ public class arm extends Machine {
     private Node con( ConstantNode con ) {
         if( !con._con.isConstant() ) return new ConstantNode( con ); // Default unknown caller inputs
         return switch( con._con ) {
-            case SONTypeInteger ti  -> new IntARM(con);
-            case SONTypeFloat   tf  -> new FloatARM(con);
-            case SONTypeFunPtr  tfp -> new TFPARM(con);
-            case SONTypeMemPtr tmp -> new ConstantNode(con);
-            case SONTypeNil tn  -> throw Utils.TODO();
+            case TypeInteger ti  -> new IntARM(con);
+            case TypeFloat tf  -> new FloatARM(con);
+            case TypeFunPtr tfp -> new TFPARM(con);
+            case TypeMemPtr tmp -> new ConstantNode(con);
+            case TypeNil tn  -> throw Utils.TODO();
             // TOP, BOTTOM, XCtrl, Ctrl, etc.  Never any executable code.
-            case SONType t -> t==SONType.NIL ? new IntARM(con) : new ConstantNode(con);
+            case Type t -> t== Type.NIL ? new IntARM(con) : new ConstantNode(con);
         };
     }
 
     private Node call(CallNode call){
-        return call.fptr() instanceof ConstantNode con && con._con instanceof SONTypeFunPtr tfp
+        return call.fptr() instanceof ConstantNode con && con._con instanceof TypeFunPtr tfp
                 ? new CallARM(call, tfp)
                 : new CallRRARM(call);
     }
 
     private Node or(OrNode or) {
         int imm12;
-        return or.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && (imm12 = imm12Logical(ti)) != -1
+        return or.in(2) instanceof ConstantNode off && off._con instanceof TypeInteger ti && (imm12 = imm12Logical(ti)) != -1
                 ? new OrIARM(or, imm12)
                 : new OrARM(or);
     }
 
     private Node xor(XorNode xor) {
         int imm12;
-        return xor.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && (imm12 = imm12Logical(ti)) != -1
+        return xor.in(2) instanceof ConstantNode off && off._con instanceof TypeInteger ti && (imm12 = imm12Logical(ti)) != -1
                 ? new XorIARM(xor, imm12)
                 : new XorARM(xor);
     }
 
     private Node and(AndNode and) {
         int imm12;
-        return and.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && (imm12 = imm12Logical(ti)) != -1
+        return and.in(2) instanceof ConstantNode off && off._con instanceof TypeInteger ti && (imm12 = imm12Logical(ti)) != -1
                 ? new AndIARM(and, imm12)
                 : new AndARM(and);
     }
 
     private Node asr(SarNode asr) {
-        return asr.in(2) instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && ti.value() >= 0 && ti.value() < 63
+        return asr.in(2) instanceof ConstantNode off && off._con instanceof TypeInteger ti && ti.value() >= 0 && ti.value() < 63
                 ? new AsrIARM(asr, (int)ti.value())
                 : new AsrARM(asr);
     }
 
     private Node lsl(ShlNode lsl) {
-        return lsl.in(2)  instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && ti.value() >= 0 && ti.value() < 63
+        return lsl.in(2)  instanceof ConstantNode off && off._con instanceof TypeInteger ti && ti.value() >= 0 && ti.value() < 63
                 ? new LslIARM(lsl, (int)ti.value())
                 : new LslARM(lsl);
     }
 
     private Node lsr(ShrNode lsr) {
-        return lsr.in(2)  instanceof ConstantNode off && off._con instanceof SONTypeInteger ti && ti.value() >= 0 && ti.value() < 63
+        return lsr.in(2)  instanceof ConstantNode off && off._con instanceof TypeInteger ti && ti.value() >= 0 && ti.value() < 63
                 ? new LsrIARM(lsr, (int)ti.value())
                 : new LsrARM(lsr);
     }
@@ -800,8 +800,8 @@ public class arm extends Machine {
         Node base = mop.ptr();
         // Skip/throw-away a ReadOnly, only used to typecheck
         if( base instanceof ReadOnlyNode read ) base = read.in(1);
-        assert !(base instanceof AddNode) && base._type instanceof SONTypeMemPtr; // Base ptr always, not some derived
-        if( mop.off() instanceof ConstantNode con && con._con instanceof SONTypeInteger ti && imm9(ti) ) {
+        assert !(base instanceof AddNode) && base._type instanceof TypeMemPtr; // Base ptr always, not some derived
+        if( mop.off() instanceof ConstantNode con && con._con instanceof TypeInteger ti && imm9(ti) ) {
             off = (int)ti.value();
             assert off == ti.value(); // In 32-bit range
         } else {

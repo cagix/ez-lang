@@ -3,15 +3,13 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv.riscv;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 
 // Function constants
 public class TFPX86 extends ConstantNode implements MachNode, RIPRelSize {
     TFPX86( ConstantNode con ) {  super(con); }
     @Override public String op() {
-        return _con == SONType.NIL ? "xor" : "ldx";
+        return _con == Type.NIL ? "xor" : "ldx";
     }
     @Override public boolean isClone() { return true; }
     @Override public Node copy() { return new TFPX86(this); }
@@ -19,13 +17,13 @@ public class TFPX86 extends ConstantNode implements MachNode, RIPRelSize {
     @Override public RegMask outregmap() { return x86_64_v2.WMASK; }
     // Zero-set uses XOR kills flags
     @Override public RegMask killmap() {
-        return _con == SONType.NIL ? x86_64_v2.FLAGS_MASK : null;
+        return _con == Type.NIL ? x86_64_v2.FLAGS_MASK : null;
     }
 
     @Override public void encoding( Encoding enc ) {
         short dst = enc.reg(this);
         // Short form for zero
-        if( _con==SONType.NIL ) {
+        if( _con== Type.NIL ) {
             // XOR dst,dst.  Can skip REX is dst is low 8, makes this a 32b
             // xor, which will also zero the high bits.
             if( dst >= 8 ) enc.add1(x86_64_v2.rex(dst, dst, 0));
@@ -58,7 +56,7 @@ public class TFPX86 extends ConstantNode implements MachNode, RIPRelSize {
     // General form: "op\tdst=src+src"
     @Override public void asm(CodeGen code, SB sb) {
         String reg = code.reg(this);
-        if( _con == SONType.NIL )
+        if( _con == Type.NIL )
             sb.p(reg).p(",").p(reg);
         else
             _con.print(sb.p(reg).p(" = #"));

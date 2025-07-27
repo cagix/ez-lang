@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.BitSet;
@@ -9,8 +9,8 @@ import java.util.BitSet;
 // Upcast (join) the input to a t.  Used after guard test to lift an input.
 // Can also be used to make a type-assertion if ctrl is null.
 public class CastNode extends Node {
-    public SONType _t;
-    public CastNode(SONType t, Node ctrl, Node in) {
+    public Type _t;
+    public CastNode(Type t, Node ctrl, Node in) {
         super(ctrl, in);
         _t = t;
         setType(compute());
@@ -36,7 +36,7 @@ public class CastNode extends Node {
     }
 
     @Override
-    public SONType compute() {
+    public Type compute() {
         return in(1)._type.join(_t);
     }
 

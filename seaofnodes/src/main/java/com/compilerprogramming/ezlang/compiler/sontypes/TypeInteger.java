@@ -6,24 +6,24 @@ import java.util.ArrayList;
 /**
  * Integer Type
  */
-public class SONTypeInteger extends SONType {
+public class TypeInteger extends Type {
 
-    public final static SONTypeInteger ZERO= make(0,0);
-    public final static SONTypeInteger FALSE=ZERO;
-    public final static SONTypeInteger TRUE= make(1,1);
+    public final static TypeInteger ZERO= make(0,0);
+    public final static TypeInteger FALSE=ZERO;
+    public final static TypeInteger TRUE= make(1,1);
 
-    public final static SONTypeInteger I1  = make(-1,0);
-    public final static SONTypeInteger I8  = make(-128,127);
-    public final static SONTypeInteger I16 = make(-32768,32767);
-    public final static SONTypeInteger I32 = make(-1L<<31,(1L<<31)-1);
-    public final static SONTypeInteger BOT = make(Long.MIN_VALUE,Long.MAX_VALUE);
-    public final static SONTypeInteger TOP = BOT.dual();
+    public final static TypeInteger I1  = make(-1,0);
+    public final static TypeInteger I8  = make(-128,127);
+    public final static TypeInteger I16 = make(-32768,32767);
+    public final static TypeInteger I32 = make(-1L<<31,(1L<<31)-1);
+    public final static TypeInteger BOT = make(Long.MIN_VALUE,Long.MAX_VALUE);
+    public final static TypeInteger TOP = BOT.dual();
 
-    public final static SONTypeInteger U1  = make(0,1);
-    public final static SONTypeInteger BOOL= U1;
-    public final static SONTypeInteger U8  = make(0,255);
-    public final static SONTypeInteger U16 = make(0,65535);
-    public final static SONTypeInteger U32 = make(0,(1L<<32)-1);
+    public final static TypeInteger U1  = make(0,1);
+    public final static TypeInteger BOOL= U1;
+    public final static TypeInteger U8  = make(0,255);
+    public final static TypeInteger U16 = make(0,65535);
+    public final static TypeInteger U32 = make(0,(1L<<32)-1);
 
     /**
      * Describes an integer *range* - everything from min to max; both min and
@@ -34,18 +34,18 @@ public class SONTypeInteger extends SONType {
      */
     public final long _min, _max;
 
-    private SONTypeInteger(long min, long max) {
+    private TypeInteger(long min, long max) {
         super(TINT);
         _min = min;
         _max = max;
     }
 
     // Strict non-zero contract
-    public static SONTypeInteger make(long lo, long hi) { return new SONTypeInteger(lo,hi).intern(); }
+    public static TypeInteger make(long lo, long hi) { return new TypeInteger(lo,hi).intern(); }
 
-    public static SONTypeInteger constant(long con) { return make(con, con); }
+    public static TypeInteger constant(long con) { return make(con, con); }
 
-    public static void gather(ArrayList<SONType> ts) { ts.add(I32); ts.add(BOT); ts.add(U1); ts.add(I1); ts.add(U8); }
+    public static void gather(ArrayList<Type> ts) { ts.add(I32); ts.add(BOT); ts.add(U1); ts.add(I1); ts.add(U8); }
 
     @Override public String str() {
         if( isConstant() ) return ""+_min;
@@ -102,26 +102,26 @@ public class SONTypeInteger extends SONType {
     }
 
     @Override
-    public SONType xmeet(SONType other) {
+    public Type xmeet(Type other) {
         // Invariant from caller: 'this' != 'other' and same class (TypeInteger)
-        SONTypeInteger i = (SONTypeInteger)other; // Contract
+        TypeInteger i = (TypeInteger)other; // Contract
         return make(Math.min(_min,i._min), Math.max(_max,i._max));
     }
 
-    @Override public SONTypeInteger dual() { return make(_max,_min); }
+    @Override public TypeInteger dual() { return make(_max,_min); }
 
-    @Override public SONTypeInteger nonZero() {
+    @Override public TypeInteger nonZero() {
         if( isHigh() ) return this;
         if( this==ZERO ) return null;                  // No sane answer
         if( _min==0 ) return make(1,Math.max(_max,1)); // specifically good on BOOL
         if( _max==0 ) return make(_min,-1);
         return this;
     }
-    @Override public SONType makeZero() { return ZERO; }
-    @Override public SONTypeInteger glb() { return BOT; }
+    @Override public Type makeZero() { return ZERO; }
+    @Override public TypeInteger glb() { return BOT; }
     @Override int hash() { return Utils.fold(_min) * Utils.fold(_max); }
-    @Override public boolean eq( SONType t ) {
-        SONTypeInteger i = (SONTypeInteger)t; // Contract
+    @Override public boolean eq( Type t ) {
+        TypeInteger i = (TypeInteger)t; // Contract
         return _min==i._min && _max==i._max;
     }
 }

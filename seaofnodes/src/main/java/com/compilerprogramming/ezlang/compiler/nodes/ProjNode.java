@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMem;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeTuple;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMem;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeTuple;
 
 import java.util.BitSet;
 
@@ -35,13 +35,13 @@ public class ProjNode extends Node {
         return in(0) instanceof CFGNode cfg ? cfg : in(0).cfg0();
     }
 
-    @Override public boolean isMem() { return _type instanceof SONTypeMem; }
+    @Override public boolean isMem() { return _type instanceof TypeMem; }
     @Override public boolean isPinned() { return true; }
 
     @Override
-    public SONType compute() {
-        SONType t = in(0)._type;
-        return t instanceof SONTypeTuple tt ? tt._types[_idx] : SONType.BOTTOM;
+    public Type compute() {
+        Type t = in(0)._type;
+        return t instanceof TypeTuple tt ? tt._types[_idx] : Type.BOTTOM;
     }
 
     @Override public Node idealize() { return ((MultiNode)in(0)).pcopy(_idx); }

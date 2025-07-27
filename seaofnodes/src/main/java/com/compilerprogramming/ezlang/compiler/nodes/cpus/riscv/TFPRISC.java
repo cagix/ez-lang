@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 
 public class TFPRISC extends ConstantNode implements MachNode, RIPRelSize {
     TFPRISC(ConstantNode con) { super(con); }
@@ -17,7 +17,7 @@ public class TFPRISC extends ConstantNode implements MachNode, RIPRelSize {
         enc.relo(this);
         // TODO: 1 op encoding, plus a TODO if it does not fit
         short dst = enc.reg(this);
-        SONTypeFunPtr tfp = (SONTypeFunPtr)_con;
+        TypeFunPtr tfp = (TypeFunPtr)_con;
         // auipc  t0,0
         int auipc = riscv.u_type(riscv.OP_AUIPC, dst, 0);
         // addi   t1,t0 + #0

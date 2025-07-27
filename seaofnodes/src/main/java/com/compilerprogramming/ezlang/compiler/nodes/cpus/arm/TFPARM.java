@@ -4,8 +4,6 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv.riscv;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
 
 public class TFPARM extends ConstantNode implements MachNode, RIPRelSize {
     TFPARM( ConstantNode con ) { super(con); }

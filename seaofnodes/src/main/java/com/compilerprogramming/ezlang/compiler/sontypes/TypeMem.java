@@ -8,52 +8,52 @@ import java.util.ArrayList;
 /**
  * Represents a slice of memory corresponding to a set of aliases
  */
-public class SONTypeMem extends SONType {
+public class TypeMem extends Type {
 
     // Which slice of memory?
     //  0 means TOP, no slice.
     //  0 means BOT, all memory.
     //  N means slice#N.
     public final int _alias;
-    public final SONType _t;       // Memory contents, some scalar type
+    public final Type _t;       // Memory contents, some scalar type
 
-    private SONTypeMem(int alias, SONType t) {
+    private TypeMem(int alias, Type t) {
         super(TMEM);
-        assert alias!=0 || (t== SONType.TOP || t== SONType.BOTTOM);
+        assert alias!=0 || (t== Type.TOP || t== Type.BOTTOM);
         _alias = alias;
         _t = t;
     }
 
-    public static SONTypeMem make(int alias, SONType t) { return new SONTypeMem(alias,t).intern(); }
-    public static final SONTypeMem TOP = make(0, SONType.TOP   );
-    public static final SONTypeMem BOT = make(0, SONType.BOTTOM);
+    public static TypeMem make(int alias, Type t) { return new TypeMem(alias,t).intern(); }
+    public static final TypeMem TOP = make(0, Type.TOP   );
+    public static final TypeMem BOT = make(0, Type.BOTTOM);
 
-    public static void gather(ArrayList<SONType> ts) { ts.add(make(1, SONType.NIL)); ts.add(make(1, SONTypeInteger.ZERO)); ts.add(BOT); }
+    public static void gather(ArrayList<Type> ts) { ts.add(make(1, Type.NIL)); ts.add(make(1, TypeInteger.ZERO)); ts.add(BOT); }
 
     @Override
-    SONTypeMem xmeet(SONType t) {
-        SONTypeMem that = (SONTypeMem) t; // Invariant: TypeMem and unequal
+    TypeMem xmeet(Type t) {
+        TypeMem that = (TypeMem) t; // Invariant: TypeMem and unequal
         if( this==TOP ) return that;
         if( that==TOP ) return this;
         if( this==BOT ) return BOT;
         if( that==BOT ) return BOT;
         int alias = _alias==that._alias ? _alias : 0;
-        SONType mt = _t.meet(that._t);
+        Type mt = _t.meet(that._t);
         return make(alias,mt);
     }
 
     @Override
-    public SONType dual() {
+    public Type dual() {
         return make(_alias,_t.dual());
     }
 
     @Override public boolean isHigh() { return _t.isHigh(); }
-    @Override public SONType glb() { return make(_alias,_t.glb()); }
+    @Override public Type glb() { return make(_alias,_t.glb()); }
 
     @Override int hash() { return 9876543 + _alias + _t.hashCode(); }
 
-    @Override boolean eq(SONType t) {
-        SONTypeMem that = (SONTypeMem) t; // Invariant
+    @Override boolean eq(Type t) {
+        TypeMem that = (TypeMem) t; // Invariant
         return _alias == that._alias && _t == that._t;
     }
 

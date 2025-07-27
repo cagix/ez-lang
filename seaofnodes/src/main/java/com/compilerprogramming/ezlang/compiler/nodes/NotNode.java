@@ -17,13 +17,13 @@ public class NotNode extends Node {
     }
 
     @Override
-    public SONTypeInteger compute() {
-        SONType t0 = in(1)._type;
-        if( t0.isHigh() )  return SONTypeInteger.BOOL.dual();
-        if( t0 == SONType.NIL || t0 == SONTypeInteger.ZERO ) return SONTypeInteger.TRUE;
-        if( t0 instanceof SONTypeNil tn && tn.notNull() ) return SONTypeInteger.FALSE;
-        if( t0 instanceof SONTypeInteger i && (i._min > 0 || i._max < 0) ) return SONTypeInteger.FALSE;
-        return SONTypeInteger.BOOL;
+    public TypeInteger compute() {
+        Type t0 = in(1)._type;
+        if( t0.isHigh() )  return TypeInteger.BOOL.dual();
+        if( t0 == Type.NIL || t0 == TypeInteger.ZERO ) return TypeInteger.TRUE;
+        if( t0 instanceof TypeNil tn && tn.notNull() ) return TypeInteger.FALSE;
+        if( t0 instanceof TypeInteger i && (i._min > 0 || i._max < 0) ) return TypeInteger.FALSE;
+        return TypeInteger.BOOL;
     }
 
     @Override

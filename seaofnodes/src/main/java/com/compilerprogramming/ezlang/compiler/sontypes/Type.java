@@ -21,8 +21,8 @@ import java.util.HashMap;
  * simple constant folding e.g. 1+2 == 3 stuff.
  */
 
-public class SONType {
-    static final HashMap<SONType, SONType> INTERN = new HashMap<>();
+public class Type {
+    static final HashMap<Type, Type> INTERN = new HashMap<>();
 
     // ----------------------------------------------------------
     // Simple types are implemented fully here.  "Simple" means: the code and
@@ -50,35 +50,35 @@ public class SONType {
 
     public boolean is_simple() { return _type < TSIMPLE; }
     private static final String[] STRS = new String[]{"Bot","Top","Ctrl","~Ctrl","null","~nil"};
-    protected SONType(byte type) { _type = type; }
+    protected Type(byte type) { _type = type; }
 
-    public static final SONType BOTTOM   = new SONType( TBOT   ).intern(); // ALL
-    public static final SONType TOP      = new SONType( TTOP   ).intern(); // ANY
-    public static final SONType CONTROL  = new SONType( TCTRL  ).intern(); // Ctrl
-    public static final SONType XCONTROL = new SONType( TXCTRL ).intern(); // ~Ctrl
-    public static final SONType NIL      = new SONType( TNIL   ).intern(); // low null of all flavors
-    public static final SONType XNIL     = new SONType( TXNIL  ).intern(); // high or choice null
-    public static SONType[] gather() {
-        ArrayList<SONType> ts = new ArrayList<>();
+    public static final Type BOTTOM   = new Type( TBOT   ).intern(); // ALL
+    public static final Type TOP      = new Type( TTOP   ).intern(); // ANY
+    public static final Type CONTROL  = new Type( TCTRL  ).intern(); // Ctrl
+    public static final Type XCONTROL = new Type( TXCTRL ).intern(); // ~Ctrl
+    public static final Type NIL      = new Type( TNIL   ).intern(); // low null of all flavors
+    public static final Type XNIL     = new Type( TXNIL  ).intern(); // high or choice null
+    public static Type[] gather() {
+        ArrayList<Type> ts = new ArrayList<>();
         ts.add(BOTTOM);
         ts.add(CONTROL);
         ts.add(NIL);
         ts.add(XNIL);
-        SONTypeNil.gather(ts);
-        SONTypePtr.gather(ts);
-        SONTypeInteger.gather(ts);
-        SONTypeFloat.gather(ts);
-        SONTypeMemPtr.gather(ts);
-        SONTypeFunPtr.gather(ts);
-        SONTypeMem.gather(ts);
+        TypeNil.gather(ts);
+        TypePtr.gather(ts);
+        TypeInteger.gather(ts);
+        TypeFloat.gather(ts);
+        TypeMemPtr.gather(ts);
+        TypeFunPtr.gather(ts);
+        TypeMem.gather(ts);
         Field.gather(ts);
-        SONTypeStruct.gather(ts);
-        SONTypeTuple.gather(ts);
-        SONTypeRPC.gather(ts);
+        TypeStruct.gather(ts);
+        TypeTuple.gather(ts);
+        TypeRPC.gather(ts);
         int sz = ts.size();
         for( int i = 0; i < sz; i++ )
             ts.add(ts.get(i).dual());
-        return ts.toArray(new SONType[ts.size()]);
+        return ts.toArray(new Type[ts.size()]);
     }
 
     // Is high or on the lattice centerline.
@@ -104,7 +104,7 @@ public class SONType {
 
     // Factory method which interns "this"
     @SuppressWarnings("unchecked")
-    public  <T extends SONType> T intern() {
+    public  <T extends Type> T intern() {
         T nnn = (T)INTERN.get(this);
         if( nnn==null )
             INTERN.put(nnn=(T)this,this);
@@ -125,41 +125,41 @@ public class SONType {
     @Override
     public final boolean equals( Object o ) {
         if( o==this ) return true;
-        if( !(o instanceof SONType t)) return false;
+        if( !(o instanceof Type t)) return false;
         if( _type != t._type ) return false;
         return eq(t);
     }
     // Overridden in subclasses; subclass can assume "this!=t" and java classes are same
-    boolean eq(SONType t) { return true; }
+    boolean eq(Type t) { return true; }
 
 
     // ----------------------------------------------------------
-    public final SONType meet(SONType t) {
+    public final Type meet(Type t) {
         // Shortcut for the self case
         if( t == this ) return this;
         // Same-type is always safe in the subclasses
         if( _type==t._type ) return xmeet(t);
         // TypeNil vs TypeNil meet
-        if( this instanceof SONTypeNil ptr0 && t instanceof SONTypeNil ptr1 )
+        if( this instanceof TypeNil ptr0 && t instanceof TypeNil ptr1 )
             return ptr0.nmeet(ptr1);
         // Reverse; xmeet 2nd arg is never "is_simple" and never equal to "this".
         if(   is_simple() ) return this.xmeet(t   );
         if( t.is_simple() ) return t   .xmeet(this);
-        return SONType.BOTTOM;     // Mixing 2 unrelated types
+        return Type.BOTTOM;     // Mixing 2 unrelated types
     }
 
     // Compute meet right now.  Overridden in subclasses.
     // Handle cases where 'this.is_simple()' and unequal to 't'.
     // Subclassed xmeet calls can assert that '!t.is_simple()'.
-    SONType xmeet(SONType t) {
+    Type xmeet(Type t) {
         assert is_simple(); // Should be overridden in subclass
         // ANY meet anything is thing; thing meet ALL is ALL
         if( _type==TBOT || t._type==TTOP ) return this;
         if( _type==TTOP || t._type==TBOT ) return    t;
 
         // RHS TypeNil vs NIL/XNIL
-        if( _type==  TNIL ) return t instanceof SONTypeNil ptr ? ptr.meet0() : (t._type==TXNIL ? SONTypePtr.PTR : BOTTOM);
-        if( _type== TXNIL ) return t instanceof SONTypeNil ptr ? ptr.meetX() : (t._type== TNIL ? SONTypePtr.PTR : BOTTOM);
+        if( _type==  TNIL ) return t instanceof TypeNil ptr ? ptr.meet0() : (t._type==TXNIL ? TypePtr.PTR : BOTTOM);
+        if( _type== TXNIL ) return t instanceof TypeNil ptr ? ptr.meetX() : (t._type== TNIL ? TypePtr.PTR : BOTTOM);
         // 'this' is only {TCTRL,TXCTRL}
         // Other non-simple RHS things bottom out
         if( !t.is_simple() ) return BOTTOM;
@@ -169,7 +169,7 @@ public class SONType {
         return _type==TCTRL || t._type==TCTRL ? CONTROL : XCONTROL;
     }
 
-    public SONType dual() {
+    public Type dual() {
         return switch( _type ) {
         case TBOT  -> TOP;
         case TTOP  -> BOTTOM;
@@ -184,24 +184,24 @@ public class SONType {
     // ----------------------------------------------------------
     // Our lattice is defined with a MEET and a DUAL.
     // JOIN is dual of meet of both duals.
-    public final SONType join(SONType t) {
+    public final Type join(Type t) {
         if( this==t ) return this;
         return dual().meet(t.dual()).dual();
     }
 
     // True if this "isa" t; e.g. 17 isa TypeInteger.BOT
-    public boolean isa( SONType t ) { return meet(t)==t; }
+    public boolean isa( Type t ) { return meet(t)==t; }
 
     // True if this "isa" t up to named structures
-    public boolean shallowISA( SONType t ) { return isa(t); }
+    public boolean shallowISA( Type t ) { return isa(t); }
 
-    public SONType nonZero() { return SONTypePtr.NPTR; }
+    public Type nonZero() { return TypePtr.NPTR; }
 
     // Make a zero version of this type, 0 for integers and null for pointers.
-    public SONType makeZero() { return SONType.NIL; }
+    public Type makeZero() { return Type.NIL; }
 
     /** Compute greatest lower bound in the lattice */
-    public SONType glb() { return SONType.BOTTOM; }
+    public Type glb() { return Type.BOTTOM; }
 
     // Is forward-reference
     public boolean isFRef() { return false; }
@@ -210,7 +210,7 @@ public class SONType {
     public boolean isFinal() { return true; }
 
     // Make all reachable struct Fields final
-    public SONType makeRO() { return this; }
+    public Type makeRO() { return this; }
 
     // ----------------------------------------------------------
 

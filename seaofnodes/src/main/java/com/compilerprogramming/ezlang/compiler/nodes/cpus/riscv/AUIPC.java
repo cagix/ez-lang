@@ -4,11 +4,11 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 
 // Add upper 20bits to PC.  Immediate comes from the relocation info.
 public class AUIPC extends ConstantNode implements MachNode, RIPRelSize {
-    AUIPC( SONType tfp ) { super(tfp); }
+    AUIPC( Type tfp ) { super(tfp); }
     @Override public RegMask regmap(int i) { return null; }
     @Override public RegMask outregmap() { return riscv.WMASK; }
     @Override public boolean isClone() { return true; }

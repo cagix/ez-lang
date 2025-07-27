@@ -1,13 +1,13 @@
 package com.compilerprogramming.ezlang.compiler.sontypes;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.Utils;
+
 import java.util.ArrayList;
 
 /**
  * Represents a struct type.
  */
-public class SONTypeStruct extends SONType {
+public class TypeStruct extends Type {
 
     // A Struct has a name and a set of fields; the fields themselves have
     // names, types and aliases.  The name has no semantic meaning, but is
@@ -25,21 +25,21 @@ public class SONTypeStruct extends SONType {
     public final String _name;
     public Field[] _fields;
 
-    public SONTypeStruct(String name, Field[] fields) {
+    public TypeStruct(String name, Field[] fields) {
         super(TSTRUCT);
         _name = name;
         _fields = fields;
     }
 
     // All fields directly listed
-    public static SONTypeStruct make(String name, Field... fields) { return new SONTypeStruct(name, fields).intern(); }
-    public static final SONTypeStruct TOP = make("$TOP",new Field[0]);
-    public static final SONTypeStruct BOT = make("$BOT",new Field[0]);
+    public static TypeStruct make(String name, Field... fields) { return new TypeStruct(name, fields).intern(); }
+    public static final TypeStruct TOP = make("$TOP",new Field[0]);
+    public static final TypeStruct BOT = make("$BOT",new Field[0]);
     //public static final SONTypeStruct TEST = make("test",new Field[]{Field.TEST});
     // Forward-ref version
-    public static SONTypeStruct makeFRef(String name) { return make(name, (Field[])null); }
+    public static TypeStruct makeFRef(String name) { return make(name, (Field[])null); }
     // Make a read-only version
-    @Override public SONTypeStruct makeRO() {
+    @Override public TypeStruct makeRO() {
         if( isFinal() ) return this;
         Field[] flds = new Field[_fields.length];
         for( int i=0; i<flds.length; i++ )
@@ -48,18 +48,18 @@ public class SONTypeStruct extends SONType {
     }
 
     // Array
-    public static SONTypeStruct makeAry(SONTypeInteger len, int lenAlias, SONType body, int bodyAlias) {
-        assert body instanceof SONTypeInteger || body instanceof SONTypeFloat || (body instanceof SONTypeNil tn && tn.nullable());
-        assert len.isa(SONTypeInteger.U32);
+    public static TypeStruct makeAry(TypeInteger len, int lenAlias, Type body, int bodyAlias) {
+        assert body instanceof TypeInteger || body instanceof TypeFloat || (body instanceof TypeNil tn && tn.nullable());
+        assert len.isa(TypeInteger.U32);
         return make("[" + body.str() + "]",
                     Field.make("#" ,len , lenAlias,true ),
                     Field.make("[]",body,bodyAlias,false));
     }
     // Array
-    public static SONTypeStruct makeArray(SONTypeInteger len, int lenAlias, SONType body, int bodyAlias) {
-        assert body instanceof SONTypeInteger || body instanceof SONTypeFloat || (body instanceof SONTypeNil tn && tn.nullable());
-        assert len.isa(SONTypeInteger.U32);
-        return new SONTypeStruct("[" + body.str() + "]",
+    public static TypeStruct makeArray(TypeInteger len, int lenAlias, Type body, int bodyAlias) {
+        assert body instanceof TypeInteger || body instanceof TypeFloat || (body instanceof TypeNil tn && tn.nullable());
+        assert len.isa(TypeInteger.U32);
+        return new TypeStruct("[" + body.str() + "]",
                 new Field[] {
                 new Field("#" ,len , lenAlias,true ),
                 new Field("[]",body,bodyAlias,false) });
@@ -73,7 +73,7 @@ public class SONTypeStruct extends SONType {
 //
 //    private static final SONTypeStruct ARY = makeAry(SONTypeInteger.U32,-1, SONTypeInteger.BOT,-2);
 
-    public static void gather(ArrayList<SONType> ts) { /* ts.add(TEST); ts.add(BOT); ts.add(S1); ts.add(S2); ts.add(ARY); */ }
+    public static void gather(ArrayList<Type> ts) { /* ts.add(TEST); ts.add(BOT); ts.add(S1); ts.add(S2); ts.add(ARY); */ }
 
     // Find field index by name
     public int find(String fname) {
@@ -97,8 +97,8 @@ public class SONTypeStruct extends SONType {
 
 
     @Override
-    SONType xmeet(SONType t) {
-        SONTypeStruct that = (SONTypeStruct) t;
+    Type xmeet(Type t) {
+        TypeStruct that = (TypeStruct) t;
         if( this==TOP ) return that;
         if( that==TOP ) return this;
         if( this==BOT ) return BOT;
@@ -127,7 +127,7 @@ public class SONTypeStruct extends SONType {
     }
 
     @Override
-    public SONTypeStruct dual() {
+    public TypeStruct dual() {
         if( this==TOP ) return BOT;
         if( this==BOT ) return TOP;
         if( _fields == null ) return this;
@@ -138,7 +138,7 @@ public class SONTypeStruct extends SONType {
     }
 
     // Keeps the same struct, but lower-bounds all fields.
-    @Override public SONTypeStruct glb() {
+    @Override public TypeStruct glb() {
         if( _glb() ) return this;
         // Need to glb each field
         Field[] flds = new Field[_fields.length];
@@ -166,8 +166,8 @@ public class SONTypeStruct extends SONType {
     }
 
     @Override
-    boolean eq(SONType t) {
-        SONTypeStruct ts = (SONTypeStruct)t; // Invariant
+    boolean eq(Type t) {
+        TypeStruct ts = (TypeStruct)t; // Invariant
         if( !_name.equals(ts._name) )
             return false;
 //        if( _fields == ts._fields ) return true;

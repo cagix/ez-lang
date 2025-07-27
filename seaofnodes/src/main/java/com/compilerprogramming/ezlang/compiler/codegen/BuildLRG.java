@@ -1,8 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMem;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMem;
 
 abstract public class BuildLRG {
     // Compute live ranges in a single forwards pass.  Every def is a new live
@@ -17,7 +16,7 @@ abstract public class BuildLRG {
     public static boolean run(int round, RegAlloc alloc) {
         for( Node bb : alloc._code._cfg )
             for( Node n : bb.outs() ) {
-                if( n instanceof PhiNode phi && !(phi._type instanceof SONTypeMem) ) {
+                if( n instanceof PhiNode phi && !(phi._type instanceof TypeMem) ) {
                     // All Phi inputs end up with the same LRG.
                     // Pass 1: find any pre-existing LRG, to avoid make-then-Union a LRG
                     LRG lrg = alloc.lrg(phi);

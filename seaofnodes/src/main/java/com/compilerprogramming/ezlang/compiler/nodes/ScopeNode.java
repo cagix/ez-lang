@@ -144,7 +144,7 @@ public class ScopeNode extends MemMergeNode {
     /**
      * Create a new variable name in the current scope
      */
-    public boolean define(String name, SONType declaredType, boolean xfinal, Node init) {
+    public boolean define(String name, Type declaredType, boolean xfinal, Node init) {
         assert _lexSize.isEmpty() || name.charAt(0)!='$' ; // Later scopes do not define memory
         if( _lexSize._len > 0 )
             for( int i=_vars.size()-1; i>=_lexSize.last(); i-- ) {
@@ -355,20 +355,20 @@ public class ScopeNode extends MemMergeNode {
             pred = pred instanceof NotNode not ? not.in(1) : CodeGen.CODE.add(new NotNode(pred).peephole());
         // This is a zero/null test.
         // Compute the positive test type.
-        SONType tnz = pred._type.nonZero();
+        Type tnz = pred._type.nonZero();
         if( tnz!=null )
             _addGuard(tnz,ctrl,pred);
 
         // Compute the negative test type.
         if( pred instanceof NotNode not ) {
             Node npred = not.in(1);
-            SONType tzero = npred._type.makeZero();
+            Type tzero = npred._type.makeZero();
             _addGuard(tzero,ctrl,npred);
         }
     }
 
-    private void _addGuard(SONType guard, Node ctrl, Node pred) {
-        SONType tcast = guard.join(pred._type);
+    private void _addGuard(Type guard, Node ctrl, Node pred) {
+        Type tcast = guard.join(pred._type);
         if( tcast != pred._type && !tcast.isHigh() ) {
             Node cast = new CastNode(tcast,ctrl,pred.keep()).peephole().keep();
             _guards.add(pred);

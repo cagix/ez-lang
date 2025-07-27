@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 import java.util.BitSet;
 
@@ -20,11 +20,11 @@ public class DivFNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if (in(1)._type instanceof SONTypeFloat i0 &&
-            in(2)._type instanceof SONTypeFloat i1) {
+    public Type compute() {
+        if (in(1)._type instanceof TypeFloat i0 &&
+            in(2)._type instanceof TypeFloat i1) {
             if (i0.isConstant() && i1.isConstant())
-                return SONTypeFloat.constant(i0.value()/i1.value());
+                return TypeFloat.constant(i0.value()/i1.value());
         }
         return in(1)._type.meet(in(2)._type);
     }
@@ -32,8 +32,8 @@ public class DivFNode extends Node {
     @Override
     public Node idealize() {
         // Div of constant
-        if( in(2)._type instanceof SONTypeFloat f && f.isConstant() )
-            return new MulFNode(in(1),new ConstantNode(SONTypeFloat.constant(1.0/f.value())).peephole());
+        if( in(2)._type instanceof TypeFloat f && f.isConstant() )
+            return new MulFNode(in(1),new ConstantNode(TypeFloat.constant(1.0/f.value())).peephole());
 
         return null;
     }

@@ -9,7 +9,6 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.HashMap;
-import java.util.Map;
 
 public class ElfFile {
 
@@ -213,7 +212,7 @@ public class ElfFile {
     }
 
     /* creates function and stores where it starts*/
-    private final HashMap<SONTypeFunPtr,Symbol> _funcs = new HashMap<>();
+    private final HashMap<TypeFunPtr,Symbol> _funcs = new HashMap<>();
     private void encodeFunctions(SymbolSection symbols, DataSection text) {
         for( int i=0; i<_code._cfg._len; i++ ) {
             if( !(_code._cfg.at(i) instanceof FunNode fun) ) continue;

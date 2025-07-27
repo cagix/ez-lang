@@ -1,7 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.Ary;
-import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
@@ -47,12 +46,12 @@ public class Encoding {
     // Big Constant relocation info.
     public static class Relo {
         public final Node _op;
-        public final SONType _t;          // Constant type
+        public final Type _t;          // Constant type
         public final byte _off;        // Offset from start of opcode
         public final byte _elf;        // ELF relocation type, e.g. 2/PC32
         public int _target;      // Where constant is finally placede
         public int _opStart;     // Opcode start
-        Relo( Node op, SONType t, byte off, byte elf ) {
+        Relo(Node op, Type t, byte off, byte elf ) {
             _op=op;  _t=t;  _off=off; _elf=elf;
         }
     }
@@ -99,12 +98,12 @@ public class Encoding {
     }
 
     // Convenience for writing log-N
-    static void addN( int log, SONType t, BAOS bits ) {
-        long x = t instanceof SONTypeInteger ti
+    static void addN(int log, Type t, BAOS bits ) {
+        long x = t instanceof TypeInteger ti
             ? ti.value()
             : log==3
-            ? Double.doubleToRawLongBits(    ((SONTypeFloat)t).value())
-            : Float.floatToRawIntBits((float)((SONTypeFloat)t).value());
+            ? Double.doubleToRawLongBits(    ((TypeFloat)t).value())
+            : Float.floatToRawIntBits((float)((TypeFloat)t).value());
         addN(log,x,bits);
     }
     static void addN( int log, long x, BAOS bits ) {
@@ -129,7 +128,7 @@ public class Encoding {
         return this;
     }
     public Encoding relo( ConstantNode con ) {
-        SONTypeFunPtr tfp = (SONTypeFunPtr)con._con;
+        TypeFunPtr tfp = (TypeFunPtr)con._con;
         _internals.put(con,_code.link(tfp));
         return this;
     }
@@ -146,7 +145,7 @@ public class Encoding {
 
     // Store t as a 32/64 bit constant in the code space; generate RIP-relative
     // addressing to load it
-    public void largeConstant( Node relo, SONType t, int off, int elf ) {
+    public void largeConstant(Node relo, Type t, int off, int elf ) {
         assert t.isConstant();
         assert (byte)off == off;
         assert (byte)elf == elf;
@@ -423,7 +422,7 @@ public class Encoding {
     void writeConstantPool( BAOS bits, boolean patch ) {
         padN(16,bits);
 
-        HashMap<SONType,Integer> targets = new HashMap<>();
+        HashMap<Type,Integer> targets = new HashMap<>();
 
         // By log size
         for( int log = 3; log >= 0; log-- ) {
@@ -436,8 +435,8 @@ public class Encoding {
                     if( target==null ) {
                         targets.put(relo._t,target = bits.size());
                         // Put constant into code space.
-                        if( relo._t instanceof SONTypeTuple tt ) // Constant tuples put all entries
-                            for( SONType tx : tt._types )
+                        if( relo._t instanceof TypeTuple tt ) // Constant tuples put all entries
+                            for( Type tx : tt._types )
                                 addN(log,tx,bits);
                         else
                             addN(log,relo._t,bits);

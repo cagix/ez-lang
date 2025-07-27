@@ -9,7 +9,7 @@ import java.util.BitSet;
  */
 public class StructNode extends Node {
 
-    public SONTypeStruct _ts;
+    public TypeStruct _ts;
 
     @Override public String label() { return _ts==null ? "STRUCT?" : _ts.str(); }
 
@@ -19,7 +19,7 @@ public class StructNode extends Node {
         sb.append(_ts._name).append(" {");
         for( int i=0; i<nIns(); i++ ) {
             sb.append(_ts._fields[i]._fname).append(":");
-            sb.append((in(i)==null ? SONType.BOTTOM : in(i)._type).print(new SB()));
+            sb.append((in(i)==null ? Type.BOTTOM : in(i)._type).print(new SB()));
             sb.append("; ");
         }
         sb.setLength(sb.length()-2);
@@ -27,12 +27,12 @@ public class StructNode extends Node {
     }
 
     @Override
-    public SONTypeStruct compute() {
-        if( _ts==null ) return SONTypeStruct.BOT;
+    public TypeStruct compute() {
+        if( _ts==null ) return TypeStruct.BOT;
         Field[] fs = new Field[_ts._fields.length];
         for( int i=0; i<fs.length; i++ )
-            fs[i] = _ts._fields[i].makeFrom(in(i)==null ? SONType.TOP : in(i)._type);
-        return SONTypeStruct.make(_ts._name,fs);
+            fs[i] = _ts._fields[i].makeFrom(in(i)==null ? Type.TOP : in(i)._type);
+        return TypeStruct.make(_ts._name,fs);
     }
 
     @Override

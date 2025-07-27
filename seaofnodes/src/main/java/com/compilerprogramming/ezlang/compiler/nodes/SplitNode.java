@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import java.util.BitSet;
 
 public abstract class SplitNode extends MachConcreteNode {
@@ -16,7 +16,7 @@ public abstract class SplitNode extends MachConcreteNode {
         else in(1)._print0(sb,visited);
         return sb.append(")");
     }
-    @Override public SONType compute() { return in(0)._type; }
+    @Override public Type compute() { return in(0)._type; }
     @Override public Node idealize() { return null; }
     @Override public void asm(CodeGen code, SB sb) {
         sb.p(code.reg(this)).p(" = ").p(code.reg(in(1)));
