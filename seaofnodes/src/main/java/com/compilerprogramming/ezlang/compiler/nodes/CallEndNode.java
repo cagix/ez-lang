@@ -18,6 +18,8 @@ public class CallEndNode extends CFGNode implements MultiNode {
     private boolean _folding;
     public final TypeRPC _rpc;
 
+    public static final boolean ALLOW_INLINING_CALLS = false;   // FIXME this is pending
+
     public CallEndNode(CallNode call) { super(new Node[]{call}); _rpc = TypeRPC.constant(_nid); }
     public CallEndNode(CallEndNode cend) { super(cend); _rpc = cend._rpc; }
 
@@ -63,7 +65,9 @@ public class CallEndNode extends CFGNode implements MultiNode {
 
         // Trivial inlining: call site calls a single function; single function
         // is only called by this call site.
-        if( !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
+        // EZ Lang - we do not support inlining calls yet
+        // EZ Lang - possibly requires updating the type dict to say inlined function is dead
+        if( ALLOW_INLINING_CALLS && !_folding && nIns()==2 && in(0) instanceof CallNode call ) {
             Node fptr = call.fptr();
             if( fptr.nOuts() == 1 && // Only user is this call
                 fptr instanceof ConstantNode && // We have an immediate call
