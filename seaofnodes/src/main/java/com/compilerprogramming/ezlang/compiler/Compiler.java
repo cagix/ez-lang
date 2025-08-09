@@ -280,7 +280,7 @@ public class Compiler {
 //        INITS.clear();
         _code._stop.peephole();
 //        if( show ) showGraph();
-        showGraph();
+        //showGraph();
     }
 
     /**

@@ -155,7 +155,7 @@ Options:
     public static void main(String[] args) throws Exception {
         String input_filename = null;
         boolean do_eval = false;
-        boolean do_run = true;
+        boolean do_run = false;
         boolean do_codegen = false;
         boolean do_print_size = false;
         boolean do_print_time = false;
