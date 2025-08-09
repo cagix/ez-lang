@@ -7,7 +7,7 @@ import com.compilerprogramming.ezlang.compiler.Operand;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.exceptions.InterpreterException;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 public class Interpreter {
@@ -122,7 +122,7 @@ public class Interpreter {
                     Frame newFrame = new Frame(frame, baseReg, callInst.callee);
                     interpret(execStack, newFrame);
                     // Copy return value in expected location
-                    if (!(callInst.callee.returnType instanceof Type.TypeVoid)) {
+                    if (!(callInst.callee.returnType instanceof EZType.EZTypeVoid)) {
                         execStack.stack[base + callInst.returnOperand().frameSlot()] = execStack.stack[baseReg];
                     }
                 }
@@ -301,7 +301,7 @@ public class Interpreter {
             this.bytecodeFunction = (CompiledFunction) functionSymbol.code();
         }
 
-        Frame(Frame caller, int base, Type.TypeFunction functionType) {
+        Frame(Frame caller, int base, EZType.EZTypeFunction functionType) {
             this.caller = caller;
             this.base = base;
             this.bytecodeFunction = (CompiledFunction) functionType.code;

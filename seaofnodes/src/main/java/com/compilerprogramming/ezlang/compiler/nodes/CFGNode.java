@@ -122,7 +122,19 @@ public abstract class CFGNode extends Node {
     // Tag all CFG Nodes with their containing LoopNode; LoopNodes themselves
     // also refer to *their* containing LoopNode, as well as have their depth.
     // Start is a LoopNode which contains all at depth 1.
-    public void buildLoopTree(StopNode stop) {
+    public void buildLoopTree(StartNode start, StopNode stop) {
+        // Unlink all linked calls.  This can remove RPC constants which
+        // shuffled the StartNode outputs so requires a while loop.
+        boolean done=false;
+        while(!done) {
+            done = true;
+            for( Node use : start._outputs )
+                if( use instanceof FunNode fun )
+                    for( Node c : fun._inputs )
+                        if( c instanceof CallNode call )
+                            { call.unlink_all(); done=false; }
+        }
+
         _ltree = stop._ltree = Compiler.XCTRL._ltree = new LoopTree((StartNode)this);
         _bltWalk(2,null,stop, new BitSet());
     }
@@ -140,8 +152,8 @@ public abstract class CFGNode extends Node {
         for( Node use : _outputs ) {
             if( !(use instanceof CFGNode usecfg) ) continue;
             if( skip(usecfg) ) continue;
-            if( usecfg._type == SONType.XCONTROL ||       // Do not walk dead control
-                usecfg._type == SONTypeTuple.IF_NEITHER ) // Nor dead IFs
+            if( usecfg._type == Type.XCONTROL ||       // Do not walk dead control
+                usecfg._type == TypeTuple.IF_NEITHER ) // Nor dead IFs
                 continue;
             // Child visited but not post-visited?
             if( !post.get(usecfg._nid) ) {

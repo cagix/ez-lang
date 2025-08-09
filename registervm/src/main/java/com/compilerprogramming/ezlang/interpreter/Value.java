@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.interpreter;
 
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 import java.util.ArrayList;
 
@@ -15,9 +15,9 @@ public class Value {
         public NullValue() {}
     }
     static public class ArrayValue extends Value {
-        public final Type.TypeArray arrayType;
+        public final EZType.EZTypeArray arrayType;
         public final ArrayList<Value> values;
-        public ArrayValue(Type.TypeArray arrayType, long len, Value initValue) {
+        public ArrayValue(EZType.EZTypeArray arrayType, long len, Value initValue) {
             this.arrayType = arrayType;
             values = new ArrayList<>();
             for (long i = 0; i < len; i++) {
@@ -26,9 +26,9 @@ public class Value {
         }
     }
     static public class StructValue extends Value {
-        public final Type.TypeStruct structType;
+        public final EZType.EZTypeStruct structType;
         public final Value[] fields;
-        public StructValue(Type.TypeStruct structType) {
+        public StructValue(EZType.EZTypeStruct structType) {
             this.structType = structType;
             this.fields = new Value[structType.numFields()];
         }

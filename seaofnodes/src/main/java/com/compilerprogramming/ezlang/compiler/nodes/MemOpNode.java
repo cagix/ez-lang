@@ -2,8 +2,8 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeMemPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeMemPtr;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.lang.StringBuilder;
@@ -37,18 +37,18 @@ public abstract class MemOpNode extends Node {
 
     // Declared type; not final because it might be a forward-reference
     // which will be lazily improved when the reference is declared.
-    public SONType _declaredType;
+    public Type _declaredType;
 
     // A debug name, no semantic meaning
     public final String _name;
-    public MemOpNode(String name, int alias, boolean isLoad, SONType glb, Node mem, Node ptr, Node off) {
+    public MemOpNode(String name, int alias, boolean isLoad, Type glb, Node mem, Node ptr, Node off) {
         super(null, mem, ptr, off);
         _name  = name;
         _alias = alias;
         _declaredType = glb;
         _isLoad = isLoad;
     }
-    public MemOpNode(String name, int alias, boolean isLoad, SONType glb, Node mem, Node ptr, Node off, Node value) {
+    public MemOpNode(String name, int alias, boolean isLoad, Type glb, Node mem, Node ptr, Node off, Node value) {
         this(name, alias, isLoad, glb, mem, ptr, off);
         addDef(value);
     }
@@ -57,7 +57,7 @@ public abstract class MemOpNode extends Node {
         _name  = mop==null ? null : mop._name;
         _alias = mop==null ? 0    : mop._alias;
         _isLoad= mop==null ? true : mop._isLoad;
-        _declaredType = mop==null ? SONType.BOTTOM : mop._declaredType;
+        _declaredType = mop==null ? Type.BOTTOM : mop._declaredType;
         if( mop==null )
             throw Utils.TODO("Load or not");
     }
@@ -69,10 +69,9 @@ public abstract class MemOpNode extends Node {
         _alias        = 0;
 
         _isLoad       = isLoad;
-        _declaredType = SONType.BOTTOM;
+        _declaredType = Type.BOTTOM;
     }
 
-    //
     static String mlabel(String name) { return "[]".equals(name) ? "ary" : ("#".equals(name) ? "len" : name); }
     String mlabel() { return mlabel(_name); }
 
@@ -82,7 +81,7 @@ public abstract class MemOpNode extends Node {
 
     @Override public StringBuilder _print1( StringBuilder sb, BitSet visited ) { return _printMach(sb,visited);  }
     public StringBuilder _printMach( StringBuilder sb, BitSet visited ) { throw Utils.TODO(); }
-
+    public int log_size() { return _declaredType.log_size();  }
 
     @Override
     public boolean eq(Node n) {
@@ -95,12 +94,12 @@ public abstract class MemOpNode extends Node {
 
     @Override
     public CompilerException err() {
-        SONType ptr = ptr()._type;
+        Type ptr = ptr()._type;
         // Already an error, but better error messages come from elsewhere
-        if( ptr == SONType.BOTTOM ) return null;
+        if( ptr == Type.BOTTOM ) return null;
         if( ptr.isHigh() ) return null; // Assume it will fall to not-null
         // Better be a not-nil TMP
-        if( ptr instanceof SONTypeMemPtr tmp && tmp.notNull() )
+        if( ptr instanceof TypeMemPtr tmp && tmp.notNull() )
             return null;
         return Compiler.error( "Might be null accessing '" + _name + "'");
     }

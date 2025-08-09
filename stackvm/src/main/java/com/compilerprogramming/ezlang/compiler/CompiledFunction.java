@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 public class CompiledFunction {
 
@@ -258,12 +258,12 @@ public class CompiledFunction {
         return false;
     }
 
-    private Type.TypeStruct getStructType(Type t) {
-        if (t instanceof Type.TypeStruct typeStruct) {
+    private EZType.EZTypeStruct getStructType(EZType t) {
+        if (t instanceof EZType.EZTypeStruct typeStruct) {
             return typeStruct;
         }
-        else if (t instanceof Type.TypeNullable ptr &&
-                ptr.baseType instanceof Type.TypeStruct typeStruct) {
+        else if (t instanceof EZType.EZTypeNullable ptr &&
+                ptr.baseType instanceof EZType.EZTypeStruct typeStruct) {
             return typeStruct;
         }
         else
@@ -271,7 +271,7 @@ public class CompiledFunction {
     }
 
     private boolean compileFieldExpr(AST.GetFieldExpr fieldExpr) {
-        Type.TypeStruct typeStruct = getStructType(fieldExpr.object.type);
+        EZType.EZTypeStruct typeStruct = getStructType(fieldExpr.object.type);
         int fieldIndex = typeStruct.getFieldIndex(fieldExpr.fieldName);
         if (fieldIndex < 0)
             throw new CompilerException("Field " + fieldExpr.fieldName + " not found");
@@ -291,7 +291,7 @@ public class CompiledFunction {
     }
 
     private boolean compileSetFieldExpr(AST.SetFieldExpr setFieldExpr) {
-        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.object.type;
+        EZType.EZTypeStruct structType = (EZType.EZTypeStruct) setFieldExpr.object.type;
         int fieldIndex = structType.getFieldIndex(setFieldExpr.fieldName);
         if (fieldIndex == -1)
             throw new CompilerException("Field " + setFieldExpr.fieldName + " not found in struct " + structType.name);
@@ -334,7 +334,7 @@ public class CompiledFunction {
     }
 
     private boolean compileSymbolExpr(AST.NameExpr symbolExpr) {
-        if (symbolExpr.type instanceof Type.TypeFunction functionType)
+        if (symbolExpr.type instanceof EZType.EZTypeFunction functionType)
             code(new Instruction.LoadFunction(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;

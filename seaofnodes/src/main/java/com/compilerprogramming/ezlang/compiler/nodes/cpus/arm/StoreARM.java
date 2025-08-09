@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.StoreNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 // Store memory addressing on ARM
 // Support imm, reg(direct), or reg+off(indirect) addressing
@@ -25,8 +25,8 @@ public class StoreARM extends MemOpARM {
 
     private static final int[] OP_STORES = new int[]{ arm.OP_STORE_IMM_8, arm.OP_STORE_IMM_16, arm.OP_STORE_IMM_32, arm.OP_STORE_IMM_64, };
     private int imm_op() {
-        return _declaredType == SONTypeFloat.F32 ? arm.OPF_STORE_IMM_32
-            :  _declaredType == SONTypeFloat.F64 ? arm.OPF_STORE_IMM_64
+        return _declaredType == TypeFloat.F32 ? arm.OPF_STORE_IMM_32
+            :  _declaredType == TypeFloat.F64 ? arm.OPF_STORE_IMM_64
             :  OP_STORES[_declaredType.log_size()];
     }
 

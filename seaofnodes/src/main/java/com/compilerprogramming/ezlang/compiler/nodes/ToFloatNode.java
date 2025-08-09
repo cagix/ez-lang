@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 import java.util.BitSet;
 
@@ -19,14 +19,14 @@ public class ToFloatNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if( in(1)._type == SONType.NIL ) return SONTypeFloat.FZERO;
-        if (in(1)._type instanceof SONTypeInteger i0 ) {
-            if( i0.isHigh() ) return SONTypeFloat.F64.dual();
+    public Type compute() {
+        if( in(1)._type == Type.NIL ) return TypeFloat.FZERO;
+        if (in(1)._type instanceof TypeInteger i0 ) {
+            if( i0.isHigh() ) return TypeFloat.F64.dual();
             if( i0.isConstant() )
-                return SONTypeFloat.constant(i0.value());
+                return TypeFloat.constant(i0.value());
         }
-        return SONTypeFloat.F64;
+        return TypeFloat.F64;
     }
 
     @Override public Node idealize() { return null; }

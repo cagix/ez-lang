@@ -4,7 +4,6 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.nodes.MachConcreteNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
 
 public class NegARM extends MachConcreteNode implements MachNode {
     NegARM(Node sub) {

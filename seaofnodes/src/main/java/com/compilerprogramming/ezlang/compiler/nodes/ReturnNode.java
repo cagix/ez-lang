@@ -51,10 +51,9 @@ public class ReturnNode extends CFGNode {
     @Override public CFGNode uctrl() { return null; }
 
     @Override
-    public SONType compute() {
-        if( inProgress () ) return SONTypeTuple.RET; // In progress
-        if( _fun.isDead() ) return SONTypeTuple.RET.dual(); // Dead another way
-        return SONTypeTuple.make(ctrl()._type,mem()._type,expr()._type);
+    public Type compute() {
+        if( inProgress () ) return TypeTuple.RET; // In progress
+        return TypeTuple.make(ctrl()._type,mem()._type,expr()._type);
     }
 
     @Override public Node idealize() {
@@ -71,9 +70,9 @@ public class ReturnNode extends CFGNode {
 //            _fun.setSig(fcn.makeFrom(ret));
 
         // If dead (cant be reached; infinite loop), kill the exit values
-        if( ctrl()._type== SONType.XCONTROL &&
+        if( ctrl()._type== Type.XCONTROL &&
             !(mem() instanceof ConstantNode && expr() instanceof ConstantNode) ) {
-            Node top = new ConstantNode(SONType.TOP).peephole();
+            Node top = new ConstantNode(Type.TOP).peephole();
             setDef(1,top);
             setDef(2,top);
             return this;
@@ -87,7 +86,7 @@ public class ReturnNode extends CFGNode {
     }
 
     // Gather parse-time return types for error reporting
-    private SONType mt = SONType.TOP;
+    private Type mt = Type.TOP;
     private boolean ti=false, tf=false, tp=false, tn=false;
 
     // Add a return exit to the current parsing function
@@ -95,18 +94,18 @@ public class ReturnNode extends CFGNode {
         assert inProgress();
 
         // Gather parse-time return types for error reporting
-        SONType t = expr._type;
+        Type t = expr._type;
         mt = mt.meet(t);
-        ti |= t instanceof SONTypeInteger x;
-        tf |= t instanceof SONTypeFloat x;
-        tp |= t instanceof SONTypeMemPtr x;
-        tn |= t== SONType.NIL;
+        ti |= t instanceof TypeInteger x;
+        tf |= t instanceof TypeFloat   x;
+        tp |= t instanceof TypeMemPtr  x;
+        tn |= t==Type.NIL;
 
         // Merge path into the One True Return
         RegionNode r = (RegionNode)ctrl();
         // Assert that the Phis are in particular outputs; not reordered or shuffled
-        PhiNode mem = (PhiNode)r.out(0); assert mem._declaredType == SONTypeMem.BOT;
-        PhiNode rez = (PhiNode)r.out(1); assert rez._declaredType == SONType.BOTTOM;
+        PhiNode mem = (PhiNode)r.out(0); assert mem._declaredType == TypeMem.BOT;
+        PhiNode rez = (PhiNode)r.out(1); assert rez._declaredType == Type.BOTTOM;
         // Pop "inProgress" null off
         r  ._inputs.pop();
         mem._inputs.pop();
@@ -122,7 +121,7 @@ public class ReturnNode extends CFGNode {
     }
 
     @Override public CompilerException err() {
-        return expr()._type/*mt*/== SONType.BOTTOM ? mixerr(ti,tf,tp,tn) : null;
+        return expr()._type/*mt*/== Type.BOTTOM ? mixerr(ti,tf,tp,tn) : null;
     }
 
     static CompilerException mixerr( boolean ti, boolean tf, boolean tp, boolean tn) {

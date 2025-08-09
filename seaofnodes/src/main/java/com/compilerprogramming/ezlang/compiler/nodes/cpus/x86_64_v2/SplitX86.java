@@ -1,14 +1,12 @@
 package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.SplitNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
 
 public class SplitX86 extends SplitNode {
     SplitX86( String kind, byte round ) { super(kind,round, new Node[2]); }
@@ -59,12 +57,12 @@ public class SplitX86 extends SplitNode {
                 x86_64_v2.indirectAdr(0, (short)-1/*index*/, (short)x86_64_v2.RSP,  off, 0, enc);
                 return;
             }
-            StoreX86.encVal(enc, srcX ? SONTypeFloat.F64 : SONTypeInteger.BOT, (short)x86_64_v2.RSP, (short)-1/*index*/, src, off, 0);
+            StoreX86.encVal(enc, srcX ? TypeFloat.F64 : TypeInteger.BOT, (short)x86_64_v2.RSP, (short)-1/*index*/, src, off, 0);
             return;
         }
         if( src >= x86_64_v2.MAX_REG ) {
             int off = enc._fun.computeStackOffset(enc._code,src);
-            LoadX86.enc(enc, dstX ? SONTypeFloat.F64 : SONTypeInteger.BOT, dst, (short)x86_64_v2.RSP, (short)-1, off, 0);
+            LoadX86.enc(enc, dstX ? TypeFloat.F64 : TypeInteger.BOT, dst, (short)x86_64_v2.RSP, (short)-1, off, 0);
             return;
         }
 

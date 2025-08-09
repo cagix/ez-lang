@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.parser.ASTVisitor;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 /**
@@ -46,7 +46,7 @@ public class SemaDefineTypes implements ASTVisitor {
             // Install a symbol for the function,
             // type is not fully formed at this stage
             // as parameters nad return values must be added
-            Symbol funcSymbol = new Symbol.FunctionTypeSymbol(funcDecl.name, new Type.TypeFunction(funcDecl.name), funcDecl);
+            Symbol funcSymbol = new Symbol.FunctionTypeSymbol(funcDecl.name, new EZType.EZTypeFunction(funcDecl.name), funcDecl);
             typeDictionary.install(funcDecl.name, funcSymbol);
             // Set up the function decl so that when we visit the parameters
             // and return type we know where to add
@@ -65,7 +65,7 @@ public class SemaDefineTypes implements ASTVisitor {
         if (enter) {
             Symbol structSymbol = typeDictionary.lookup(structDecl.name);
             if (structSymbol != null) {
-                if (structSymbol.type instanceof Type.TypeStruct lookupStructType) {
+                if (structSymbol.type instanceof EZType.EZTypeStruct lookupStructType) {
                     if (!lookupStructType.pending)
                         throw new CompilerException("Struct type " + structDecl.name + " is already declared");
                 }
@@ -73,7 +73,7 @@ public class SemaDefineTypes implements ASTVisitor {
                     throw new CompilerException("Symbol " + structDecl.name + " is already declared");
             }
             else {
-                Type.TypeStruct structType = new Type.TypeStruct(structDecl.name);
+                EZType.EZTypeStruct structType = new EZType.EZTypeStruct(structDecl.name);
                 structSymbol = new Symbol.TypeSymbol(structDecl.name, structType);
                 typeDictionary.install(structDecl.name, structSymbol);
             }
@@ -107,7 +107,7 @@ public class SemaDefineTypes implements ASTVisitor {
         else {
             if (varDecl.varType == AST.VarType.STRUCT_FIELD
                     && currentStructDecl != null) {
-                Type.TypeStruct type = (Type.TypeStruct) currentStructDecl.symbol.type;
+                EZType.EZTypeStruct type = (EZType.EZTypeStruct) currentStructDecl.symbol.type;
                 type.addField(varDecl.name, varDecl.typeExpr.type);
             }
             else if (varDecl.varType == AST.VarType.FUNCTION_PARAMETER
@@ -115,7 +115,7 @@ public class SemaDefineTypes implements ASTVisitor {
                     && currentScope == currentFuncDecl.scope) {
                 if (currentScope.localLookup(varDecl.name) != null)
                     throw new CompilerException("Parameter " + varDecl.name + " is already declared");
-                Type.TypeFunction type = (Type.TypeFunction) currentFuncDecl.symbol.type;
+                EZType.EZTypeFunction type = (EZType.EZTypeFunction) currentFuncDecl.symbol.type;
                 varDecl.symbol = currentScope.install(varDecl.name, new Symbol.ParameterSymbol(varDecl.name, varDecl.typeExpr.type));
                 type.addArg(varDecl.symbol);
             }
@@ -153,26 +153,26 @@ public class SemaDefineTypes implements ASTVisitor {
         return this;
     }
 
-    Type getNullableSimpleType(AST.NullableSimpleTypeExpr simpleTypeExpr) {
+    EZType getNullableSimpleType(AST.NullableSimpleTypeExpr simpleTypeExpr) {
         String baseTypeName = simpleTypeExpr.baseTypeName();
         Symbol typeSymbol = typeDictionary.lookup(baseTypeName);
-        Type baseType;
+        EZType baseType;
         if (typeSymbol == null)
-            baseType = typeDictionary.intern(new Type.TypeStruct(baseTypeName));
+            baseType = typeDictionary.intern(new EZType.EZTypeStruct(baseTypeName));
         else
             baseType = typeSymbol.type;
         if (baseType.isPrimitive())
             throw new CompilerException("Cannot make Nullable instance of primitive type");
-        return typeDictionary.intern(new Type.TypeNullable(baseType));
+        return typeDictionary.intern(new EZType.EZTypeNullable(baseType));
     }
 
-    Type getSimpleType(AST.SimpleTypeExpr simpleTypeExpr) {
+    EZType getSimpleType(AST.SimpleTypeExpr simpleTypeExpr) {
         if (simpleTypeExpr instanceof AST.NullableSimpleTypeExpr nullableSimpleTypeExpr)
             return getNullableSimpleType(nullableSimpleTypeExpr);
         String typeName = simpleTypeExpr.name();
         Symbol typeSymbol = typeDictionary.lookup(typeName);
         if (typeSymbol == null) {
-            return  typeDictionary.intern(new Type.TypeStruct(typeName));
+            return  typeDictionary.intern(new EZType.EZTypeStruct(typeName));
         }
         return typeSymbol.type;
     }
@@ -193,7 +193,7 @@ public class SemaDefineTypes implements ASTVisitor {
         return this;
     }
 
-    Type getArrayType(AST.ArrayTypeExpr arrayTypeExpr) {
+    EZType getArrayType(AST.ArrayTypeExpr arrayTypeExpr) {
         if (arrayTypeExpr instanceof AST.NullableArrayTypeExpr nullableArrayTypeExpr)
             return getNullableArrayType(nullableArrayTypeExpr);
         var elemTypeExpr = arrayTypeExpr.elementType;
@@ -201,7 +201,7 @@ public class SemaDefineTypes implements ASTVisitor {
         return typeDictionary.makeArrayType(elemType, false);
     }
 
-    Type getNullableArrayType(AST.NullableArrayTypeExpr arrayTypeExpr) {
+    EZType getNullableArrayType(AST.NullableArrayTypeExpr arrayTypeExpr) {
         var elemTypeExpr = arrayTypeExpr.elementType;
         var elemType = getSimpleType(elemTypeExpr);
         return typeDictionary.makeArrayType(elemType, true);
@@ -229,7 +229,7 @@ public class SemaDefineTypes implements ASTVisitor {
             // We override the visitor and visit the return type here because
             // we need to associate the return type to the function's return type
             // The visitor mechanism doesn't allow us to associate values between two steps
-            Type.TypeFunction type = (Type.TypeFunction) currentFuncDecl.symbol.type;
+            EZType.EZTypeFunction type = (EZType.EZTypeFunction) currentFuncDecl.symbol.type;
             if (returnTypeExpr.returnType != null) {
                 returnTypeExpr.returnType.accept(this);
                 returnTypeExpr.type = returnTypeExpr.returnType.type;

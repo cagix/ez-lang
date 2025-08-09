@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Var;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.util.BitSet;
@@ -13,7 +13,7 @@ import java.util.BitSet;
  *  peepholes to the Def.
  */
 public class FRefNode extends ConstantNode {
-    public static final SONType FREF_TYPE = SONType.BOTTOM;
+    public static final Type FREF_TYPE = Type.BOTTOM;
     public final Var _n;
     public FRefNode( Var n ) { super(FREF_TYPE); _n = n; }
 

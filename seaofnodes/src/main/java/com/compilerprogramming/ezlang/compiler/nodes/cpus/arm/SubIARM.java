@@ -5,7 +5,6 @@ import com.compilerprogramming.ezlang.compiler.nodes.MachConcreteNode;
 
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeInteger;
 
 public class SubIARM extends MachConcreteNode implements MachNode {
     final int _imm;

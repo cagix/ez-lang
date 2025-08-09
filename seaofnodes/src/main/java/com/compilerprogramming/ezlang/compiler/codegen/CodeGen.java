@@ -23,7 +23,7 @@ public class CodeGen {
         Opto,                   // Run ideal optimizations
         TypeCheck,              // Last check for bad programs
         LoopTree,               // Build a loop tree; break infinite loops
-        InstSelect,             // Convert to target hardware nodes
+        Select,                 // Convert to target hardware nodes
         Schedule,               // Global schedule (code motion) nodes
         LocalSched,             // Local schedule
         RegAlloc,               // Register allocation
@@ -36,11 +36,11 @@ public class CodeGen {
     // Compilation source code
     public final String _src;
     // Compile-time known initial argument type
-    public final SONTypeInteger _arg;
+    public final TypeInteger _arg;
 
     // ---------------------------
-    public CodeGen( String src ) { this(src, SONTypeInteger.BOT, 123L ); }
-    public CodeGen( String src, SONTypeInteger arg, long workListSeed ) {
+    public CodeGen( String src ) { this(src, TypeInteger.BOT, 123L ); }
+    public CodeGen( String src, TypeInteger arg, long workListSeed ) {
         CODE = this;
         _phase = null;
         _callingConv = null;
@@ -57,14 +57,15 @@ public class CodeGen {
     public CodeGen driver( Phase phase ) { return driver(phase,null,null); }
     public CodeGen driver( Phase phase, String cpu, String callingConv ) {
         if( _phase==null )                       parse();
-        if( _phase.ordinal() < phase.ordinal() ) opto();
-        if( _phase.ordinal() < phase.ordinal() ) typeCheck();
-        if( _phase.ordinal() < phase.ordinal() ) loopTree();
-        if( _phase.ordinal() < phase.ordinal() && cpu != null ) instSelect(cpu,callingConv);
-        if( _phase.ordinal() < phase.ordinal() ) GCM();
-        if( _phase.ordinal() < phase.ordinal() ) localSched();
-        if( _phase.ordinal() < phase.ordinal() ) regAlloc();
-        if( _phase.ordinal() < phase.ordinal() ) encode();
+        int p1 = phase.ordinal();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.Opto      .ordinal() ) opto();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.TypeCheck .ordinal() ) typeCheck();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.LoopTree  .ordinal() ) loopTree();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.Select    .ordinal() && cpu != null ) instSelect(cpu,callingConv);
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.Schedule  .ordinal() ) GCM();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.LocalSched.ordinal() ) localSched();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.RegAlloc  .ordinal() ) regAlloc();
+        if( _phase.ordinal() < p1 && _phase.ordinal() < Phase.Encoding  .ordinal() ) encode();
         return this;
     }
 
@@ -122,39 +123,39 @@ public class CodeGen {
 
     // Compute "function indices": FIDX.
     // Each new request at the same signature gets a new FIDX.
-    private final HashMap<SONTypeTuple,Integer> FIDXS = new HashMap<>();
-    public SONTypeFunPtr makeFun( SONTypeTuple sig, SONType ret ) {
+    private final HashMap<TypeTuple,Integer> FIDXS = new HashMap<>();
+    public TypeFunPtr makeFun( TypeTuple sig, Type ret ) {
         Integer i = FIDXS.get(sig);
         int fidx = i==null ? 0 : i;
         FIDXS.put(sig,fidx+1);  // Track count per sig
         assert fidx<64;         // TODO: need a larger FIDX space
-        return SONTypeFunPtr.make((byte)2,sig,ret, 1L<<fidx );
+        return TypeFunPtr.make((byte)2,sig,ret, 1L<<fidx );
     }
-    public SONTypeFunPtr makeFun2( SONTypeTuple sig, SONType ret ) {
+    public TypeFunPtr makeFun2(TypeTuple sig, Type ret ) {
         Integer i = FIDXS.get(sig);
         int fidx = i==null ? 0 : i;
         FIDXS.put(sig,fidx+1);  // Track count per sig
         assert fidx<64;         // TODO: need a larger FIDX space
-        return new SONTypeFunPtr((byte)2,sig,ret, 1L<<fidx );
+        return new TypeFunPtr((byte)2,sig,ret, 1L<<fidx );
     }
     // Signature for MAIN
-    public SONTypeFunPtr _main = makeFun(SONTypeTuple.MAIN,SONType.BOTTOM);
+    public TypeFunPtr _main = makeFun(TypeTuple.MAIN, Type.BOTTOM);
     // Reverse from a constant function pointer to the IR function being called
-    public FunNode link( SONTypeFunPtr tfp ) {
+    public FunNode link( TypeFunPtr tfp ) {
         assert tfp.isConstant();
-        return _linker.get(tfp.makeFrom(SONType.BOTTOM));
+        return _linker.get(tfp.makeFrom(Type.BOTTOM));
     }
 
     // Insert linker mapping from constant function signature to the function
     // being called.
     public void link(FunNode fun) {
-        _linker.put(fun.sig().makeFrom(SONType.BOTTOM),fun);
+        _linker.put(fun.sig().makeFrom(Type.BOTTOM),fun);
     }
 
     // "Linker" mapping from constant TypeFunPtrs to heads of function.  These
     // TFPs all have exact single fidxs and their return is wiped to BOTTOM (so
     // the return is not part of the match).
-    private final HashMap<SONTypeFunPtr,FunNode> _linker = new HashMap<>();
+    private final HashMap<TypeFunPtr,FunNode> _linker = new HashMap<>();
 
     // Parser object
     public final Compiler P;
@@ -229,7 +230,7 @@ public class CodeGen {
         _phase = Phase.LoopTree;
         long t0 = System.currentTimeMillis();
         // Build the loop tree, fix never-exit loops
-        _start.buildLoopTree(_stop);
+        _start.buildLoopTree(_start,_stop);
         _tLoopTree = (int)(System.currentTimeMillis() - t0);
         return this;
     }
@@ -257,7 +258,7 @@ public class CodeGen {
     public CodeGen instSelect( String cpu, String callingConv ) { return instSelect(cpu,callingConv,PORTS); }
     public CodeGen instSelect( String cpu, String callingConv, String base ) {
         assert _phase.ordinal() == Phase.LoopTree.ordinal();
-        _phase = Phase.InstSelect;
+        _phase = Phase.Select;
 
         _callingConv = callingConv;
 
@@ -288,14 +289,14 @@ public class CodeGen {
         _rpcMask = new RegMask(_mach.rpc());
         _retMasks[3] = _rpcMask;
 
-
         // Convert to machine ops
         long t0 = System.currentTimeMillis();
         _uid = 1;               // All new machine nodes reset numbering
         var map = new IdentityHashMap<Node,Node>();
         _instSelect( _stop, map );
         _stop  = ( StopNode)map.get(_stop );
-        _start = (StartNode)map.get(_start);
+        StartNode start = (StartNode)map.get(_start);
+        _start = start==null ? new StartNode(_start) : start;
         _instOuts(_stop,visit());
         _visit.clear();
         _tInsSel = (int)(System.currentTimeMillis() - t0);
@@ -326,8 +327,6 @@ public class CodeGen {
         if( x instanceof MachNode mach )
             mach.postSelect(this);  // Post selection action
 
-        // Updates forward edges only.
-        n._outputs.clear();
         return x;
     }
 
@@ -351,7 +350,7 @@ public class CodeGen {
     // Global schedule (code motion) nodes
     public CodeGen GCM() { return GCM(false); }
     public CodeGen GCM( boolean show) {
-        assert _phase.ordinal() <= Phase.InstSelect.ordinal();
+        assert _phase.ordinal() <= Phase.Select.ordinal();
         _phase = Phase.Schedule;
         long t0 = System.currentTimeMillis();
 
@@ -451,8 +450,10 @@ public class CodeGen {
     String printCFG() {
         if( _cfg==null ) return "no CFG";
         SB sb = new SB();
-        for( CFGNode cfg : _cfg )
-            IRPrinter.printLine(cfg,sb);
+        for( CFGNode cfg : _cfg ) {
+            sb.fix(8,""+cfg._idepth);
+            IRPrinter.printLine( cfg, sb );
+        }
         return sb.toString();
     }
 

@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 /**
  * Represents a Virtual Register in the abstract machine.
@@ -44,7 +44,7 @@ public class Register {
     /**
      * The type of the register
      */
-    public final Type type;
+    public final EZType type;
     /**
      * The location of this register relative to the base
      * of the executing function. Multiple registers may share the same
@@ -52,10 +52,10 @@ public class Register {
      */
     protected int frameSlot;
 
-    public Register(int id, String name, Type type) {
+    public Register(int id, String name, EZType type) {
         this(id,name,type,id);  // Initially frame slot is set to the unique ID
     }
-    protected Register(int id, String name, Type type, int frameSlot) {
+    protected Register(int id, String name, EZType type, int frameSlot) {
         this.id = id;
         this.name = name;
         this.type = type;

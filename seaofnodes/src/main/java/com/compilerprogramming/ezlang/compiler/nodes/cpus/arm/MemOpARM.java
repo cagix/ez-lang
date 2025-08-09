@@ -15,7 +15,7 @@ public abstract class MemOpARM extends MemOpNode implements MachNode {
     final char _sz = (char)('0'+(1<<_declaredType.log_size()));
     MemOpARM(MemOpNode mop, Node ptr, Node idx, int off, int imm) {
         super(mop,mop);
-        assert ptr._type instanceof SONTypeMemPtr && !(ptr instanceof AddNode);
+        assert ptr._type instanceof TypeMemPtr && !(ptr instanceof AddNode);
         assert ptr() == ptr;
         _inputs.setX(2, ptr);
         _inputs.setX(3, idx);
@@ -34,7 +34,7 @@ public abstract class MemOpARM extends MemOpNode implements MachNode {
 
     @Override public  StringBuilder _printMach(StringBuilder sb, BitSet visited) { return sb.append(".").append(_name); }
 
-    @Override public SONType compute() { throw Utils.TODO(); }
+    @Override public Type compute() { throw Utils.TODO(); }
     @Override public Node idealize() { throw Utils.TODO(); }
 
     int size() { return 1<<_declaredType.log_size(); }

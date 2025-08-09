@@ -1,7 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 
 import java.util.BitSet;
@@ -17,9 +16,9 @@ import static com.compilerprogramming.ezlang.compiler.Utils.TODO;
  */
 public class StartNode extends LoopNode implements MultiNode {
 
-    final SONType _arg;
+    final Type _arg;
 
-    public StartNode(SONType arg) { super((Node)null); _arg = arg; _type = compute(); }
+    public StartNode(Type arg) { super((Node)null); _arg = arg; _type = compute(); }
     public StartNode(StartNode start) { super(start); _arg = start==null ? null : start._arg; }
 
     @Override public String label() { return "Start"; }
@@ -44,8 +43,8 @@ public class StartNode extends LoopNode implements MultiNode {
     }
 
 
-    @Override public SONTypeTuple compute() {
-        return SONTypeTuple.make(SONType.CONTROL, SONTypeMem.TOP,_arg);
+    @Override public TypeTuple compute() {
+        return TypeTuple.make(Type.CONTROL,TypeMem.TOP,_arg);
     }
 
     @Override public Node idealize() { return null; }

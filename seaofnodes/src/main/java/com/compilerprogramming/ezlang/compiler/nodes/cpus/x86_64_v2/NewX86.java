@@ -3,7 +3,6 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
 
 public class NewX86 extends NewNode implements MachNode {
     // A pre-zeroed chunk of memory.

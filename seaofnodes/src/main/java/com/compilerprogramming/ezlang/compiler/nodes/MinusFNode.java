@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 import java.util.BitSet;
 
@@ -19,10 +19,10 @@ public class MinusFNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if (in(1)._type instanceof SONTypeFloat i0)
-            return i0.isConstant() ? SONTypeFloat.constant(-i0.value()) : i0;
-        return SONTypeFloat.F64;
+    public Type compute() {
+        if (in(1)._type instanceof TypeFloat i0)
+            return i0.isConstant() ? TypeFloat.constant(-i0.value()) : i0;
+        return TypeFloat.F64;
     }
 
     @Override

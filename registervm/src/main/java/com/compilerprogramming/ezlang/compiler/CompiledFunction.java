@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.parser.AST;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
@@ -281,7 +281,7 @@ public class CompiledFunction {
     private boolean compileCallExpr(AST.CallExpr callExpr) {
         compileExpr(callExpr.callee);
         var callee = pop();
-        Type.TypeFunction calleeType = null;
+        EZType.EZTypeFunction calleeType = null;
         if (callee instanceof Operand.LocalFunctionOperand functionOperand)
             calleeType = functionOperand.functionType;
         else throw new CompilerException("Cannot call a non function type");
@@ -303,8 +303,8 @@ public class CompiledFunction {
         for (int i = 0; i < args.size(); i++)
             pop();
         Operand.TempRegisterOperand ret = null;
-        if (callExpr.callee.type instanceof Type.TypeFunction tf &&
-                !(tf.returnType instanceof Type.TypeVoid)) {
+        if (callExpr.callee.type instanceof EZType.EZTypeFunction tf &&
+                !(tf.returnType instanceof EZType.EZTypeVoid)) {
             ret = createTemp(tf.returnType);
             assert ret.regnum-maxLocalReg == returnStackPos;
         }
@@ -312,12 +312,12 @@ public class CompiledFunction {
         return false;
     }
 
-    private Type.TypeStruct getStructType(Type t) {
-        if (t instanceof Type.TypeStruct typeStruct) {
+    private EZType.EZTypeStruct getStructType(EZType t) {
+        if (t instanceof EZType.EZTypeStruct typeStruct) {
             return typeStruct;
         }
-        else if (t instanceof Type.TypeNullable ptr &&
-                ptr.baseType instanceof Type.TypeStruct typeStruct) {
+        else if (t instanceof EZType.EZTypeNullable ptr &&
+                ptr.baseType instanceof EZType.EZTypeStruct typeStruct) {
             return typeStruct;
         }
         else
@@ -325,7 +325,7 @@ public class CompiledFunction {
     }
 
     private boolean compileFieldExpr(AST.GetFieldExpr fieldExpr) {
-        Type.TypeStruct typeStruct = getStructType(fieldExpr.object.type);
+        EZType.EZTypeStruct typeStruct = getStructType(fieldExpr.object.type);
         int fieldIndex = typeStruct.getFieldIndex(fieldExpr.fieldName);
         if (fieldIndex < 0)
             throw new CompilerException("Field " + fieldExpr.fieldName + " not found");
@@ -348,7 +348,7 @@ public class CompiledFunction {
     }
 
     private boolean compileSetFieldExpr(AST.SetFieldExpr setFieldExpr) {
-        Type.TypeStruct structType = (Type.TypeStruct) setFieldExpr.object.type;
+        EZType.EZTypeStruct structType = (EZType.EZTypeStruct) setFieldExpr.object.type;
         int fieldIndex = structType.getFieldIndex(setFieldExpr.fieldName);
         if (fieldIndex == -1)
             throw new CompilerException("Field " + setFieldExpr.fieldName + " not found in struct " + structType.name);
@@ -398,7 +398,7 @@ public class CompiledFunction {
     }
 
     private boolean compileSymbolExpr(AST.NameExpr symbolExpr) {
-        if (symbolExpr.type instanceof Type.TypeFunction functionType)
+        if (symbolExpr.type instanceof EZType.EZTypeFunction functionType)
             pushOperand(new Operand.LocalFunctionOperand(functionType));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
@@ -506,23 +506,23 @@ public class CompiledFunction {
     }
 
     private boolean compileConstantExpr(AST.LiteralExpr constantExpr) {
-        if (constantExpr.type instanceof Type.TypeInteger)
+        if (constantExpr.type instanceof EZType.EZTypeInteger)
             pushConstant(constantExpr.value.num.intValue(), constantExpr.type);
-        else if (constantExpr.type instanceof Type.TypeNull)
+        else if (constantExpr.type instanceof EZType.EZTypeNull)
             pushNullConstant(constantExpr.type);
         else throw new CompilerException("Invalid constant type");
         return false;
     }
 
-    private void pushConstant(long value, Type type) {
+    private void pushConstant(long value, EZType type) {
         pushOperand(new Operand.ConstantOperand(value, type));
     }
 
-    private void pushNullConstant(Type type) {
+    private void pushNullConstant(EZType type) {
         pushOperand(new Operand.NullConstantOperand(type));
     }
 
-    private Operand.TempRegisterOperand createTemp(Type type) {
+    private Operand.TempRegisterOperand createTemp(EZType type) {
         var tempRegister = new Operand.TempRegisterOperand(virtualStack.size()+maxLocalReg, type);
         pushOperand(tempRegister);
         if (maxStackSize < virtualStack.size())
@@ -530,7 +530,7 @@ public class CompiledFunction {
         return tempRegister;
     }
 
-    Type typeOfOperand(Operand operand) {
+    EZType typeOfOperand(Operand operand) {
         if (operand instanceof Operand.ConstantOperand constant)
             return constant.type;
         else if (operand instanceof Operand.NullConstantOperand nullConstantOperand)
@@ -541,7 +541,7 @@ public class CompiledFunction {
     }
 
     private Operand.TempRegisterOperand createTempAndMove(Operand src) {
-        Type type = typeOfOperand(src);
+        EZType type = typeOfOperand(src);
         var temp = createTemp(type);
         code(new Instruction.Move(src, temp));
         return temp;
@@ -603,10 +603,10 @@ public class CompiledFunction {
             code(new Instruction.Move(value, indexed));
     }
 
-    private void codeNew(Type type, AST.Expr len, AST.Expr initVal) {
-        if (type instanceof Type.TypeArray typeArray)
+    private void codeNew(EZType type, AST.Expr len, AST.Expr initVal) {
+        if (type instanceof EZType.EZTypeArray typeArray)
             codeNewArray(typeArray, len, initVal);
-        else if (type instanceof Type.TypeStruct typeStruct) {
+        else if (type instanceof EZType.EZTypeStruct typeStruct) {
             var temp = createTemp(type);
             code(new Instruction.NewStruct(typeStruct, temp));
         }
@@ -614,7 +614,7 @@ public class CompiledFunction {
             throw new CompilerException("Unexpected type: " + type);
     }
 
-    private void codeNewArray(Type.TypeArray typeArray, AST.Expr len, AST.Expr initVal) {
+    private void codeNewArray(EZType.EZTypeArray typeArray, AST.Expr len, AST.Expr initVal) {
         var temp = createTemp(typeArray);
         Operand lenOperand = null;
         Operand initValOperand = null;

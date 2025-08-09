@@ -1,0 +1,27 @@
+---foo { -> int #0}---------------------------
+0030 4883EC08    subi  rsp -= #8
+0034 BF0A000000  ldi   rdi = #10
+0039 E8C2FFFFFF  call  fib  rdi
+003E 4883C408C3  addi  rsp += #8
+0043             ret
+---{ -> int #0}---------------------------
+
+---fib { int -> int #1}---------------------------
+                 n:rdi
+0000 BA01000000  ldi   rdx = #1
+0005 B901000000  ldi   rcx = #1
+LOOP5:
+                 i:rdi,f2:rdx,f1:rcx
+000A 488BC2      mov   rax = rdx                      // def/self #0
+000D 4883FF01    cmp   rdi, #1
+0011 7E0E        j<=   L3                             // L8
+L8:
+0013 48FFCF      dec   rdi += #-1
+0016 488BD0      mov   rdx = rax                      // use/self/use #0
+0019 4803D1      add   rdx += rcx
+001C 488BC8      mov   rcx = rax                      // use/self/use #0
+001F EBE9        jmp   LOOP5
+L51:
+L3:
+0021 C3          ret
+---{ int -> int #1}---------------------------

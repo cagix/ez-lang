@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import java.util.BitSet;
 
 public class ParmNode extends PhiNode {
@@ -8,7 +8,7 @@ public class ParmNode extends PhiNode {
     // Argument indices are mapped one-to-one on CallNode inputs
     public final int _idx;             // Argument index
 
-    public ParmNode(String label, int idx, SONType declaredType, Node... inputs) {
+    public ParmNode(String label, int idx, Type declaredType, Node... inputs) {
         super(label,declaredType,inputs);
         _idx = idx;
     }
@@ -44,4 +44,8 @@ public class ParmNode extends PhiNode {
 
     // Always in-progress until we run out of unknown callers
     @Override public boolean inProgress() { return fun().inProgress(); }
+
+    @Override public boolean eq( Node n ) {
+        return ((ParmNode)n)._idx==_idx && super.eq(n);
+    }
 }

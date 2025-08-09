@@ -32,7 +32,6 @@ public abstract class GlobalCodeMotion {
 
     // Post-Order of CFG
     private static void _rpo_cfg(CFGNode def, Node use, BitSet visit, Ary<CFGNode> rpo) {
-        if( use instanceof CallNode call ) call.unlink_all();
         if( !(use instanceof CFGNode cfg) || visit.get(cfg._nid) )
             return;             // Been there, done that
         if( def instanceof ReturnNode && use instanceof CallEndNode )
@@ -166,11 +165,11 @@ public abstract class GlobalCodeMotion {
                             // New makes new memory, never crushes load memory
                             !(memuse instanceof NewNode) &&
                             // Load-use directly defines memory
-                            (memuse._type instanceof SONTypeMem ||
+                            (memuse._type instanceof TypeMem ||
                              // Load-use directly defines memory
                              memuse instanceof CallNode ||
                              // Load-use indirectly defines memory
-                             (memuse._type instanceof SONTypeTuple tt && tt._types[ld._alias] instanceof SONTypeMem)) )
+                             (memuse._type instanceof TypeTuple tt && tt._types[ld._alias] instanceof TypeMem)) )
                             continue outer;
 
                 // All uses done, schedule
@@ -178,14 +177,22 @@ public abstract class GlobalCodeMotion {
             }
 
             // Walk all inputs and put on worklist, as their last-use might now be done
-            for( Node def : n._inputs )
-                if( def!=null && late[def._nid]==null ) {
+            for( Node def : n._inputs ) {
+                if( def!=null && late[def._nid]==null )
                     work.push(def);
-                    // if the def has a load use, maybe the load can fire
+                // if the def has a load use, maybe the load can fire
+                if( def!=null )
                     for( Node out : def._outputs )
                         if( out instanceof MemOpNode ld && ld._isLoad && late[ld._nid]==null )
                             work.push(ld);
+            }
+
+            if( n instanceof LoopNode loop ) {
+                for( Node phi : loop._outputs ) {
+                    if( phi instanceof PhiNode && late[phi._nid]==null )
+                        work.push(phi);
                 }
+            }
         }
     }
 
@@ -274,7 +281,7 @@ public abstract class GlobalCodeMotion {
         for( Node mem : load.mem()._outputs ) {
             switch( mem ) {
             case MemOpNode st:
-                if( !st._isLoad ) {
+                if( !st._isLoad && load._alias == st._alias ) {
                     assert late[mem._nid] != null;
                     lca = anti_dep( load, late[mem._nid], mem.cfg0(), lca, st );
                 }

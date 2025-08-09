@@ -1,22 +1,17 @@
 package com.compilerprogramming.ezlang.types;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.util.ArrayList;
-
 public class TestTypes {
 
-    Type buildStruct1(TypeDictionary typeDictionary) {
-        Type.TypeStruct s = new Type.TypeStruct("S1");
+    EZType buildStruct1(TypeDictionary typeDictionary) {
+        EZType.EZTypeStruct s = new EZType.EZTypeStruct("S1");
         s.addField("a", typeDictionary.INT);
         s.addField("b", typeDictionary.INT);
         s.complete();
         return typeDictionary.intern(s);
     }
 
-    Type buildStruct2(TypeDictionary typeDictionary) {
-        Type.TypeStruct s = new Type.TypeStruct("S2");
+    EZType buildStruct2(TypeDictionary typeDictionary) {
+        EZType.EZTypeStruct s = new EZType.EZTypeStruct("S2");
         s.addField("a", typeDictionary.INT);
         s.addField("b", typeDictionary.INT);
         s.complete();

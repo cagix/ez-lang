@@ -4,9 +4,9 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeTuple;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeTuple;
 
 import java.util.BitSet;
 import static com.compilerprogramming.ezlang.compiler.codegen.CodeGen.CODE;
@@ -16,19 +16,19 @@ public class FunNode extends RegionNode {
     // When set true, this Call/CallEnd/Fun/Return is being trivially inlined
     boolean _folding;
 
-    private SONTypeFunPtr _sig;    // Initial signature
+    private TypeFunPtr _sig;    // Initial signature
     private ReturnNode _ret;    // Return pointer
 
     public String _name;        // Debug name
 
-    public FunNode(SONTypeFunPtr sig, Node... nodes ) { super(nodes); _sig = sig; }
+    public FunNode(TypeFunPtr sig, Node... nodes ) { super(nodes); _sig = sig; }
     public FunNode( FunNode fun ) {
         super( fun );
         if( fun!=null ) {
             _sig = fun.sig();
             _name = fun._name;
         } else {
-            _sig = SONTypeFunPtr.BOT;
+            _sig = TypeFunPtr.BOT;
             _name = "";
         }
     }
@@ -60,8 +60,8 @@ public class FunNode extends RegionNode {
     public ReturnNode ret() { assert _ret!=null; return _ret; }
 
     // Signature can improve over time
-    public SONTypeFunPtr sig() { return _sig; }
-    public void setSig( SONTypeFunPtr sig ) {
+    public TypeFunPtr sig() { return _sig; }
+    public void setSig( TypeFunPtr sig ) {
         assert sig.isa(_sig);
         if( _sig != sig ) {
             CODE.add(this);
@@ -69,10 +69,17 @@ public class FunNode extends RegionNode {
         }
     }
 
+    public void setName( String name ) {
+        if( _name==null ) _name=name;
+        else _name += "."+name;
+    }
+
     @Override
-    public SONType compute() {
+    public Type compute() {
         // Only dead if no callers after SCCP
-        return SONType.CONTROL;
+        if( unknownCallers() )
+            return Type.CONTROL;
+        return super.compute();
     }
 
     @Override
@@ -87,7 +94,7 @@ public class FunNode extends RegionNode {
         }
 
         // Upgrade inferred or user-written return type to actual
-        if( _ret!=null && _ret._type instanceof SONTypeTuple tt && tt.ret() != _sig.ret() )
+        if( _ret!=null && _ret._type instanceof TypeTuple tt && tt.ret() != _sig.ret() )
 		    // FIXME Dibyendu
             //throw Utils.TODO();
             return null;
@@ -120,10 +127,10 @@ public class FunNode extends RegionNode {
         return _folding ? super.idepth() : CodeGen.CODE.iDepthAt(1);
     }
     // Bypass Region idom, always assume idom is Start
-    @Override public CFGNode idom(Node dep) { return cfg(1); }
+    @Override public CFGNode idom(Node dep) { return _folding && nIns()==3 ? cfg(2) : cfg(1); }
 
     // Always in-progress until we run out of unknown callers
-    public boolean unknownCallers() { return in(1) instanceof StartNode; }
+    public boolean unknownCallers() { return nIns()<2 || in(1) instanceof StartNode; }
 
     @Override public boolean inProgress() { return unknownCallers(); }
 

@@ -1,59 +1,37 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.sontypes.*;
 
 import java.util.BitSet;
 
 import static com.compilerprogramming.ezlang.compiler.Compiler.con;
 
-public class AddNode extends Node {
-    public AddNode(Node lhs, Node rhs) { super(null, lhs, rhs); }
+public class AddNode extends ArithNode {
+    public AddNode(Node lhs, Node rhs) { super(lhs, rhs); }
 
     @Override public String label() { return "Add"; }
+    @Override public String op() { return "+"; }
 
-    @Override public String glabel() { return "+"; }
-
-    @Override
-    public StringBuilder _print1(StringBuilder sb, BitSet visited) {
-        in(1)._print0(sb.append("("), visited);
-        in(2)._print0(sb.append("+"), visited);
-        return sb.append(")");
+    @Override long doOp( long x, long y ) { return x + y; }
+    @Override TypeInteger doOp(TypeInteger x, TypeInteger y) {
+        // Fold ranges like {0-1} + {2-3} into {2-4}.
+        if( !overflow(x._min,y._min) &&
+            !overflow(x._max,y._max) )
+            return TypeInteger.make(x._min+y._min,x._max+y._max);
+        return TypeInteger.BOT;
     }
 
-
-    @Override
-    public SONType compute() {
-        SONType t1 = in(1)._type, t2 = in(2)._type;
-        if( t1.isHigh() || t2.isHigh() )
-            return SONTypeInteger.TOP;
-        if( t1 instanceof SONTypeInteger i1 &&
-            t2 instanceof SONTypeInteger i2 ) {
-            if (i1.isConstant() && i2.isConstant())
-                return SONTypeInteger.constant(i1.value()+i2.value());
-            // Fold ranges like {0-1} + {2-3} into {2-4}.
-            if( !overflow(i1._min,i2._min) &&
-                !overflow(i1._max,i2._max) )
-                return SONTypeInteger.make(i1._min+i2._min,i1._max+i2._max);
-        }
-        return SONTypeInteger.BOT;
-    }
-
-    static boolean overflow( long x, long y ) {
-        if( (x ^    y ) < 0 ) return false; // unequal signs, never overflow
-        return (x ^ (x + y)) < 0; // sum has unequal signs, so overflow
-    }
     @Override
     public Node idealize () {
         Node lhs = in(1);
         Node rhs = in(2);
         if( rhs instanceof AddNode add && add.err()!=null )
             return null;
-        SONType t2 = rhs._type;
+        Type t2 = rhs._type;
 
         // Add of 0.  We do not check for (0+x) because this will already
         // canonicalize to (x+0)
-        if( t2 == SONTypeInteger.ZERO )
+        if( t2 == TypeInteger.ZERO )
             return lhs;
 
         // Add of same to a multiply by 2
@@ -113,7 +91,7 @@ public class AddNode extends Node {
         if( spine_cmp(lhs.in(2),rhs,this) )
             return new AddNode(new AddNode(lhs.in(1),rhs).peephole(),lhs.in(2));
 
-        return null;
+        return super.idealize();
     }
 
     // Rotation is only valid for associative ops, e.g. Add, Mul, And, Or, Xor.
@@ -122,7 +100,7 @@ public class AddNode extends Node {
     static Node phiCon(Node op, boolean rotate) {
         Node lhs = op.in(1);
         Node rhs = op.in(2);
-        if( rhs._type== SONTypeInteger.TOP ) return null;
+        if( rhs._type==TypeInteger.TOP ) return null;
         // LHS is either a Phi of constants, or another op with Phi of constants
         PhiNode lphi = pcon(lhs,op);
         if( rotate && lphi==null && lhs.nIns() > 2 ) {
@@ -175,8 +153,8 @@ public class AddNode extends Node {
         if( lo._type.isConstant() ) return false;
         if( hi._type.isConstant() ) return true ;
 
-        if( lo instanceof PhiNode lphi && lphi.region()._type== SONType.XCONTROL ) return false;
-        if( hi instanceof PhiNode hphi && hphi.region()._type== SONType.XCONTROL ) return false;
+        if( lo instanceof PhiNode lphi && lphi.region()._type==Type.XCONTROL ) return false;
+        if( hi instanceof PhiNode hphi && hphi.region()._type==Type.XCONTROL ) return false;
 
         if( lo instanceof PhiNode && lo.allCons(dep) ) return false;
         if( hi instanceof PhiNode && hi.allCons(dep) ) return true ;
@@ -190,11 +168,4 @@ public class AddNode extends Node {
 
     @Override Node copy(Node lhs, Node rhs) { return new AddNode(lhs,rhs); }
     @Override Node copyF() { return new AddFNode(null,null); }
-// FIXME Dibyendu
-//    @Override public Parser.ParseException err() {
-//        if( in(1)._type.isHigh() || in(2)._type.isHigh() ) return null;
-//        if( !(in(1)._type instanceof SONTypeInteger) ) return Parser.error("Cannot '"+label()+"' " + in(1)._type,null);
-//        if( !(in(2)._type instanceof SONTypeInteger) ) return Parser.error("Cannot '"+label()+"' " + in(2)._type,null);
-//        return null;
-//    }
 }

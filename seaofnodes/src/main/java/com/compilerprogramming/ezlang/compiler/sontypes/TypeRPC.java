@@ -6,7 +6,7 @@ import java.util.HashSet;
 /**
  *  Return Program Control or Return PC or RPC
  */
-public class SONTypeRPC extends SONType {
+public class TypeRPC extends Type {
 
     // A set of CallEndNode IDs (or StopNode); commonly just one.
     // Basically a sparse bit set
@@ -15,26 +15,26 @@ public class SONTypeRPC extends SONType {
     // If true, invert the meaning of the bits
     final boolean _any;
 
-    private SONTypeRPC(boolean any, HashSet<Integer> rpcs) {
+    private TypeRPC(boolean any, HashSet<Integer> rpcs) {
         super(TRPC);
         _any = any;
         _rpcs = rpcs;
     }
-    private static SONTypeRPC make(boolean any, HashSet<Integer> rpcs) {
-        return new SONTypeRPC(any,rpcs).intern();
+    private static TypeRPC make(boolean any, HashSet<Integer> rpcs) {
+        return new TypeRPC(any,rpcs).intern();
     }
 
-    public static SONTypeRPC constant(int cend) {
+    public static TypeRPC constant(int cend) {
         HashSet<Integer> rpcs = new HashSet<>();
         rpcs.add(cend);
         return make(false,rpcs);
     }
 
-    public  static final SONTypeRPC BOT = make(true,new HashSet<>());
-    private static final SONTypeRPC TEST2 = constant(2);
-    private static final SONTypeRPC TEST3 = constant(2);
+    public  static final TypeRPC BOT = make(true,new HashSet<>());
+    private static final TypeRPC TEST2 = constant(2);
+    private static final TypeRPC TEST3 = constant(2);
 
-    public static void gather(ArrayList<SONType> ts) { ts.add(BOT); ts.add(TEST2); ts.add(TEST3); }
+    public static void gather(ArrayList<Type> ts) { ts.add(BOT); ts.add(TEST2); ts.add(TEST3); }
 
     @Override public String str() {
         if( _rpcs.isEmpty() )
@@ -50,8 +50,8 @@ public class SONTypeRPC extends SONType {
     }
 
     @Override
-    public SONTypeRPC xmeet(SONType other) {
-        SONTypeRPC rpc = (SONTypeRPC)other;
+    public TypeRPC xmeet(Type other) {
+        TypeRPC rpc = (TypeRPC)other;
         // If the two sets are equal, the _any must be unequal (invariant),
         // so they cancel and all bits are set.
         if( _rpcs.equals(rpc._rpcs) )
@@ -84,13 +84,13 @@ public class SONTypeRPC extends SONType {
     }
 
     @Override
-    public SONType dual() { return make(!_any,_rpcs); }
+    public Type dual() { return make(!_any,_rpcs); }
 
     @Override
     int hash() { return _rpcs.hashCode() ^ (_any ? -1 : 0) ; }
     @Override
-    public boolean eq( SONType t ) {
-        SONTypeRPC rpc = (SONTypeRPC)t; // Contract
+    public boolean eq( Type t ) {
+        TypeRPC rpc = (TypeRPC)t; // Contract
         return _any==rpc._any && _rpcs.equals(rpc._rpcs);
     }
 

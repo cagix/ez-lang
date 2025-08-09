@@ -49,7 +49,7 @@ public class ScopeNode extends MemMergeNode {
         int j=1;
         for( int i=0; i<nIns(); i++ ) {
             if( j < _lexSize._len && i == _lexSize.at(j) ) { sb.append("| "); j++; }
-            Var v = _vars.get(i);
+            Var v = _vars.at(i);
             sb.append(v.type().print(new SB()));
             sb.append(" ");
             if( v._final ) sb.append("!");
@@ -71,6 +71,7 @@ public class ScopeNode extends MemMergeNode {
 
     public Node ctrl() { return in(0); }
     public MemMergeNode mem() { return (MemMergeNode)in(1); }
+    public Var var(int i) { return _vars.at(i); }
 
     /**
      * The ctrl of a ScopeNode is always bound to the currently active
@@ -85,7 +86,7 @@ public class ScopeNode extends MemMergeNode {
     public <N extends Node> N ctrl(N n) { return setDef(0,n); }
     public Node mem(Node n) { return setDef(1,n); }
 
-    public void push(Kind kind) {
+    public void push( Kind kind ) {
         assert _lexSize._len==_kinds._len;
         _lexSize.push(_vars.size());
         _kinds  .push(kind);
@@ -94,11 +95,11 @@ public class ScopeNode extends MemMergeNode {
     // Pop a lexical scope
     public void pop() {
         assert _lexSize._len==_kinds._len;
-        promote();
+        promote();              // Promote forward references to the next outer scope
         int n = _lexSize.pop();
         _kinds.pop();
-        popUntil(n);
-        _vars.setLen(n);
+        popUntil(n);            // Pop off inputs going out of scope
+        _vars.setLen(n);        // Pop off variables going out of scope
     }
 
 
@@ -107,7 +108,7 @@ public class ScopeNode extends MemMergeNode {
     public void promote() {
         int n = _lexSize.last();
         for( int i=n; i<nIns(); i++ ) {
-            Var v = _vars.at(i);
+            Var v = var(i);
             if( !v.isFRef() ) continue;
             if( _lexSize._len==1 )
                 throw Compiler.error("Undefined name '" + v._name + "'");
@@ -120,7 +121,7 @@ public class ScopeNode extends MemMergeNode {
     }
 
 
-    public boolean inCon() { return _kinds.last() == Kind.Constructor; }
+    public boolean inConstructor() { return _kinds.last() == Kind.Constructor; }
 
     // Is v outside any current function scope?
     public boolean outOfFunction( Var v ) {
@@ -134,9 +135,9 @@ public class ScopeNode extends MemMergeNode {
     // Find name in reverse, return an index into _vars or -1.  Linear scan
     // instead of hashtable, but probably doesn't matter until the scan
     // typically hits many dozens of variables.
-    int find( String name ) {
+    public int find( String name ) {
         for( int i=_vars.size()-1; i>=0; i-- )
-            if( _vars.at(i)._name.equals(name) )
+            if( var(i)._name.equals(name) )
                 return i;
         return -1;
     }
@@ -144,11 +145,11 @@ public class ScopeNode extends MemMergeNode {
     /**
      * Create a new variable name in the current scope
      */
-    public boolean define(String name, SONType declaredType, boolean xfinal, Node init) {
+    public boolean define(String name, Type declaredType, boolean xfinal, Node init) {
         assert _lexSize.isEmpty() || name.charAt(0)!='$' ; // Later scopes do not define memory
         if( _lexSize._len > 0 )
             for( int i=_vars.size()-1; i>=_lexSize.last(); i-- ) {
-                Var n = _vars.at(i);
+                Var n = var(i);
                 if( n._name.equals(name) ) {
                     if( !n.isFRef() ) return false;       // Double define
                     FRefNode fref = (FRefNode)in(n._idx); // Get forward ref
@@ -181,11 +182,11 @@ public class ScopeNode extends MemMergeNode {
     public Var lookup( String name ) {
         int idx = find(name);
         // -1 is missed in all scopes, not found
-        return idx == -1 ? null : update(_vars.at(idx),null);
+        return idx == -1 ? null : update(var(idx),null);
     }
 
     /**
-     * If the name is present in any scope, then redefine else null
+     * Redefine an existing name
      *
      * @param name Name being redefined
      * @param n    The node to bind to the name
@@ -193,7 +194,7 @@ public class ScopeNode extends MemMergeNode {
     public void update( String name, Node n ) {
         int idx = find(name);
         assert idx>=0;
-        update(_vars.at(idx),n);
+        update(var(idx),n);
     }
 
     public Var update( Var v, Node st ) {
@@ -207,7 +208,7 @@ public class ScopeNode extends MemMergeNode {
                 // Set real Phi in the loop head
                 // The phi takes its one input (no backedge yet) from a recursive
                 // lookup, which might have insert a Phi in every loop nest.
-                : loop.setDef(v._idx,new PhiNode(v._name, v.lazyGLB(), loop.ctrl(), loop.in(loop.update(v,null)._idx),null).peephole());
+                : loop.setDef(v._idx,new PhiNode(v._name, v.type(), loop.ctrl(), loop.in(loop.update(v,null)._idx),null).peephole());
             setDef(v._idx,old);
         }
         assert !v._final || st==null;
@@ -260,7 +261,7 @@ public class ScopeNode extends MemMergeNode {
         for( int i=2; i<nIns(); i++ )
             // For lazy phis on loops we use a sentinel
             // that will trigger phi creation on update
-            dup.addDef(loop && !_vars.at(i)._final ? this : in(i));
+            dup.addDef(loop && !var(i)._final ? this : in(i));
         return dup;
     }
 
@@ -286,7 +287,7 @@ public class ScopeNode extends MemMergeNode {
             if( in(i) != that.in(i) ) { // No need for redundant Phis
                 // If we are in lazy phi mode we need to a lookup
                 // by name as it will trigger a phi creation
-                Var v = _vars.at(i);
+                Var v = var(i);
                 Node lhs = this.in(this.update(v,null));
                 Node rhs = that.in(that.update(v,null));
                 setDef(i, new PhiNode(v._name, v.type(), r, lhs, rhs).peephole());
@@ -297,7 +298,7 @@ public class ScopeNode extends MemMergeNode {
     // Forward refs are copied to the other side, "as if" they were there all along.
     public void balanceIf( ScopeNode scope ) {
         for( int i = nIns(); i < scope.nIns(); i++ ) {
-            Var n = scope._vars.at(i);
+            Var n = scope.var(i);
             if( n.isFRef() ) {  // RHS has forward refs
                 _vars.add(n);   // Copy to LHS
                 addDef(scope.in(i));
@@ -329,8 +330,8 @@ public class ScopeNode extends MemMergeNode {
     // Fill in the backedge of any inserted Phis
     void _endLoop( ScopeNode scope, Node back, Node exit ) {
         for( int i=2; i<nIns(); i++ ) {
-            if( _vars.at(i)._final ) continue; // Final vars did not get modified in the loop
-            if( _vars.at(i).type().isHighOrConst() ) continue; // Cannot lift higher than a constant, so no Phi
+            if( var(i)._final ) continue; // Final vars did not get modified in the loop
+            if( var(i).type().isHighOrConst() ) continue; // Cannot lift higher than a constant, so no Phi
             if( back.in(i) != scope ) {
                 PhiNode phi = (PhiNode)in(i);
                 assert phi.region()==scope.ctrl() && phi.in(2)==null;
@@ -355,20 +356,20 @@ public class ScopeNode extends MemMergeNode {
             pred = pred instanceof NotNode not ? not.in(1) : CodeGen.CODE.add(new NotNode(pred).peephole());
         // This is a zero/null test.
         // Compute the positive test type.
-        SONType tnz = pred._type.nonZero();
+        Type tnz = pred._type.nonZero();
         if( tnz!=null )
             _addGuard(tnz,ctrl,pred);
 
         // Compute the negative test type.
         if( pred instanceof NotNode not ) {
             Node npred = not.in(1);
-            SONType tzero = npred._type.makeZero();
+            Type tzero = npred._type.makeZero();
             _addGuard(tzero,ctrl,npred);
         }
     }
 
-    private void _addGuard(SONType guard, Node ctrl, Node pred) {
-        SONType tcast = guard.join(pred._type);
+    private void _addGuard(Type guard, Node ctrl, Node pred) {
+        Type tcast = guard.join(pred._type);
         if( tcast != pred._type && !tcast.isHigh() ) {
             Node cast = new CastNode(tcast,ctrl,pred.keep()).peephole().keep();
             _guards.add(pred);

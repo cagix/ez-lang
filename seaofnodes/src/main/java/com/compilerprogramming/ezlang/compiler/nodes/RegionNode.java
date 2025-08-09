@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import java.util.*;
 
 public class RegionNode extends CFGNode {
@@ -21,9 +21,9 @@ public class RegionNode extends CFGNode {
     @Override public boolean blockHead() { return true; }
 
     @Override
-    public SONType compute() {
-        if( inProgress() ) return SONType.CONTROL;
-        SONType t = SONType.XCONTROL;
+    public Type compute() {
+        if( inProgress() ) return Type.CONTROL;
+        Type t = Type.XCONTROL;
         for (int i = 1; i < nIns(); i++)
             t = t.meet(in(i)._type);
         return t;
@@ -106,7 +106,7 @@ public class RegionNode extends CFGNode {
 
     private int findDeadInput() {
         for( int i=1; i<nIns(); i++ )
-            if( in(i)._type== SONType.XCONTROL )
+            if( in(i)._type== Type.XCONTROL )
                 return i;
         return 0;               // All inputs alive
     }

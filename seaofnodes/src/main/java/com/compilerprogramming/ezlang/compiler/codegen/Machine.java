@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 
 abstract public class Machine {
     // Human readable machine name.  Something like "x86-64" or "arm" or "risc5"
@@ -21,9 +21,9 @@ abstract public class Machine {
     // for the function itself, or for *outgoing* calls, the maximum stack slot
     // given to the incoming function arguments (stack slots reserved for
     // incoming arguments).
-    public abstract RegMask callArgMask(SONTypeFunPtr tfp, int arg, int maxArgSlot);
+    public abstract RegMask callArgMask(TypeFunPtr tfp, int arg, int maxArgSlot);
     // Return register mask, based on signature (GPR vs FPR)
-    public abstract RegMask retMask(SONTypeFunPtr tfp);
+    public abstract RegMask retMask(TypeFunPtr tfp);
     // Return PC register
     public abstract int rpc();
     // Return a MachNode unconditional branch
@@ -92,6 +92,6 @@ Pre-alloc               Post-Alloc    SP+48   RPC
     // Maximum stack slot (or 0) for the args in this TFP.  This will include
     // shadow slots if defined in the ABI, even if all arguments are passed in
     // registers.
-    public abstract short maxArgSlot(SONTypeFunPtr tfp);
+    public abstract short maxArgSlot(TypeFunPtr tfp);
 
 }

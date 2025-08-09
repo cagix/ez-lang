@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
 import org.junit.Test;
@@ -245,7 +245,7 @@ L1:
     /* page 448 Engineering a Compiler */
     static CompiledFunction buildTest3() {
         TypeDictionary typeDictionary = new TypeDictionary();
-        Type.TypeFunction functionType = new Type.TypeFunction("foo");
+        EZType.EZTypeFunction functionType = new EZType.EZTypeFunction("foo");
         functionType.setReturnType(typeDictionary.INT);
         CompiledFunction function = new CompiledFunction(functionType, typeDictionary);
         RegisterPool regPool = function.registerPool;

@@ -18,7 +18,7 @@ public class LoadNode extends MemOpNode {
      * @param ptr   The ptr to the struct base from where we load a field
      * @param off   The offset inside the struct base
      */
-    public LoadNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off) {
+    public LoadNode(String name, int alias, Type glb, Node mem, Node ptr, Node off) {
         super(name, alias, true, glb, mem, ptr, off);
     }
 
@@ -31,10 +31,10 @@ public class LoadNode extends MemOpNode {
     public StringBuilder _print1(StringBuilder sb, BitSet visited) { return sb.append(".").append(_name); }
 
     @Override
-    public SONType compute() {
-        if( mem()._type instanceof SONTypeMem mem ) {
+    public Type compute() {
+        if( mem()._type instanceof TypeMem mem ) {
             // Update declared forward ref to the actual
-            if( _declaredType.isFRef() && mem._t instanceof SONTypeMemPtr tmp && !tmp.isFRef() )
+            if( _declaredType.isFRef() && mem._t instanceof TypeMemPtr tmp && !tmp.isFRef() )
                 _declaredType = tmp;
             // No lifting if ptr might null-check
             if( err()==null )
@@ -53,6 +53,12 @@ public class LoadNode extends MemOpNode {
             ptr == st.ptr() && off() == st.off() ) { // Must check same object
             assert _name.equals(st._name); // Equiv class aliasing is perfect
             return extend(st.val());
+        }
+
+        // Simple load-after-MemMerge to a known alias can bypass.  Happens when inlining.
+        if( mem instanceof MemMergeNode mem2 ) {
+            setDef(1,mem2.alias(_alias));
+            return this;
         }
 
         // Simple Load-after-New on same address.
@@ -118,7 +124,7 @@ public class LoadNode extends MemOpNode {
         //   if( pred ) ptr.x = e0;         val = pred ? e0
         //   else       ptr.x = e1;                    : e1;
         //   val = ptr.x;                   ptr.x = val;
-        if( mem() instanceof PhiNode memphi && memphi.region()._type == SONType.CONTROL && memphi.nIns()== 3 &&
+        if( mem() instanceof PhiNode memphi && memphi.region()._type == Type.CONTROL && memphi.nIns()== 3 &&
             // Offset can be hoisted
             off() instanceof ConstantNode &&
             // Pointer can be hoisted
@@ -139,8 +145,8 @@ public class LoadNode extends MemOpNode {
 
     // Load a flavored zero from a New
     private Node zero(NewNode nnn) {
-        SONTypeStruct ts = nnn._ptr._obj;
-        SONType zero = ts._fields[ts.findAlias(_alias)]._type.makeZero();
+        TypeStruct ts = nnn._ptr._obj;
+        Type zero = ts._fields[ts.findAlias(_alias)]._type.makeZero();
         return castRO(new ConstantNode(zero).peephole());
     }
 
@@ -179,7 +185,7 @@ public class LoadNode extends MemOpNode {
     private boolean profit(PhiNode phi, int idx) {
         Node px = phi.in(idx);
         if( px==null ) return false;
-        if( px._type instanceof SONTypeMem mem && mem._t.isHighOrConst() ) return true;
+        if( px._type instanceof TypeMem mem && mem._t.isHighOrConst() ) return true;
         if( px instanceof StoreNode st1 && ptr()==st1.ptr() && off()==st1.off() ) return true;
         addDep(px);
         return false;
@@ -195,13 +201,13 @@ public class LoadNode extends MemOpNode {
     // When a load bypasses a store, the store might truncate bits - and the
     // load will need to zero/sign-extend.
     private Node extend(Node val) {
-        if( !(_declaredType instanceof SONTypeInteger ti) ) return val;
+        if( !(_declaredType instanceof TypeInteger ti) ) return val;
         if( ti._min==0 )        // Unsigned
             return new AndNode(val,con(ti._max));
         // Signed extension
         int shift = Long.numberOfLeadingZeros(ti._max)-1;
         Node shf = con(shift);
-        if( shf._type== SONTypeInteger.ZERO )
+        if( shf._type== TypeInteger.ZERO )
             return val;
         Node shl = new ShlNode(val,shf.keep()).peephole();
         return new SarNode(shl,shf.unkeep());

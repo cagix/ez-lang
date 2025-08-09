@@ -3,29 +3,35 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.CallNode;
+import com.compilerprogramming.ezlang.compiler.nodes.ExternNode;
+import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 
 public class CallX86 extends CallNode implements MachNode, RIPRelSize {
-    final SONTypeFunPtr _tfp;
+    final TypeFunPtr _tfp;
     final String _name;
-    CallX86( CallNode call, SONTypeFunPtr tfp ) {
+    CallX86( CallNode call, TypeFunPtr tfp ) {
         super(call);
         _inputs.pop(); // Pop constant target
         assert tfp.isConstant();
         _tfp = tfp;
-        _name = CodeGen.CODE.link(tfp)._name;
+        FunNode fun = CodeGen.CODE.link(tfp);
+        _name = fun==null ? ((ExternNode)call.fptr())._extern : fun._name; // Can be null for extern calls
     }
     @Override public String op() { return "call"; }
     @Override public String label() { return op(); }
     @Override public String name() { return _name; }
-    @Override public SONTypeFunPtr tfp() { return _tfp; }
+    @Override public TypeFunPtr tfp() { return _tfp; }
     @Override public RegMask regmap(int i) { return x86_64_v2.callInMask(_tfp,i,fun()._maxArgSlot);  }
     @Override public RegMask outregmap() { return null; }
     @Override public int nargs() { return nIns()-2; } // Minus control, memory, fptr
 
     @Override public void encoding( Encoding enc ) {
-        enc.relo(this).add1(0xe8).add4(0);
+        FunNode fun = CodeGen.CODE.link(_tfp);
+        if( fun==null ) enc.external(this,_name);
+        else enc.relo(this);
+        enc.add1(0xe8).add4(0);
     }
 
     // Delta is from opcode start, but X86 measures from the end of the 5-byte encoding

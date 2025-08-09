@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 import java.util.BitSet;
 
@@ -20,11 +20,11 @@ public class SubFNode extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if (in(1)._type instanceof SONTypeFloat i0 &&
-            in(2)._type instanceof SONTypeFloat i1) {
+    public Type compute() {
+        if (in(1)._type instanceof TypeFloat i0 &&
+            in(2)._type instanceof TypeFloat i1) {
             if (i0.isConstant() && i1.isConstant())
-                return SONTypeFloat.constant(i0.value()-i1.value());
+                return TypeFloat.constant(i0.value()-i1.value());
         }
         return in(1)._type.meet(in(2)._type);
     }
@@ -32,10 +32,10 @@ public class SubFNode extends Node {
     @Override
     public Node idealize() {
         Node lhs = in(1);
-        SONType t2 = in(2)._type;
+        Type t2 = in(2)._type;
 
         // Sub of 0.
-        if ( t2.isConstant() && t2 instanceof SONTypeFloat i && i.value()==0 )
+        if ( t2.isConstant() && t2 instanceof TypeFloat i && i.value()==0 )
             return lhs;
 
         return null;

@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 import java.util.*;
 
@@ -361,7 +361,7 @@ public class SparseConditionalConstantPropagation {
                 } else throw new IllegalStateException();
             }
             case Instruction.Call callInst -> {
-                if (!(callInst.callee.returnType instanceof Type.TypeVoid)) {
+                if (!(callInst.callee.returnType instanceof EZType.EZTypeVoid)) {
                     var cell = valueLattice.get(callInst.returnOperand().reg);
                     changed = cell.setKind(V_VARYING);
                 }

@@ -10,7 +10,7 @@ import java.util.Objects;
  * Currently, we support Int, Struct, and Array of Int/Struct.
  * Arrays and Structs are reference types.
  */
-public abstract class Type {
+public abstract class EZType {
 
     // Type classes
     static final byte TVOID = 0;
@@ -25,7 +25,7 @@ public abstract class Type {
     public final byte tclass;    // type class
     public final String name;      // type name, always unique
 
-    protected Type(byte tclass, String name) {
+    protected EZType(byte tclass, String name) {
         this.tclass = tclass;
         this.name = name;
     }
@@ -37,7 +37,7 @@ public abstract class Type {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Type type = (Type) o;
+        EZType type = (EZType) o;
         return tclass == type.tclass && Objects.equals(name, type.name);
     }
 
@@ -52,16 +52,16 @@ public abstract class Type {
     }
     public String name() { return name; }
 
-    public boolean isAssignable(Type other) {
-        if (other == null || other instanceof TypeVoid || other instanceof TypeUnknown)
+    public boolean isAssignable(EZType other) {
+        if (other == null || other instanceof EZTypeVoid || other instanceof EZTypeUnknown)
             return false;
         if (this == other || equals(other)) return true;
-        if (this instanceof TypeNullable nullable) {
-            if (other instanceof TypeNull)
+        if (this instanceof EZTypeNullable nullable) {
+            if (other instanceof EZTypeNull)
                 return true;
             return nullable.baseType.isAssignable(other);
         }
-        else if (other instanceof TypeNullable nullable) {
+        else if (other instanceof EZTypeNullable nullable) {
             // At compile time we allow nullable value to be
             // assigned to base type, but null check must be inserted
             // Optimizer may remove null check
@@ -74,25 +74,25 @@ public abstract class Type {
      * Represents no type - useful for defining functions
      * that do not return a value
      */
-    public static class TypeVoid extends Type {
-        public TypeVoid() {
+    public static class EZTypeVoid extends EZType {
+        public EZTypeVoid() {
             super(TVOID, "$Void");
         }
     }
 
-    public static class TypeUnknown extends Type {
-        public TypeUnknown() {
+    public static class EZTypeUnknown extends EZType {
+        public EZTypeUnknown() {
             super(TUNKNOWN, "$Unknown");
         }
     }
 
-    public static class TypeNull extends Type {
-        public TypeNull() { super(TNULL, "$Null"); }
+    public static class EZTypeNull extends EZType {
+        public EZTypeNull() { super(TNULL, "$Null"); }
     }
 
-    public static class TypeInteger extends Type {
+    public static class EZTypeInteger extends EZType {
 
-        public TypeInteger() {
+        public EZTypeInteger() {
             super (TINT, "Int");
         }
         @Override
@@ -101,15 +101,15 @@ public abstract class Type {
         }
     }
 
-    public static class TypeStruct extends Type {
+    public static class EZTypeStruct extends EZType {
         ArrayList<String> fieldNames = new ArrayList<>();
-        ArrayList<Type> fieldTypes = new ArrayList<>();
+        ArrayList<EZType> fieldTypes = new ArrayList<>();
         public boolean pending = true;
 
-        public TypeStruct(String name) {
+        public EZTypeStruct(String name) {
             super(TSTRUCT, name);
         }
-        public void addField(String name, Type type) {
+        public void addField(String name, EZType type) {
             if (!pending)
                 throw new CompilerException("Cannot add field to an already defined struct");
             if (fieldNames.contains(name))
@@ -124,13 +124,13 @@ public abstract class Type {
             sb.append("struct ").append(name()).append("{");
             for (int i = 0; i < fieldNames.size(); i++) {
                 String fieldName = fieldNames.get(i);
-                Type fieldType = fieldTypes.get(i);
+                EZType fieldType = fieldTypes.get(i);
                 sb.append(fieldName).append(": ").append(fieldType.name()).append(";");
             }
             sb.append("}");
             return sb.toString();
         }
-        public Type getField(String name) {
+        public EZType getField(String name) {
             int index = fieldNames.indexOf(name);
             if (index < 0)
                 return null;
@@ -144,40 +144,40 @@ public abstract class Type {
         public void complete() { pending = false; }
     }
 
-    public static class TypeArray extends Type {
-        Type elementType;
+    public static class EZTypeArray extends EZType {
+        EZType elementType;
 
-        public TypeArray(Type baseType) {
+        public EZTypeArray(EZType baseType) {
             super(TARRAY, "[" + baseType.name() + "]");
             this.elementType = baseType;
-            if (baseType instanceof TypeArray)
+            if (baseType instanceof EZTypeArray)
                 throw new CompilerException("Array of array type not supported");
         }
-        public Type getElementType() {
+        public EZType getElementType() {
             return elementType;
         }
     }
 
     // This is really a dedicated Union type for T|Null.
-    public static class TypeNullable extends Type {
-        public final Type baseType;
-        public TypeNullable(Type baseType) {
+    public static class EZTypeNullable extends EZType {
+        public final EZType baseType;
+        public EZTypeNullable(EZType baseType) {
             super(TNULLABLE, baseType.name()+"?");
             this.baseType = baseType;
         }
     }
 
-    public static class TypeFunction extends Type {
+    public static class EZTypeFunction extends EZType {
         public final List<Symbol> args = new ArrayList<>();
-        public Type returnType;
+        public EZType returnType;
         public Object code;
-        public TypeFunction(String name) {
+        public EZTypeFunction(String name) {
             super(TFUNC, name);
         }
         public void addArg(Symbol arg) {
             args.add(arg);
         }
-        public void setReturnType(Type returnType) {
+        public void setReturnType(EZType returnType) {
             this.returnType = returnType;
         }
         public String describe() {
@@ -191,7 +191,7 @@ public abstract class Type {
                 sb.append(arg.name).append(": ").append(arg.type.name());
             }
             sb.append(")");
-            if (!(returnType instanceof Type.TypeVoid)) {
+            if (!(returnType instanceof EZTypeVoid)) {
                 sb.append("->").append(returnType.name());
             }
             return sb.toString();

@@ -16,21 +16,21 @@ import java.util.BitSet;
  */
 public class NewNode extends Node implements MultiNode {
 
-    public final SONTypeMemPtr _ptr;
+    public final TypeMemPtr _ptr;
     public final int _len;
 
-    public NewNode(SONTypeMemPtr ptr, Node... nodes) {
+    public NewNode(TypeMemPtr ptr, Node... nodes) {
         super(nodes);
         assert !ptr.nullable();
         _ptr = ptr;
         _len = ptr._obj._fields.length;
         // Control in slot 0
-        assert nodes[0]._type== SONType.CONTROL || nodes[0]._type == SONType.XCONTROL;
+        assert nodes[0]._type==Type.CONTROL || nodes[0]._type == Type.XCONTROL;
         // Malloc-length in slot 1
-        assert nodes[1]._type instanceof SONTypeInteger || nodes[1]._type== SONType.NIL;
+        assert nodes[1]._type instanceof TypeInteger || nodes[1]._type==Type.NIL;
         for( int i=0; i<_len; i++ )
             // Memory slices for all fields.
-            assert nodes[2+i]._type.isa(SONTypeMem.BOT);
+            assert nodes[2+i]._type.isa(TypeMem.BOT);
     }
 
     public NewNode(NewNode nnn) { super(nnn); _ptr = nnn._ptr; _len = nnn._len; }
@@ -61,19 +61,19 @@ public class NewNode extends Node implements MultiNode {
     public Node size() { return in(1); }
 
     @Override
-    public SONTypeTuple compute() {
+    public TypeTuple compute() {
         Field[] fs = _ptr._obj._fields;
-        SONType[] ts = new SONType[fs.length+2];
-        ts[0] = SONType.CONTROL;
+        Type[] ts = new Type[fs.length+2];
+        ts[0] = Type.CONTROL;
         ts[1] = _ptr;
         for( int i=0; i<fs.length; i++ ) {
-            SONType mt = in(i+2)._type;
-            SONTypeMem mem = mt== SONType.TOP ? SONTypeMem.TOP : (SONTypeMem)mt;
-            SONType tfld = mem._t.meet(mem._t.makeZero());
-            SONType tfld2 = tfld.join(fs[i]._type);
-            ts[i+2] = SONTypeMem.make(fs[i]._alias,tfld2);
+            Type mt = in(i+2)._type;
+            TypeMem mem = mt==Type.TOP ? TypeMem.TOP : (TypeMem)mt;
+            Type tfld = mem._t.meet(mem._t.makeZero());
+            Type tfld2 = tfld.join(fs[i]._type);
+            ts[i+2] = TypeMem.make(fs[i]._alias,tfld2);
         }
-        return SONTypeTuple.make(ts);
+        return TypeTuple.make(ts);
     }
 
     @Override
@@ -92,10 +92,10 @@ public class NewNode extends Node implements MultiNode {
     private RegMask _retMask;
     private RegMask _kills;
     public void cacheRegs(CodeGen code) {
-        _arg2Reg  = code._mach.callArgMask(SONTypeFunPtr.CALLOC,2,0).firstReg();
-        _arg3Mask = code._mach.callArgMask(SONTypeFunPtr.CALLOC,3,0);
+        _arg2Reg  = code._mach.callArgMask(TypeFunPtr.CALLOC,2,0).firstReg();
+        _arg3Mask = code._mach.callArgMask(TypeFunPtr.CALLOC,3,0);
         // Return mask depends on TFP (either GPR or FPR)
-        _retMask = code._mach.retMask(SONTypeFunPtr.CALLOC);
+        _retMask = code._mach.retMask(TypeFunPtr.CALLOC);
         // Kill mask is all caller-saves, and any mirror stack slots for args
         // in registers.
         RegMaskRW kills = code._callerSave.copy();
@@ -104,7 +104,7 @@ public class NewNode extends Node implements MultiNode {
         // Incoming function arg slots, all low numbered in the RA
         int fslot = cfg0().fun()._maxArgSlot;
         // Killed slots for this calls outgoing args
-        int xslot = code._mach.maxArgSlot(SONTypeFunPtr.CALLOC);
+        int xslot = code._mach.maxArgSlot(TypeFunPtr.CALLOC);
         _xslot = (maxReg+fslot)+xslot;
         for( int i=0; i<xslot; i++ )
             kills.set((maxReg+fslot)+i);

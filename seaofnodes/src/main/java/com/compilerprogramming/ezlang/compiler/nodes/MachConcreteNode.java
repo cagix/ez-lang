@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 import com.compilerprogramming.ezlang.compiler.Utils;
 
 import java.util.BitSet;
@@ -13,7 +13,7 @@ public abstract class MachConcreteNode extends Node implements MachNode {
     public MachConcreteNode(Node[]nodes) { super(nodes); }
 
     @Override public String label() { return op(); }
-    @Override public SONType compute () { throw Utils.TODO(); }
+    @Override public Type compute () { throw Utils.TODO(); }
     @Override public Node idealize() { throw Utils.TODO(); }
 
     @Override public StringBuilder _print1(StringBuilder sb, BitSet visited) {

@@ -12,7 +12,7 @@ import com.compilerprogramming.ezlang.semantic.SemaAssignTypes;
 import com.compilerprogramming.ezlang.semantic.SemaDefineTypes;
 import com.compilerprogramming.ezlang.types.Scope;
 import com.compilerprogramming.ezlang.types.Symbol;
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 
 import java.util.ArrayList;
@@ -57,22 +57,22 @@ public class Compiler {
     // Mapping from a type name to a Type.  The string name matches
     // `type.str()` call.  No TypeMemPtrs are in here, because Simple does not
     // have C-style '*ptr' references.
-    public static HashMap<String, SONType> TYPES = new HashMap<>();
+    public static HashMap<String, Type> TYPES = new HashMap<>();
 
     private ArrayList<Node> ctorStack = new ArrayList<>();
 
-    public Compiler(CodeGen codeGen, SONTypeInteger arg) {
+    public Compiler(CodeGen codeGen, TypeInteger arg) {
         this._code = codeGen;
     }
 
     public void parse() {
         this.typeDictionary = createAST(_code._src);
-        Map<String, SONType> types = new HashMap<>();
+        Map<String, Type> types = new HashMap<>();
         populateDefaultTypes(types);
         populateTypes(types);
         TYPES.putAll(types);
-        ZERO  = con(SONTypeInteger.ZERO).keep();
-        NIL  = con(SONType.NIL).keep();
+        ZERO  = con(TypeInteger.ZERO).keep();
+        NIL  = con(Type.NIL).keep();
         XCTRL= new XCtrlNode().peephole().keep();
         processFunctions();
     }
@@ -89,26 +89,26 @@ public class Compiler {
     }
 
 
-    private void populateDefaultTypes(Map<String,SONType> types) {
+    private void populateDefaultTypes(Map<String, Type> types) {
         // Pre-create int, [int] and *[int] types
-        types.put(typeDictionary.INT.name(), SONTypeInteger.BOT);
-        var intArrayType = SONTypeStruct.makeAry(SONTypeInteger.U32, _code.getALIAS(), SONTypeInteger.BOT, _code.getALIAS());
-        var ptrIntArrayType = SONTypeMemPtr.make(intArrayType);
+        types.put(typeDictionary.INT.name(), TypeInteger.BOT);
+        var intArrayType = TypeStruct.makeAry(TypeInteger.U32, _code.getALIAS(), TypeInteger.BOT, _code.getALIAS());
+        var ptrIntArrayType = TypeMemPtr.make(intArrayType);
         types.put("[" + typeDictionary.INT.name() + "]", ptrIntArrayType);
         // Also get the types created by default
-        for (SONType t: SONType.gather()) {
+        for (Type t: Type.gather()) {
             types.put(t.str(), t);
         }
     }
 
-    private void populateTypes(Map<String, SONType> structTypes) {
+    private void populateTypes(Map<String, Type> structTypes) {
         // First process struct types
         for (var symbol: typeDictionary.getLocalSymbols()) {
             if (symbol instanceof Symbol.TypeSymbol typeSymbol) {
-                if (typeSymbol.type instanceof Type.TypeStruct typeStruct) {
+                if (typeSymbol.type instanceof EZType.EZTypeStruct typeStruct) {
                     createSONStructType(structTypes,typeSymbol.name, typeStruct);
                 }
-                else if (typeSymbol.type instanceof Type.TypeArray typeArray) {
+                else if (typeSymbol.type instanceof EZType.EZTypeArray typeArray) {
                     getSONType(structTypes, typeArray);
                 }
             }
@@ -129,33 +129,33 @@ public class Compiler {
         }
     }
 
-    private void createFunctionType(Map<String, SONType> structTypes, Symbol.FunctionTypeSymbol functionSymbol) {
-        Type.TypeFunction functionType = (Type.TypeFunction) functionSymbol.type;
-        Ary<SONType> params = new Ary<>(SONType.class);
+    private void createFunctionType(Map<String, Type> structTypes, Symbol.FunctionTypeSymbol functionSymbol) {
+        EZType.EZTypeFunction functionType = (EZType.EZTypeFunction) functionSymbol.type;
+        Ary<Type> params = new Ary<>(Type.class);
         for (var symbol: functionType.args) {
             if (symbol instanceof Symbol.ParameterSymbol parameterSymbol) {
-                SONType paramType = getSONType(structTypes, parameterSymbol.type);
+                Type paramType = getSONType(structTypes, parameterSymbol.type);
                 params.push(paramType);
             }
         }
         var retType = getSONType(structTypes, functionType.returnType);
-        SONTypeFunPtr tfp = _code.makeFun2(new SONTypeTuple(params.asAry()),retType);
+        TypeFunPtr tfp = _code.makeFun2(new TypeTuple(params.asAry()),retType);
         structTypes.put(functionSymbol.name, tfp);
     }
 
-    private void createSONStructType(Map<String, SONType> structTypes, String typeName, Type.TypeStruct typeStruct) {
+    private void createSONStructType(Map<String, Type> structTypes, String typeName, EZType.EZTypeStruct typeStruct) {
         Ary<Field> fs = new Ary<>(Field.class);
         for (int i = 0; i < typeStruct.numFields(); i++) {
             String name = typeStruct.getFieldName(i);
-            Type type = typeStruct.getField(name); // FIXME
+            EZType type = typeStruct.getField(name); // FIXME
             fs.push(new Field(name,getSONType(structTypes,type),_code.getALIAS(),false));
         }
         // A Struct type may have been created before because of
         // reference from itself; in which case we need to update that
-        SONType fref = structTypes.get(typeName);
+        Type fref = structTypes.get(typeName);
         if (fref != null) {
-            if (fref instanceof SONTypeMemPtr ptr &&
-                ptr._obj instanceof SONTypeStruct ts) {
+            if (fref instanceof TypeMemPtr ptr &&
+                ptr._obj instanceof TypeStruct ts) {
                 assert ts._fields.length == 0;
                 // Add the fields to the existing type
                 ts._fields = fs.asAry();
@@ -163,73 +163,73 @@ public class Compiler {
             else throw new CompilerException("Expected struct type " + typeName + " but got " + fref);
         }
         else {
-            var ts = SONTypeStruct.make(typeName, fs.asAry());
-            var ptr = SONTypeMemPtr.make((byte)2,ts);
+            var ts = TypeStruct.make(typeName, fs.asAry());
+            var ptr = TypeMemPtr.make((byte)2,ts);
             structTypes.put(typeName,ptr);
         }
     }
 
-    private String getSONTypeName(Type type) {
-        if (type instanceof Type.TypeFunction typeFunction) {
+    private String getSONTypeName(EZType type) {
+        if (type instanceof EZType.EZTypeFunction typeFunction) {
             return typeFunction.name;
         }
-        else if (type instanceof Type.TypeArray typeArray) {
+        else if (type instanceof EZType.EZTypeArray typeArray) {
             return "*[" + getSONTypeName(typeArray.getElementType()) + "]";
         }
-        else if (type instanceof Type.TypeStruct typeStruct) {
+        else if (type instanceof EZType.EZTypeStruct typeStruct) {
             return "*" + typeStruct.name;
         }
-        else if (type instanceof Type.TypeInteger ||
-                 type instanceof Type.TypeVoid) {
-            return SONTypeInteger.BOT.str();
+        else if (type instanceof EZType.EZTypeInteger ||
+                 type instanceof EZType.EZTypeVoid) {
+            return TypeInteger.BOT.str();
         }
-        else if (type instanceof Type.TypeNull) {
-            return SONTypeNil.NIL.str();
+        else if (type instanceof EZType.EZTypeNull) {
+            return TypeNil.NIL.str();
         }
-        else if (type instanceof Type.TypeNullable typeNullable) {
+        else if (type instanceof EZType.EZTypeNullable typeNullable) {
             return getSONTypeName(typeNullable.baseType)+"?";
         }
         else throw new CompilerException("Not yet implemented " + type.name());
     }
 
-    private SONType getSONType(Map<String, SONType> structTypes, Type type) {
-        SONType t = structTypes.get(type.name());
+    private Type getSONType(Map<String, Type> structTypes, EZType type) {
+        Type t = structTypes.get(type.name());
         if (t != null) return t;
-        if (type instanceof Type.TypeStruct) {
+        if (type instanceof EZType.EZTypeStruct) {
             // For struct types in EeZee language a reference
             // to T means *T in SoN
             // Create SON struct type
-            SONTypeStruct ts = SONTypeStruct.make(type.name, new Field[0]);
+            TypeStruct ts = TypeStruct.make(type.name, new Field[0]);
             // Now create *T
-            SONTypeMemPtr ptr = SONTypeMemPtr.make((byte)2,ts);
+            TypeMemPtr ptr = TypeMemPtr.make((byte)2,ts);
             // EeZee T maps to SoN *T
             structTypes.put(type.name(), ptr);
             return ptr;
         }
-        else if (type instanceof Type.TypeArray typeArray) {
+        else if (type instanceof EZType.EZTypeArray typeArray) {
             // A reference to array in EeZee means
             // *array in SoN
-            SONType elementType = getSONType(structTypes,typeArray.getElementType());
-            SONTypeStruct ts = SONTypeStruct.makeArray(SONTypeInteger.U32, _code.getALIAS(), elementType, _code.getALIAS());
-            SONTypeMemPtr ptr = SONTypeMemPtr.make((byte)2,ts);
+            Type elementType = getSONType(structTypes,typeArray.getElementType());
+            TypeStruct ts = TypeStruct.makeArray(TypeInteger.U32, _code.getALIAS(), elementType, _code.getALIAS());
+            TypeMemPtr ptr = TypeMemPtr.make((byte)2,ts);
             structTypes.put(typeArray.name(), ptr); // Array type name is not same as ptr str()
             return ptr;
         }
-        else if (type instanceof Type.TypeNullable typeNullable) {
-            SONType baseType = getSONType(structTypes,typeNullable.baseType);
-            SONTypeMemPtr ptr = null;
-            if (baseType instanceof SONTypeMemPtr ptr1) {
+        else if (type instanceof EZType.EZTypeNullable typeNullable) {
+            Type baseType = getSONType(structTypes,typeNullable.baseType);
+            TypeMemPtr ptr = null;
+            if (baseType instanceof TypeMemPtr ptr1) {
                 if (ptr1.nullable())
                     ptr = ptr1;
                 else
-                    ptr = SONTypeMemPtr.make((byte)3,ptr1._obj);
+                    ptr = TypeMemPtr.make((byte)3,ptr1._obj);
             }
             else
-                ptr = SONTypeMemPtr.make((byte)2,(SONTypeStruct) baseType);
+                ptr = TypeMemPtr.make((byte)2,(TypeStruct) baseType);
             structTypes.put(typeNullable.name(), ptr);
             return ptr;
         }
-        else if (type instanceof Type.TypeVoid) {
+        else if (type instanceof EZType.EZTypeVoid) {
             return structTypes.get("Int"); // Only allowed in return types
         }
         throw new CompilerException("Count not find type " + type.name());
@@ -244,7 +244,7 @@ public class Compiler {
         for (Symbol symbol: scope.getLocalSymbols()) {
             if (symbol instanceof Symbol.VarSymbol varSymbol) {
                 varSymbol.regNumber = REGNUM++;
-                SONType sonType = TYPES.get(varSymbol.type.name());
+                Type sonType = TYPES.get(varSymbol.type.name());
                 if (sonType == null)
                     throw new CompilerException("Unknown SON Type "+varSymbol.type.name());
                 Node init = null;
@@ -259,13 +259,13 @@ public class Compiler {
 
     private void generateFunction(Symbol.FunctionTypeSymbol functionTypeSymbol) {
         _scope = new ScopeNode();
-        _scope.define(ScopeNode.CTRL, SONType.CONTROL   , false, null);
-        _scope.define(ScopeNode.MEM0, SONTypeMem.BOT    , false, null);
+        _scope.define(ScopeNode.CTRL, Type.CONTROL   , false, null);
+        _scope.define(ScopeNode.MEM0, TypeMem.BOT    , false, null);
 
         ctrl(XCTRL);
         _scope.mem(new MemMergeNode(false));
 
-        var funType = (SONTypeFunPtr) TYPES.get(functionTypeSymbol.name);
+        var funType = (TypeFunPtr) TYPES.get(functionTypeSymbol.name);
         if (funType == null) throw new CompilerException("Function " + functionTypeSymbol.name + " not found");
 
         // Parse whole program, as-if function header "{ int arg -> body }"
@@ -280,7 +280,7 @@ public class Compiler {
 //        INITS.clear();
         _code._stop.peephole();
 //        if( show ) showGraph();
-        showGraph();
+        //showGraph();
     }
 
     /**
@@ -295,7 +295,7 @@ public class Compiler {
     /**
      *  Parses a function body, assuming the header is parsed.
      */
-    private ReturnNode generateFunctionBody(Symbol.FunctionTypeSymbol functionTypeSymbol,SONTypeFunPtr sig) {
+    private ReturnNode generateFunctionBody(Symbol.FunctionTypeSymbol functionTypeSymbol, TypeFunPtr sig) {
         // Stack parser state on the local Java stack, and unstack it later
         Node oldctrl = ctrl().keep();
         Node oldmem  = _scope.mem().keep();
@@ -310,13 +310,13 @@ public class Compiler {
         // the exact single function).
         _code.link(fun);
 
-        Node rpc = new ParmNode("$rpc",0,SONTypeRPC.BOT,fun,con(SONTypeRPC.BOT)).peephole();
+        Node rpc = new ParmNode("$rpc",0, TypeRPC.BOT,fun,con(TypeRPC.BOT)).peephole();
 
         // Build a multi-exit return point for all function returns
         RegionNode r = new RegionNode(null,null).init();
         assert r.inProgress();
-        PhiNode rmem = new PhiNode(ScopeNode.MEM0,SONTypeMem.BOT,r,null).init();
-        PhiNode rrez = new PhiNode(ScopeNode.ARG0,SONType.BOTTOM,r,null).init();
+        PhiNode rmem = new PhiNode(ScopeNode.MEM0, TypeMem.BOT,r,null).init();
+        PhiNode rrez = new PhiNode(ScopeNode.ARG0, Type.BOTTOM,r,null).init();
         ReturnNode ret = new ReturnNode(r, rmem, rrez, rpc, fun).init();
         fun.setRet(ret);
         assert ret.inProgress();
@@ -330,7 +330,7 @@ public class Compiler {
         // Private mem alias tracking per function
         MemMergeNode mem = new MemMergeNode(true);
         mem.addDef(null);       // Alias#0
-        mem.addDef(new ParmNode(ScopeNode.MEM0,1,SONTypeMem.BOT,fun,con(SONTypeMem.BOT)).peephole()); // All aliases
+        mem.addDef(new ParmNode(ScopeNode.MEM0,1, TypeMem.BOT,fun,con(TypeMem.BOT)).peephole()); // All aliases
         _scope.mem(mem);
         // All args, "as-if" called externally
         AST.FuncDecl funcDecl = (AST.FuncDecl) functionTypeSymbol.functionDecl;
@@ -341,7 +341,7 @@ public class Compiler {
         Node last = compileStatement(funcDecl.block);
 
         // Last expression is the return
-        if( ctrl()._type==SONType.CONTROL )
+        if( ctrl()._type== Type.CONTROL )
             fun.addReturn(ctrl(), _scope.mem().merge(), last);
 
         // Pop off the inProgress node on the multi-exit Region merge
@@ -411,15 +411,15 @@ public class Compiler {
     private Node compileFieldExpr(AST.GetFieldExpr getFieldExpr) {
         Node objPtr = compileExpr(getFieldExpr.object).keep();
         // Sanity check expr for being a reference
-        if( !(objPtr._type instanceof SONTypeMemPtr ptr) ) {
+        if( !(objPtr._type instanceof TypeMemPtr ptr) ) {
             throw new CompilerException("Unexpected type " + objPtr._type.str());
         }
         String name = getFieldExpr.fieldName;
-        SONTypeStruct base = ptr._obj;
+        TypeStruct base = ptr._obj;
         int fidx = base.find(name);
         if( fidx == -1 ) throw error("Accessing unknown field '" + name + "' from '" + ptr.str() + "'");
         Field f = base._fields[fidx];  // Field from field index
-        SONType tf = f._type;
+        Type tf = f._type;
         // Field offset; fixed for structs
         Node off = con(base.offset(fidx)).keep();
         Node load = new LoadNode(name, f._alias, tf, memAlias(f._alias), objPtr, off);
@@ -439,16 +439,16 @@ public class Compiler {
         else
             objPtr = compileExpr(setFieldExpr.object);
         // Sanity check expr for being a reference
-        if( !(objPtr._type instanceof SONTypeMemPtr ptr) ) {
+        if( !(objPtr._type instanceof TypeMemPtr ptr) ) {
             throw new CompilerException("Unexpected type " + objPtr._type.str());
         }
         Node val = compileExpr(setFieldExpr.value).keep();
         String name = setFieldExpr.fieldName;
-        SONTypeStruct base = ptr._obj;
+        TypeStruct base = ptr._obj;
         int fidx = base.find(name);
         if( fidx == -1 ) throw error("Accessing unknown field '" + name + "' from '" + ptr.str() + "'");
         Field f = base._fields[fidx];  // Field from field index
-        SONType tf = f._type;
+        Type tf = f._type;
         Node mem = memAlias(f._alias);
         Node st = new StoreNode(f._fname,f._alias,tf,mem,objPtr,con(base.offset(fidx)),val.unkeep(),true).peephole();
         memAlias(f._alias,st);
@@ -458,17 +458,17 @@ public class Compiler {
     private Node compileArrayIndexExpr(AST.ArrayLoadExpr arrayLoadExpr) {
         Node objPtr = compileExpr(arrayLoadExpr.array).keep();
         // Sanity check expr for being a reference
-        if( !(objPtr._type instanceof SONTypeMemPtr ptr) ) {
+        if( !(objPtr._type instanceof TypeMemPtr ptr) ) {
             throw new CompilerException("Unexpected type " + objPtr._type.str());
         }
         String name = "[]";
-        SONTypeStruct base = ptr._obj;
+        TypeStruct base = ptr._obj;
         Node index = compileExpr(arrayLoadExpr.expr).keep();
         Node off = peep(new AddNode(con(base.aryBase()),peep(new ShlNode(index.unkeep(),con(base.aryScale()))))).keep();
         int fidx = base.find(name);
         if( fidx == -1 ) throw error("Accessing unknown field '" + name + "' from '" + ptr.str() + "'");
         Field f = base._fields[fidx];  // Field from field index
-        SONType tf = f._type;
+        Type tf = f._type;
         Node load = new LoadNode(name, f._alias, tf, memAlias(f._alias), objPtr, off);
         // Arrays include control, as a proxy for a safety range check
         // Structs don't need this; they only need a NPE check which is
@@ -487,18 +487,18 @@ public class Compiler {
         else
             objPtr = compileExpr(arrayStoreExpr.array);
         // Sanity check expr for being a reference
-        if( !(objPtr._type instanceof SONTypeMemPtr ptr) ) {
+        if( !(objPtr._type instanceof TypeMemPtr ptr) ) {
             throw new CompilerException("Unexpected type " + objPtr._type.str());
         }
         String name = "[]";
-        SONTypeStruct base = ptr._obj;
+        TypeStruct base = ptr._obj;
         Node index = compileExpr(arrayStoreExpr.expr).keep();
         Node off = peep(new AddNode(con(base.aryBase()),peep(new ShlNode(index.unkeep(),con(base.aryScale()))))).keep();
         Node val = compileExpr(arrayStoreExpr.value).keep();
         int fidx = base.find(name);
         if( fidx == -1 ) throw error("Accessing unknown field '" + name + "' from '" + ptr.str() + "'");
         Field f = base._fields[fidx];  // Field from field index
-        SONType tf = f._type;
+        Type tf = f._type;
         Node mem = memAlias(f._alias);
         Node st = new StoreNode(f._fname,f._alias,tf,mem,objPtr,off.unkeep(),val.unkeep(),true).peephole();
         memAlias(f._alias,st);
@@ -509,7 +509,7 @@ public class Compiler {
         Node objPtr = compileExpr(initExpr.newExpr).keep();
         ctorStack.add(objPtr);
         // Sanity check expr for being a reference
-        if( !(objPtr._type instanceof SONTypeMemPtr ptr) ) {
+        if( !(objPtr._type instanceof TypeMemPtr ptr) ) {
             throw new CompilerException("Unexpected type " + objPtr._type.str());
         }
         if (initExpr.initExprList != null && !initExpr.initExprList.isEmpty()) {
@@ -521,7 +521,7 @@ public class Compiler {
         return objPtr.unkeep();
     }
 
-    private Node newArray(SONTypeStruct ary, Node len) {
+    private Node newArray(TypeStruct ary, Node len) {
         int base = ary.aryBase ();
         int scale= ary.aryScale();
         Node size = peep(new AddNode(con(base),peep(new ShlNode(len.keep(),con(scale)))));
@@ -531,7 +531,7 @@ public class Compiler {
      * Return a NewNode initialized memory.
      * @param obj is the declared type, with GLB fields
      */
-    private Node newStruct( SONTypeStruct obj, Node size) {
+    private Node newStruct(TypeStruct obj, Node size) {
         Field[] fs = obj._fields;
         if( fs==null )
             throw error("Unknown struct type '" + obj._name + "'");
@@ -544,20 +544,20 @@ public class Compiler {
         for( int i = 0; i < len; i++ )
             ns[2+i] = memAlias(fs[i]._alias);
         // FIXME make
-        Node nnn = new NewNode(SONTypeMemPtr.make(obj), ns).peephole().keep();
+        Node nnn = new NewNode(TypeMemPtr.make(obj), ns).peephole().keep();
         for( int i = 0; i < len; i++ )
             memAlias(fs[i]._alias, new ProjNode(nnn,i+2,memName(fs[i]._alias)).peephole());
         return new ProjNode(nnn.unkeep(),1,obj._name).peephole();
     }
 
     private Node compileNewExpr(AST.NewExpr newExpr) {
-        Type type = newExpr.type;
-        if (type instanceof Type.TypeArray typeArray) {
-            SONTypeMemPtr tarray = (SONTypeMemPtr) TYPES.get(typeArray.name());
+        EZType type = newExpr.type;
+        if (type instanceof EZType.EZTypeArray typeArray) {
+            TypeMemPtr tarray = (TypeMemPtr) TYPES.get(typeArray.name());
             return newArray(tarray._obj,newExpr.len==null?ZERO:compileExpr(newExpr.len));
         }
-        else if (type instanceof Type.TypeStruct typeStruct) {
-            SONTypeMemPtr tptr = (SONTypeMemPtr) TYPES.get(typeStruct.name());
+        else if (type instanceof EZType.EZTypeStruct typeStruct) {
+            TypeMemPtr tptr = (TypeMemPtr) TYPES.get(typeStruct.name());
             return newStruct(tptr._obj,con(tptr._obj.offset(tptr._obj._fields.length)));
         }
         else
@@ -625,15 +625,15 @@ public class Compiler {
     }
 
     private Node compileConstantExpr(AST.LiteralExpr constantExpr) {
-        if (constantExpr.type instanceof Type.TypeInteger)
+        if (constantExpr.type instanceof EZType.EZTypeInteger)
             return con(constantExpr.value.num.intValue());
-        else if (constantExpr.type instanceof Type.TypeNull)
+        else if (constantExpr.type instanceof EZType.EZTypeNull)
             return NIL;
         else throw new CompilerException("Invalid constant type");
     }
 
     private Node compileSymbolExpr(AST.NameExpr symbolExpr) {
-        if (symbolExpr.type instanceof Type.TypeFunction functionType)
+        if (symbolExpr.type instanceof EZType.EZTypeFunction functionType)
             return con(TYPES.get(functionType.name));
         else {
             Symbol.VarSymbol varSymbol = (Symbol.VarSymbol) symbolExpr.symbol;
@@ -653,10 +653,10 @@ public class Compiler {
      */
     private Node compileCallExpr(AST.CallExpr callExpr) {
         Node expr = compileExpr(callExpr.callee);
-        if( expr._type == SONType.NIL )
+        if( expr._type == Type.NIL )
             throw error("Calling a null function pointer");
-        if( !(expr instanceof FRefNode) && !expr._type.isa(SONTypeFunPtr.BOT) )
-            throw error("Expected a function but got "+expr._type.glb().str());
+        if( !(expr instanceof FRefNode) && !expr._type.isa(TypeFunPtr.BOT) )
+            throw error("Expected a function but got "+expr._type.glb(false).str());
         expr.keep();            // Keep while parsing args
 
         Ary<Node> args = new Ary<Node>(Node.class);
@@ -674,11 +674,11 @@ public class Compiler {
         for( Node arg : args )
             arg.unkeep();
         // Dead into the call?  Skip all the node gen
-        if( ctrl()._type == SONType.XCONTROL ) {
+        if( ctrl()._type == Type.XCONTROL ) {
             for( Node arg : args )
                 if( arg.isUnused() )
                     arg.kill();
-            return con(SONType.TOP);
+            return con(Type.TOP);
         }
 
         // Into the call
@@ -962,8 +962,8 @@ public class Compiler {
         return last;
     }
 
-    public static Node con(long con ) { return con==0 ? ZERO : con(SONTypeInteger.constant(con));  }
-    public static ConstantNode con( SONType t ) { return (ConstantNode)new ConstantNode(t).peephole();  }
+    public static Node con(long con ) { return con==0 ? ZERO : con(TypeInteger.constant(con));  }
+    public static ConstantNode con( Type t ) { return (ConstantNode)new ConstantNode(t).peephole();  }
     public Node peep( Node n ) {
         // Peephole, then improve with lexically scoped guards
         return _scope.upcastGuard(n.peephole());

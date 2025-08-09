@@ -4,7 +4,9 @@ import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 
 public class SraIRISC extends ImmRISC {
-    public SraIRISC( Node and, int imm) { super(and,imm); }
+    public SraIRISC( Node and, int imm) {
+        super(and,imm | (0x20 << 5));
+    }
     @Override int opcode() {  return riscv.OP_IMM; }
     @Override int func3() {  return 5;}
     @Override public String glabel() { return ">>"; }

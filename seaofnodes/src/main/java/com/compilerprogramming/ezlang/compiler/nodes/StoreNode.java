@@ -21,7 +21,7 @@ public class StoreNode extends MemOpNode {
      * @param off   The offset inside the struct base
      * @param value Value to be stored
      */
-    public StoreNode(String name, int alias, SONType glb, Node mem, Node ptr, Node off, Node value, boolean init) {
+    public StoreNode(String name, int alias, Type glb, Node mem, Node ptr, Node off, Node value, boolean init) {
         super(name, alias, false, glb, mem, ptr, off, value);
         _init = init;
     }
@@ -40,20 +40,20 @@ public class StoreNode extends MemOpNode {
     }
 
     @Override
-    public SONType compute() {
-        SONType val = val()._type;
-        SONTypeMem mem = (SONTypeMem)mem()._type; // Invariant
-        if( mem == SONTypeMem.TOP ) return SONTypeMem.TOP;
-        SONType t = SONType.BOTTOM;               // No idea on field contents
+    public Type compute() {
+        Type val = val()._type;
+        TypeMem mem = (TypeMem)mem()._type; // Invariant
+        if( mem == TypeMem.TOP ) return TypeMem.TOP;
+        Type t = Type.BOTTOM;               // No idea on field contents
         // Same alias, lift val to the declared type and then meet into other fields
         if( mem._alias == _alias ) {
             // Update declared forward ref to the actual
-            if( _declaredType.isFRef() && val instanceof SONTypeMemPtr tmp && !tmp.isFRef() )
+            if( _declaredType.isFRef() && val instanceof TypeMemPtr tmp && !tmp.isFRef() )
                 _declaredType = tmp;
             val = val.join(_declaredType);
             t = val.meet(mem._t);
         }
-        return SONTypeMem.make(_alias,t);
+        return TypeMem.make(_alias,t);
     }
 
     @Override
@@ -64,7 +64,7 @@ public class StoreNode extends MemOpNode {
         if( mem() instanceof StoreNode st &&
             ptr()==st.ptr() &&  // Must check same object
             off()==st.off() &&  // And same offset (could be "same alias" but this handles arrays to same index)
-            ptr()._type instanceof SONTypeMemPtr && // No bother if weird dead pointers
+            ptr()._type instanceof TypeMemPtr && // No bother if weird dead pointers
             // Must have exactly one use of "this" or you get weird
             // non-serializable memory effects in the worse case.
             checkOnlyUse(st) ) {
@@ -73,11 +73,17 @@ public class StoreNode extends MemOpNode {
             return this;
         }
 
+        // Simple store-after-MemMerge to a known alias can bypass.  Happens when inlining.
+        if( mem() instanceof MemMergeNode mem ) {
+            setDef(1,mem.alias(_alias));
+            return this;
+        }
+
         // Value is automatically truncated by narrow store
         if( val() instanceof AndNode and && and.in(2)._type.isConstant()  ) {
             int log = _declaredType.log_size();
             if( log<3 ) {       // And-mask vs narrow store
-                long mask = ((SONTypeInteger)and.in(2)._type).value();
+                long mask = ((TypeInteger)and.in(2)._type).value();
                 long bits = (1L<<(8<<log))-1;
                 // Mask does not mask any of the stored bits
                 if( (bits&mask)==bits )
@@ -86,12 +92,23 @@ public class StoreNode extends MemOpNode {
             }
         }
 
-        // Store of zero after alloc
-        if( mem() instanceof ProjNode prj && prj.in(0) instanceof NewNode &&
-            prj.in(0)==ptr().in(0) &&  // Same NewNode memory & pointer
-            (val()._type==SONTypeInteger.ZERO || val()._type==SONType.NIL ) )
-            return mem();
+        // Store will chop high order bits off; math to change those bits can be dropped.
+        if( val() instanceof SarNode shr &&
+            shr.in(1) instanceof ShlNode shl &&
+            shr.in(2)._type.isConstant() &&
+            shl.in(2)._type.isConstant() ) {
+            TypeInteger shrC = (TypeInteger) shr.in(2)._type;
 
+            // size of the thing that sign-extends
+            int base_size = (1 << shr.in(1)._type.log_size()) << 3;
+            int not_affected_bits = base_size - (int) shrC.value();
+            int store_size = (1 << log_size()) << 3;
+            // if the store is unrelated to the shift amount, then get rid of the shift
+            if( shl.in(2)._type == shr.in(2)._type && shrC.value() >= store_size && not_affected_bits >= store_size) {
+                setDef(4, shl.in(1));
+                return this;
+            }
+        }
         return null;
     }
 
@@ -110,10 +127,10 @@ public class StoreNode extends MemOpNode {
     public CompilerException err() {
         CompilerException err = super.err();
         if( err != null ) return err;
-        SONTypeMemPtr tmp = (SONTypeMemPtr)ptr()._type;
+        TypeMemPtr tmp = (TypeMemPtr)ptr()._type;
         if( tmp._obj.field(_name)._final && !_init )
             return Compiler.error("Cannot modify final field '"+_name+"'");
-        SONType t = val()._type;
+        Type t = val()._type;
         //return _init || t.isa(_declaredType) ? null : Parser.error("Cannot store "+t+" into field "+_declaredType+" "+_name,_loc);
         return null;
     }

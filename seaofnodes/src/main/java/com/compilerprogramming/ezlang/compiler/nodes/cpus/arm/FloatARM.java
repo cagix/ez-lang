@@ -1,11 +1,10 @@
 package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 //FMOV (scalar, immediate)
 //Floating-point move immediate.
@@ -20,8 +19,6 @@ public class FloatARM extends ConstantNode implements MachNode, RIPRelSize {
     @Override public void encoding( Encoding enc ) {
         enc.largeConstant(this,_con,0,-1/*TODO: ARM-style ELF patching*/);
         short dst = (short)(enc.reg(this) - arm.D_OFFSET);
-        double d = ((SONTypeFloat)_con).value();
-        long x = Double.doubleToRawLongBits(d);
         enc.add4(arm.load_pc(arm.OPF_ARM, 0, dst));
     }
 

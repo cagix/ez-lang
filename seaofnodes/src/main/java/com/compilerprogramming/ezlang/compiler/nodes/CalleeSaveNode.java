@@ -1,11 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import java.util.BitSet;
-import java.io.ByteArrayOutputStream;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
 
 public class CalleeSaveNode extends ProjNode implements MachNode {
     final RegMask _mask;
@@ -21,6 +18,6 @@ public class CalleeSaveNode extends ProjNode implements MachNode {
     @Override public RegMask outregmap() { return _mask; }
     @Override public void encoding( Encoding enc ) { }
 
-    @Override public SONType compute() { return SONType.BOTTOM; }
+    @Override public Type compute() { return Type.BOTTOM; }
     @Override public Node idealize() { return null; }
 }

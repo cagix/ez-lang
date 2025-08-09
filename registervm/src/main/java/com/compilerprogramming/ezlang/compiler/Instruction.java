@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Type;
+import com.compilerprogramming.ezlang.types.EZType;
 
 public abstract class Instruction {
 
@@ -57,16 +57,16 @@ public abstract class Instruction {
     }
 
     public static class NewArray extends Instruction {
-        public final Type.TypeArray type;
-        public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand) {
+        public final EZType.EZTypeArray type;
+        public NewArray(EZType.EZTypeArray type, Operand.RegisterOperand destOperand) {
             super(I_NEW_ARRAY, destOperand);
             this.type = type;
         }
-        public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand, Operand len) {
+        public NewArray(EZType.EZTypeArray type, Operand.RegisterOperand destOperand, Operand len) {
             super(I_NEW_ARRAY, destOperand, len);
             this.type = type;
         }
-        public NewArray(Type.TypeArray type, Operand.RegisterOperand destOperand, Operand len, Operand initValue) {
+        public NewArray(EZType.EZTypeArray type, Operand.RegisterOperand destOperand, Operand len, Operand initValue) {
             super(I_NEW_ARRAY, destOperand, len, initValue);
             this.type = type;
         }
@@ -88,8 +88,8 @@ public abstract class Instruction {
     }
 
     public static class NewStruct extends Instruction {
-        public final Type.TypeStruct type;
-        public NewStruct(Type.TypeStruct type, Operand.RegisterOperand destOperand) {
+        public final EZType.EZTypeStruct type;
+        public NewStruct(EZType.EZTypeStruct type, Operand.RegisterOperand destOperand) {
             super(I_NEW_STRUCT, destOperand);
             this.type = type;
         }
@@ -244,9 +244,9 @@ public abstract class Instruction {
     }
 
     public static class Call extends Instruction {
-        public final Type.TypeFunction callee;
+        public final EZType.EZTypeFunction callee;
         public final int newbase;
-        public Call(int newbase, Operand.RegisterOperand returnOperand, Type.TypeFunction callee, Operand.RegisterOperand... args) {
+        public Call(int newbase, Operand.RegisterOperand returnOperand, EZType.EZTypeFunction callee, Operand.RegisterOperand... args) {
             super(I_CALL, returnOperand, args);
             this.callee = callee;
             this.newbase = newbase;

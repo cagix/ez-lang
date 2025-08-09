@@ -2,11 +2,10 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
-import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.StoreNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+
 import java.util.BitSet;
 
 public class StoreX86 extends MemOpX86 {
@@ -52,7 +51,7 @@ public class StoreX86 extends MemOpX86 {
     }
 
     // Non-immediate encoding
-    static void encVal( Encoding enc, SONType decl, short ptr, short idx, short src, int off, int scale ) {
+    static void encVal( Encoding enc, Type decl, short ptr, short idx, short src, int off, int scale ) {
         int log = decl.log_size();
         // Float reg being stored
         if( src >= x86_64_v2.XMM_OFFSET ) {

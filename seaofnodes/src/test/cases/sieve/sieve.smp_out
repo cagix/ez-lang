@@ -1,0 +1,138 @@
+---sys.ary.copy { *[u8]! int *[u8] int int -> *[u8]! #0}---------------------------
+                 len:r8,dst:rdi,doff:rsi,src:rdx,soff:rcx
+0000 4C8BDF      mov   r11 = rdi                      // def/empty1 #0
+0003 4D33D2      xor   r10,r10
+LOOP5:
+                 i:r10
+0006 4D3BD0      cmp   r10, r8
+0009 7D1C        j>=   L3                             // L8
+L8:
+000B 4D8BCA      mov   r9 = r10                       // use/self/use #1
+000E 4C03C9      add   r9 += rcx
+0011 4A0FB6440A  ld1   rax,[rdx+r9+4]
+0016 04
+0017 498BFA      mov   rdi = r10                      // use/self/use #1
+001A 4803FE      add   rdi += rsi
+001D 4188443B04  st1   [r11+rdi+4],rax
+0022 49FFC2      inc   r10 += #1
+0025 EBDF        jmp   LOOP5
+L199:
+L3:
+0027 498BC3      mov   rax = r11                      // use/empty1 #0
+002A C3          ret
+---{ *[u8]! int *[u8] int int -> *[u8]! #0}---------------------------
+
+---sieve { int -> *[u32]! #1}---------------------------
+0030 4883EC28    subi  rsp -= #40
+                 N:rdi
+0034 48895C2420  mov   [rsp+32] = rbx                 // def/loop #3
+0039 48896C2418  mov   [rsp+24] = rbp                 // def/loop #3
+003E 4C89642410  mov   [rsp+16] = r12                 // def/loop #3
+0043 4C896C2408  mov   [rsp+8] = r13                  // def/loop #3
+0048 4C893424    mov   [rsp+0] = r14                  // def/loop #3
+004C 4C8BE7      mov   r12 = rdi                      // def/empty1 #2
+004F 4C8BF7      mov   r14 = rdi                      // use/empty1 #2
+0052 BBFFFFFFFF  ldi   rbx = #4294967295
+0057 498BF4      mov   rsi = r12                      // use/self/two #1
+005A 4883C604    addi  rsi += #4
+005E BF01000000  alloc ldi   rcx = #1
+0063 E800000000  call  #calloc
+0068 488BE8      mov   rbp = rax                      // def/empty1 #1
+006B 4D8BEC      mov   r13 = r12                      // use/self/two #1
+006E 4C23EB      and   r13 &= rbx
+0071 49C1FC01    sari  r12 >>= #1
+0075 4A8D34A504  lea   rsi = r12<<2 + #4
+007A 000000
+007D BF01000000  alloc ldi   rcx = #1
+0082 E800000000  call  #calloc
+0087 488BD8      mov   rbx = rax                      // def/empty1 #1
+008A B902000000  ldi   rcx = #2
+008F 41B8040000  ldi   r8 = #4
+0094 00
+0095 33FF        xor   rdi,rdi
+LOOP41:
+                 p:rcx,p:r8,nprimes:rdi
+0097 488BC7      mov   rax = rdi                      // def/self #1
+009A 488BD1      mov   rdx = rcx                      // def/self #1
+009D 4D3BC6      cmp   r8, r14
+00A0 7D41        j>=   L39                            // L51
+L51:
+LOOP50:
+                 p:rdx
+00A2 488BCA      mov   rcx = rdx                      // use/self/use #1
+00A5 48FFC1      inc   rcx += #1
+00A8 488BF5      mov   rsi = rbp                      // use/empty1 #1
+00AB 807C160400  test1 , [rsi+rdx+4]
+00B0 7405        j==   L46                            // L52
+L52:
+00B2 488BD1      mov   rdx = rcx                      // use/self/use #1
+00B5 EBEB        jmp   LOOP50
+L198:
+L46:
+00B7 488BF2      mov   rsi = rdx                      // use/self/use #1
+00BA 48C1E601    shli  rsi <<= #1
+LOOP45:
+                 i:rsi
+00BE 493BF5      cmp   rsi, r13
+00C1 7D0A        j>=   L43                            // L63
+L63:
+00C3 C644350401  st1   [rbp+rsi+4],#1
+00C8 4803F2      add   rsi += rdx
+00CB EBF1        jmp   LOOP45
+L197:
+L43:
+00CD 4C8BC1      mov   r8 = rcx                       // use/self/use #1
+00D0 4C0FAFC1    mul   r8 = r8 * rcx
+00D4 488BF8      mov   rdi = rax                      // use/self/use #1
+00D7 48FFC7      inc   rdi += #1
+00DA 488BF3      mov   rsi = rbx                      // use/empty1 #1
+00DD 89548604    st4   [rsi+rax*4+4],rdx
+00E1 EBB4        jmp   LOOP41
+L196:
+L39:
+00E3 488BCA      mov   rcx = rdx                      // use/self/use #1
+00E6 4C8BE8      mov   r13 = rax                      // use/self/phi #1
+LOOP38:
+                 p:rcx,nprimes:r13
+00E9 493BCE      cmp   rcx, r14
+00EC 7D14        j>=   L36                            // L86
+L86:
+00EE 807C0D0400  test1 , [rbp+rcx+4]
+00F3 7508        j!=   L81                            // L82
+L82:
+00F5 42894CAB04  st4   [rbx+r13*4+4],rcx
+00FA 49FFC5      inc   r13 += #1
+L91:
+L81:
+                 nprimes:r13
+00FD 48FFC1      inc   rcx += #1
+0100 EBE7        jmp   LOOP38
+L195:
+L36:
+0102 4A8D34AD04  lea   rsi = r13<<2 + #4
+0107 000000
+010A 448923      st4   [rbx],r12
+010D BF01000000  alloc ldi   rcx = #1
+0112 E800000000  call  #calloc
+0117 33C9        xor   rcx,rcx
+LOOP35:
+                 j:rcx
+0119 493BCD      cmp   rcx, r13
+011C 7D0D        j>=   L33                            // L94
+L94:
+011E 8B548B04    ld4   rdx,[rbx+rcx*4+4]
+0122 89548804    st4   [rax+rcx*4+4],rdx
+0126 48FFC1      inc   rcx += #1
+0129 EBEE        jmp   LOOP35
+L194:
+L33:
+012B 44897500    st4   [rbp],r14
+012F 448928      st4   [rax],r13
+0132 4C8B3424    mov   r14 = [rsp+0]                  // use/loop/use #3
+0136 4C8B6C2408  mov   r13 = [rsp+8]                  // use/loop/use #3
+013B 4C8B642410  mov   r12 = [rsp+16]                 // use/loop/use #3
+0140 488B6C2418  mov   rbp = [rsp+24]                 // use/loop/use #3
+0145 488B5C2420  mov   rbx = [rsp+32]                 // use/loop/use #3
+014A 4883C428C3  addi  rsp += #40
+014F             ret
+---{ int -> *[u32]! #1}---------------------------

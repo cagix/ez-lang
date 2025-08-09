@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFloat;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
 
 import java.util.BitSet;
 
@@ -18,19 +18,19 @@ public class RoundF32Node extends Node {
     }
 
     @Override
-    public SONType compute() {
-        if (in(1)._type instanceof SONTypeFloat i0 && i0.isConstant() )
-            return SONTypeFloat.constant((float)i0.value());
+    public Type compute() {
+        if (in(1)._type instanceof TypeFloat i0 && i0.isConstant() )
+            return TypeFloat.constant((float)i0.value());
         return in(1)._type;
     }
 
     @Override
     public Node idealize() {
         Node lhs = in(1);
-        SONType t1 = lhs._type;
+        Type t1 = lhs._type;
 
         // RoundF32 of float
-        if( t1 instanceof SONTypeFloat tf && tf._sz==32 )
+        if( t1 instanceof TypeFloat tf && tf._sz==32 )
             return lhs;
 
         return null;

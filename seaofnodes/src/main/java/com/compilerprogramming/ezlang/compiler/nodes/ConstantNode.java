@@ -2,8 +2,8 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONType;
-import com.compilerprogramming.ezlang.compiler.sontypes.SONTypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
 import java.util.BitSet;
 
 /**
@@ -20,17 +20,17 @@ import java.util.BitSet;
  */
 
 public class ConstantNode extends Node {
-    public final SONType _con;
-    public ConstantNode( SONType type ) {
+    public final Type _con;
+    public ConstantNode( Type type ) {
         super(new Node[]{CodeGen.CODE._start});
         _con = _type = type;
     }
-    public ConstantNode( Node con, SONType t ) { super(con);  _con = t;  }
+    public ConstantNode( Node con, Type t ) { super(con);  _con = t;  }
     public ConstantNode( ConstantNode con ) { this(con,con._type);  }
 
-    public static Node make( SONType type ) {
-        if( type== SONType. CONTROL ) return new CtrlNode();
-        if( type== SONType.XCONTROL ) return new XCtrlNode();
+    public static Node make( Type type ) {
+        if( type==Type. CONTROL ) return new CtrlNode();
+        if( type==Type.XCONTROL ) return new XCtrlNode();
         return new ConstantNode(type);
     }
 
@@ -42,7 +42,7 @@ public class ConstantNode extends Node {
 
     @Override
     public StringBuilder _print1(StringBuilder sb, BitSet visited) {
-        if( _con instanceof SONTypeFunPtr tfp && tfp.isConstant() ) {
+        if( _con instanceof TypeFunPtr tfp && tfp.isConstant() ) {
             FunNode fun = CodeGen.CODE.link(tfp);
             if( fun!=null && fun._name != null )
                 return sb.append("{ ").append(fun._name).append("}");
@@ -53,7 +53,7 @@ public class ConstantNode extends Node {
     @Override public boolean isConst() { return true; }
 
     @Override
-    public SONType compute() { return _con; }
+    public Type compute() { return _con; }
 
     @Override
     public Node idealize() { return null; }
