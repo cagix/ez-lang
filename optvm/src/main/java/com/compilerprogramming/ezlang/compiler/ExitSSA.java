@@ -245,6 +245,13 @@ public class ExitSSA {
     private void addMoveAtBBEnd(BasicBlock block, Register src, Register dest) {
         var inst = new Instruction.Move(new Operand.RegisterOperand(src), new Operand.RegisterOperand(dest));
         insertAtEnd(block, inst);
+        // If the copy instruction is followed by a cbr which uses the old var
+        // then we need to update the cbr instruction
+        // This is not specified in the Briggs paper but t
+        var brInst = block.instructions.getLast();
+        if (brInst instanceof Instruction.ConditionalBranch cbr) {
+            cbr.replaceUse(src,dest);
+        }
     }
     /* Insert a copy from constant src to dst at end of BB */
     private void addMoveAtBBEnd(BasicBlock block, Operand.ConstantOperand src, Register dest) {
