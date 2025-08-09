@@ -3156,7 +3156,7 @@ L2:
     if %t2_0 goto L3 else goto L4
 L3:
     p_5 = p_1
-    if p_1 goto L5 else goto L6
+    if p_5 goto L5 else goto L6
 L5:
     %t3_0 = p_1+1
     p_4 = %t3_0
