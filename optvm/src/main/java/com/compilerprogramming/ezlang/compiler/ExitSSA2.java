@@ -18,7 +18,7 @@ public class ExitSSA2 {
         insertPCopiesForEachBlock();
         makeConventionalSSA();
         removePhis();
-        sequentialzeParallelCopies();
+        sequenceParallelCopies();
     }
 
     private void insertPCopiesForEachBlock() {
@@ -100,10 +100,26 @@ public class ExitSSA2 {
     }
 
     private void removePhis() {
-
+        var blocks = function.getBlocks();
+        for (BasicBlock block: blocks) {
+            var phis = block.phis();
+            if (phis.isEmpty())
+                continue;
+            // Insert copy in predecessor
+            for (var phi: phis) {
+                for (int j = 0; j < phi.numInputs(); j++) {
+                    BasicBlock pred = block.predecessor(j);
+                    var pCopyBEnd = getParallelCopyAtEnd(pred);
+                    var phiInput = phi.input(j);
+                    var phiVar = phi.value();
+                    pCopyBEnd.addCopy(phiInput,new Operand.RegisterOperand(phiVar));
+                }
+            }
+            block.instructions.removeIf(instruction -> instruction instanceof Instruction.Phi);
+        }
     }
 
-    private void sequentialzeParallelCopies() {
+    private void sequenceParallelCopies() {
 
     }
 
