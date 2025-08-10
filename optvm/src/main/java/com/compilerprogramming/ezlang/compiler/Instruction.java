@@ -25,6 +25,7 @@ public abstract class Instruction {
     static final int I_ARRAY_LOAD = 13;
     static final int I_FIELD_GET = 14;
     static final int I_FIELD_SET = 15;
+    static final int I_PARALLEL_COPY = 16;
 
     public final int opcode;
     protected Operand.RegisterOperand def;
@@ -474,6 +475,68 @@ public abstract class Instruction {
         @Override
         public StringBuilder toStr(StringBuilder sb) {
             return sb.append("arg ").append(arg());
+        }
+    }
+
+    /**
+     * The parallel copy instruction is only used temporarily to exit
+     * SSA form. It represents the parallel copy semantics of phi instructions.
+     */
+    public static class ParallelCopyInstruction extends Instruction {
+
+        List<Operand> sourceOperands = new ArrayList<>();
+        List<Operand.RegisterOperand> destOperands = new ArrayList<>();
+
+        protected ParallelCopyInstruction() {
+            super(I_PARALLEL_COPY);
+        }
+
+        @Override
+        public StringBuilder toStr(StringBuilder sb) {
+            sb.append("(");
+            for (int i = 0; i < destOperands.size(); i++) {
+                if (i > 0)
+                    sb.append(",");
+                sb.append(destOperands.get(i));
+            }
+            sb.append(") = (");
+            for (int i = 0; i < sourceOperands.size(); i++) {
+                if (i > 0)
+                    sb.append(",");
+                sb.append(sourceOperands.get(i));
+            }
+            sb.append(")");
+            return sb;
+        }
+
+        public void addCopy(Operand sourceOperand, Operand.RegisterOperand destOperand) {
+            sourceOperands.add(sourceOperand);
+            destOperands.add(destOperand);
+        }
+
+        @Override
+        public Register def() {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public void replaceDef(Register newDef) {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public boolean definesVar() {
+            return false;
+        }
+        @Override
+        public List<Register> uses() {
+            return Collections.emptyList();
+        }
+        @Override
+        public void replaceUses(Register[] newUses) {
+            throw new UnsupportedOperationException();
+        }
+        @Override
+        public boolean replaceUse(Register source, Register target) {
+            throw new UnsupportedOperationException();
         }
     }
 

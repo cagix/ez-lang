@@ -158,6 +158,11 @@ public class BasicBlock {
         }
         throw new IllegalStateException();
     }
+    public BasicBlock predecessor(int i) {
+        if (i >= predecessors.size())
+            return null;
+        return predecessors.get(i);
+    }
     public int whichSucc(BasicBlock succ) {
         int i = 0;
         for (BasicBlock s: successors) {
