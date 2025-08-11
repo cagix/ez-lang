@@ -158,6 +158,11 @@ public class BasicBlock {
         }
         throw new IllegalStateException();
     }
+    public BasicBlock predecessor(int i) {
+        if (i >= predecessors.size())
+            return null;
+        return predecessors.get(i);
+    }
     public int whichSucc(BasicBlock succ) {
         int i = 0;
         for (BasicBlock s: successors) {
@@ -167,7 +172,17 @@ public class BasicBlock {
         }
         throw new IllegalStateException();
     }
-
+    public void replaceInstruction(Instruction instruction, List<Instruction> replacements) {
+        int i;
+        for (i = 0; i < instructions.size(); i++)
+            if (instructions.get(i) == instruction)
+                break;
+        assert i < instructions.size();
+        for (int j = replacements.size()-1; j >= 0; j--) {
+            instructions.add(i+1, replacements.get(j));
+        }
+        instructions.remove(i);
+    }
     public static StringBuilder toStr(StringBuilder sb, BasicBlock bb, BitSet visited, boolean dumpLiveness)
     {
         if (visited.get(bb.bid))

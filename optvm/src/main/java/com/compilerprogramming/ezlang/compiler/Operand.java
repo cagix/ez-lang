@@ -3,6 +3,8 @@ package com.compilerprogramming.ezlang.compiler;
 import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.EZType;
 
+import java.util.Objects;
+
 public class Operand {
 
     EZType type;
@@ -16,6 +18,19 @@ public class Operand {
         @Override
         public String toString() {
             return String.valueOf(value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ConstantOperand that = (ConstantOperand) o;
+            return value == that.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(value);
         }
     }
 
@@ -45,6 +60,19 @@ public class Operand {
         @Override
         public String toString() {
             return reg.name();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            RegisterOperand operand = (RegisterOperand) o;
+            return Objects.equals(reg, operand.reg);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(reg);
         }
     }
 
