@@ -19,6 +19,7 @@ public class ExitSSA2 {
         makeConventionalSSA();
         removePhis();
         sequenceParallelCopies();
+        function.isSSA = false;
     }
 
     private void insertPCopiesForEachBlock() {
