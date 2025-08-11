@@ -105,14 +105,14 @@ public class ExitSSA2 {
             var phis = block.phis();
             if (phis.isEmpty())
                 continue;
-            // Insert copy in predecessor
+            // Insert copy in predecessor, since we are in CSSA, this is
+            // a simple assignment from phi input to phi var
             for (var phi: phis) {
                 for (int j = 0; j < phi.numInputs(); j++) {
                     BasicBlock pred = block.predecessor(j);
-                    var pCopyBEnd = getParallelCopyAtEnd(pred);
                     var phiInput = phi.input(j);
                     var phiVar = phi.value();
-                    pCopyBEnd.addCopy(phiInput,new Operand.RegisterOperand(phiVar));
+                    insertAtEnd(pred,new Instruction.Move(phiInput,new Operand.RegisterOperand(phiVar)));
                 }
             }
             block.instructions.removeIf(instruction -> instruction instanceof Instruction.Phi);
