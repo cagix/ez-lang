@@ -5,25 +5,50 @@ import java.util.*;
 /**
  * Implement method to exit SSA by converting to conventional SSA,
  * without coalescing. This is the basic form.
+ *
+ * This is essentially Method 1 described by
+ * Translating Out of Static Single Assignment Form
+ * Vugranam C. Sreedhar, Roy Dz-Ching Ju, David M. Gillies, and Vatsa Santhanam
+ *
+ * However, Sreedhar left out details such as using parallel copies
+ * and sequencing of parallel copies.
+ *
+ * Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency
+ * Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon
+ *
+ * The Boissinot paper gives a more correct description, discussing the need for parallel copy
+ * and sequencing the parallel copy, but the paper describes a
+ * more complex approach that performs coalescing.
+ *
+ * Engineering a Compiler, 3rd edition, describes the simpler form - omitting the coalescing part.
+ *
+ * Our implementation is similar to EaC.
+ *
+ * We do not use the sequencing algo described in Boissinot paper. Instead, we use:
+ *
+ * https://xavierleroy.org/publi/parallel-move.pdf
+ * Tilting at windmills with Coq: formal verification of a compilation algorithm for parallel moves
+ * Laurence Rideau, Bernard Paul Serpette, Xavier Leroy
  */
-public class ExitSSA2 {
+public class ExitSSABoissinotNoCoalesce {
 
     CompiledFunction function;
     Map<BasicBlock,PCopy> parallelCopies = new HashMap<>();
     List<BasicBlock> allBlocks;
 
-    public ExitSSA2(CompiledFunction function, EnumSet<Options> options) {
+    public ExitSSABoissinotNoCoalesce(CompiledFunction function, EnumSet<Options> options) {
         this.function = function;
         allBlocks = function.getBlocks();
-        insertPCopiesForEachBlock();
+        init();
         makeConventionalSSA();
         removePhis();
         sequenceParallelCopies();
         function.isSSA = false;
+        if (options.contains(Options.DUMP_POST_SSA_IR)) function.dumpIR(false, "After exiting SSA");
     }
 
-    private void insertPCopiesForEachBlock() {
-        // We do not actually insert pcopy instruction until needed
+    private void init() {
+        // We do not actually insert parallel copy instruction until needed
         // but we create an auxiliary data structure to help us track these
         for (BasicBlock block: allBlocks) {
             parallelCopies.put(block,new PCopy(block));
@@ -73,8 +98,9 @@ public class ExitSSA2 {
     }
 
     /**
-     * Isolate phi nodes to make SSA conventionalS
+     * Isolate phi nodes to make SSA conventional.
      * This is Phase 1 as described in Engineering a Compiler 3rd Edition, p490.
+     * It is also described as method 1 by Sreedhar, and explained in detail by Boissinot.
      */
     private void makeConventionalSSA() {
         var blocks = function.getBlocks();
@@ -100,6 +126,9 @@ public class ExitSSA2 {
         }
     }
 
+    /**
+     * Phase 2 in Engineering a Compiler
+     */
     private void removePhis() {
         var blocks = function.getBlocks();
         for (BasicBlock block: blocks) {
@@ -120,6 +149,9 @@ public class ExitSSA2 {
         }
     }
 
+    /**
+     * Phase 3 in Engineering a Compiler.
+     */
     private void sequenceParallelCopies() {
         for (var block: function.getBlocks()) {
             var pcopy = parallelCopies.get(block);
@@ -146,6 +178,7 @@ public class ExitSSA2 {
     // formal verification of a compilation algorithm
     // for parallel moves
     // Laurence Rideau, Bernard Paul Serpette, Xavier Leroy
+
     enum MoveStatus {
         TO_MOVE, BEING_MOVED, MOVED
     }

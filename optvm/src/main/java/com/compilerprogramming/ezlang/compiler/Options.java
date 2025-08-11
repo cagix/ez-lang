@@ -5,6 +5,8 @@ import java.util.EnumSet;
 public enum Options {
     ISSA, // Incremental SSA
     OPTIMIZE,
+    SSA_DESTRUCTION_BRIGGS,
+    SSA_DESTRUCTION_BOISSINOT_NOCOALESCE,
     SCCP,
     CCP, // constant comparison propagation
     REGALLOC,
