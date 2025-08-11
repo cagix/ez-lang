@@ -133,110 +133,72 @@ public class ExitSSA2 {
         block.replaceInstruction(pcopy, instructions);
     }
 
-    static final class Copy {
-        Operand src;
-        Operand dest;
-        boolean removed = false;
+    private boolean isEqual(Operand op1, Operand op2) {
+        if (op1 instanceof Operand.RegisterOperand reg1 && op2 instanceof Operand.RegisterOperand reg2)
+            return reg1.reg.id == reg2.reg.id;
+        return false;
+    }
 
-        public Copy(Operand src, Operand dest) {
-            this.src = src;
-            this.dest = dest;
+    // The parallel move algo below is from
+    // https://xavierleroy.org/publi/parallel-move.pdf
+    // Tilting at windmills with Coq:
+    // formal verification of a compilation algorithm
+    // for parallel moves
+    // Laurence Rideau, Bernard Paul Serpette, Xavier Leroy
+    enum MoveStatus {
+        TO_MOVE, BEING_MOVED, MOVED
+    }
+
+    static final class MoveCtx {
+        Operand[] src;
+        Operand[] dst;
+        MoveStatus[] status;
+        ArrayList<Instruction> copyInstructions;
+
+        MoveCtx(Instruction.ParallelCopyInstruction pcopy) {
+            src = pcopy.sourceOperands.toArray(new Operand[0]);
+            dst = pcopy.destOperands.toArray(new Operand[0]);
+            copyInstructions = new ArrayList<Instruction>();
+            status = new MoveStatus[src.length];
+            Arrays.fill(status, MoveStatus.TO_MOVE);
         }
     }
 
-    List<Copy> getCopies(Instruction.ParallelCopyInstruction pcopy) {
-        List<Copy> copies = new ArrayList<>();
-        for (int i = 0; i < pcopy.sourceOperands.size(); i++) {
-            var src = pcopy.sourceOperands.get(i);
-            var dest = pcopy.destOperands.get(i);
-            if (src instanceof Operand.RegisterOperand srcR && dest instanceof Operand.RegisterOperand destR) {
-                if (srcR.reg.id == destR.reg.id)
-                    continue;
-            }
-            copies.add(new Copy(src,dest));
-        }
-        return copies;
-    }
-
-    private void sequenceParallelCopy(BasicBlock block, Instruction.ParallelCopyInstruction pcopy) {
-        var copyInstructions = new ArrayList<Instruction>();
-        var copies = getCopies(pcopy);
-
-        while (copies.size() > 0) {
-            boolean progress = false;
-
-            for (var copy: copies) {
-                boolean cycle = false;
-                for (int i = 0; i < copies.size(); i++) {
-                    if (copy.removed == true)
-                        continue;
-                    if (copy.src.equals(copies.get(i).dest)) {
-                        cycle = true;
-                        break;
+    private void moveOne(MoveCtx ctx, int i) {
+        Operand[] src = ctx.src;
+        Operand[] dst = ctx.dst;
+        if (!isEqual(src[i], dst[i])) {
+            ctx.status[i] = MoveStatus.BEING_MOVED;
+            for (int j = 0; j < src.length; j++) {
+                if (isEqual(src[j],dst[i])) {
+                    // cycle found
+                    switch (ctx.status[j]) {
+                        case TO_MOVE:
+                            moveOne(ctx, j);
+                            break;
+                        case BEING_MOVED:
+                            var temp = new Operand.RegisterOperand(function.registerPool.newTempReg(src[j].type));
+                            ctx.copyInstructions.add(new Instruction.Move(src[j], temp));
+                            src[j] = temp;
+                            break;
+                        case MOVED:
+                            break;
                     }
                 }
-                if (!cycle) {
-                    copyInstructions.add(new Instruction.Move(copy.src,copy.dest));
-                    copy.removed = true;
-                    progress = true;
-                }
             }
-
-            copies.removeIf(c->c.removed);
-            if (progress)
-                continue;
-
-            var copy = copies.removeFirst();
-            var temp = new Operand.RegisterOperand(function.registerPool.newTempReg(copy.src.type));
-            copyInstructions.add(new Instruction.Move(copy.src,temp));
-            copies.add(new Copy(copy.dest,temp));
+            ctx.copyInstructions.add(new Instruction.Move(src[i], dst[i]));
+            ctx.status[i] = MoveStatus.MOVED;
         }
-        replaceInstruction(block,pcopy,copyInstructions);
     }
 
-    private void sequenceParallelCopyX(BasicBlock block, Instruction.ParallelCopyInstruction pcopy) {
-        var copyInstructions = new ArrayList<Instruction>();
-        var ready = new ArrayList<Operand>();
-        var toDo = new ArrayList<Operand>();
-        var directPred = new HashMap<Operand,Operand>();
-        var loc = new HashMap<Operand,Operand>();
-        for (int i = 0; i <pcopy.sourceOperands.size(); i++) {
-            var a = pcopy.sourceOperands.get(i);
-            var b = pcopy.destOperands.get(i);
-            if (a.equals(b))
-                continue;
-            loc.put(a,a);
-            directPred.put(b,a);
-            toDo.add(b);
-        }
-        for (int i = 0; i <pcopy.sourceOperands.size(); i++) {
-            var a = pcopy.sourceOperands.get(i);
-            var b = pcopy.destOperands.get(i);
-            if (a == b)
-                continue;
-            if (loc.get(b) == null)
-                ready.add(b);
-        }
-        while (!toDo.isEmpty()) {
-            while (!ready.isEmpty()) {
-                var b = ready.removeLast();
-                var a = directPred.get(b);
-                var c = loc.get(a);
-                copyInstructions.add(new Instruction.Move(c,b));
-                loc.put(a,b);
-                if (a == c && directPred.get(a) != null)
-                    ready.add(a);
-            }
-            var b = toDo.removeLast();
-            if (b == loc.get(directPred.get(b))) {
-                var n = new Operand.RegisterOperand(function.registerPool.newTempReg(b.type));
-                copyInstructions.add(new Instruction.Move(b,n));
-                loc.put(b,n);
-                ready.add(b);
-            }
-        }
-        replaceInstruction(block,pcopy,copyInstructions);
+    private void sequenceParallelCopy(BasicBlock block, Instruction.ParallelCopyInstruction parallelCopyInstruction) {
+        var ctx = new MoveCtx(parallelCopyInstruction);
+        for (int i = 0; i < ctx.src.length; i++)
+            if (ctx.status[i] == MoveStatus.TO_MOVE)
+                moveOne(ctx,i);
+        replaceInstruction(block,parallelCopyInstruction,ctx.copyInstructions);
     }
+
 
     static final class PCopy {
         BasicBlock block;
