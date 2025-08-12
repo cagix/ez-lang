@@ -44,11 +44,14 @@ A VM / Interpreter is provided that can run the generated code.
   SSA Form using Dominator Trees. The input to this transformation is regular IR, output is SSA IR.
 * Incremental SSA - This method generate SSA IR directly from the AST, using [Braun's algorithm](https://dl.acm.org/doi/10.1007/978-3-642-37051-9_6) - this is integrated into the
   [compiler](src/main/java/com/compilerprogramming/ezlang/compiler/CompiledFunction.java) itself and can be enabled using an option.
-* [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form, using algorithm by Preston Briggs.
+* [ExitSSA](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSA.java) - Exits SSA form - i.e. implements SSA destruction. Two methods are implemented:
+  * [ExitSSABriggs](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSABriggs.java) - implements method described by [Preston Briggs](https://dl.acm.org/doi/10.5555/295545.295551).
+  * [ExitSSABoissinotNoCoalesce](src/main/java/com/compilerprogramming/ezlang/compiler/ExitSSABoissinotNoCoalesce.java) - implements method described by [Benoit Boissinot](https://inria.hal.science/inria-00349925v1/document) - 
+    without the coalescing step. Thus, it is the "naive" approach that resembles Sreedhar's method I. 
 
 ## Optimizations on SSA Form
 
-* [SparseConditionalConstantPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/SparseConditionalConstantPropagation.java) - Conditional Constant Propagation on SSA form (SCCP)
+* [SparseConditionalConstantPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/SparseConditionalConstantPropagation.java) - Conditional Constant Propagation on SSA form (SCCP). This is an implementation of the paper [Constant propagation with conditional branches](https://dl.acm.org/doi/10.1145/103135.103136).
 * [ConstantComparisonPropagation](src/main/java/com/compilerprogramming/ezlang/compiler/ConstantComparisonPropagation.java) - Detects equals and not equals against constants within conditionals,
    and inserts scoped variables with appropriately specialized type within the dominated blocks, so that a second pass of SCCP can further optimize code.
 * [SSAEdges](src/main/java/com/compilerprogramming/ezlang/compiler/SSAEdges.java) - SSAEdges are def-use chains used by SCCP algorithm, and also generated during incremental SSA construction using Braun's method.
@@ -70,7 +73,7 @@ unlimited amount of those.
 * [InterferenceGraphBuilder](src/main/java/com/compilerprogramming/ezlang/compiler/InterferenceGraphBuilder.java) - Constructs an InterferenceGraph for a set
   of basic bocks, using basic block level liveness information as a starting point for calculating instruction level liveness.
 * [ChaitinGraphColoringRegisterAllocator](src/main/java/com/compilerprogramming/ezlang/compiler/ChaitinGraphColoringRegisterAllocator.java) - basic
-  Chaitin Graph Coloring Register Allocator. Since our target machine here is an abstract machine, we do not really needing spilling support
+  [Chaitin Graph Coloring Register Allocator](https://web.eecs.umich.edu/~mahlke/courses/583f12/reading/chaitin82.pdf) without spilling. Since our target machine here is an abstract machine, we do not really need spilling support
   as we can size each function's stack frame to accommodate the number of registers needed such that each register is really a slot in the stack
   frame. But we will eventually simulate an abstract machine with a limited set of registers and a separate stack frame.
 
