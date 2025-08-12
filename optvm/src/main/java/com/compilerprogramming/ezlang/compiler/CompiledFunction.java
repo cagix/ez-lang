@@ -27,6 +27,8 @@ public class CompiledFunction {
     public boolean hasLiveness;
     private final IncrementalSSA issa;
 
+    private StringBuilder dumpTarget;
+
     /**
      * We essentially do a form of abstract interpretation as we generate
      * the bytecode instructions. For this purpose we use a virtual operand stack.
@@ -72,7 +74,9 @@ public class CompiledFunction {
         issa.finish(null);
         this.frameSlots = registerPool.numRegisters();
     }
-
+    public void setDumpTarget(StringBuilder dumpTarget) {
+        this.dumpTarget = dumpTarget;
+    }
     private void generateArgInstructions(Scope scope) {
         if (scope.isFunctionParameterScope) {
             for (Symbol symbol: scope.getLocalSymbols()) {
@@ -814,8 +818,14 @@ public class CompiledFunction {
     }
 
     public void dumpIR(boolean verbose, String title) {
-        System.out.println(title);
-        System.out.println(toStr(new StringBuilder(), verbose));
+        if (dumpTarget != null) {
+            dumpTarget.append(title).append("\n");
+            toStr(dumpTarget,verbose);
+        }
+        else {
+            System.out.println(title);
+            System.out.println(toStr(new StringBuilder(), verbose));
+        }
     }
 
     public void livenessAnalysis() {
