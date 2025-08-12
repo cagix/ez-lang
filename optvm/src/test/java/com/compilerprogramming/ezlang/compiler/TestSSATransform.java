@@ -3683,4 +3683,121 @@ L0:
 L1:
 """, result);
     }
+
+    @Test
+    public void testSSA21()
+    {
+        String src = """
+func eq(a: [Int], b: [Int], n: Int)->Int
+{
+    var result = 1
+    var i = 0
+    while (i < n)
+    {
+        if (a[i] != b[i])
+        {
+            result = 0
+            break
+        }
+        i = i + 1
+    } 
+    return result
+}
+                """;
+        String result = compileSrc(src);
+        Assert.assertEquals("""
+func eq
+Before SSA
+==========
+L0:
+    arg a
+    arg b
+    arg n
+    result = 1
+    i = 0
+    goto  L2
+L2:
+    %t5 = i<n
+    if %t5 goto L3 else goto L4
+L3:
+    %t6 = a[i]
+    %t7 = b[i]
+    %t8 = %t6!=%t7
+    if %t8 goto L5 else goto L6
+L5:
+    result = 0
+    goto  L4
+L4:
+    ret result
+    goto  L1
+L1:
+L6:
+    %t9 = i+1
+    i = %t9
+    goto  L2
+After SSA
+=========
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    goto  L2
+L2:
+    i_1 = phi(i_0, i_2)
+    %t5_0 = i_1<n_0
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    goto  L4
+L4:
+    result_2 = phi(result_0, result_1)
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    goto  L2
+After exiting SSA
+=================
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    i_1 = i_0
+    goto  L2
+L2:
+    %t5_0 = i_1<n_0
+    result_2 = result_0
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    result_2 = result_1
+    goto  L4
+L4:
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    i_1 = i_2
+    goto  L2
+""", result);
+    }
+
 }
