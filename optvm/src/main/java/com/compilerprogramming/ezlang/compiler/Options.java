@@ -29,7 +29,9 @@ public enum Options {
 
     public static final EnumSet<Options> NONE = EnumSet.noneOf(Options.class);
     public static final EnumSet<Options> OPT = EnumSet.of(Options.OPTIMIZE,Options.SCCP,Options.CCP,Options.REGALLOC);
+    public static final EnumSet<Options> OPT_B = EnumSet.of(Options.OPTIMIZE,Options.SCCP,Options.CCP,Options.REGALLOC,Options.SSA_DESTRUCTION_BOISSINOT_NOCOALESCE);
     public static final EnumSet<Options> OPT_ISSA = EnumSet.of(Options.OPTIMIZE,Options.ISSA,Options.SCCP,Options.CCP,Options.REGALLOC);
+    public static final EnumSet<Options> OPT_ISSA_B = EnumSet.of(Options.OPTIMIZE,Options.ISSA,Options.SCCP,Options.CCP,Options.REGALLOC,Options.SSA_DESTRUCTION_BOISSINOT_NOCOALESCE);
     public static final EnumSet<Options> VERBOSE = EnumSet.range(DUMP_INITIAL_IR, DUMP_POST_CHAITIN_IR);
     public static final EnumSet<Options> OPT_VERBOSE = EnumSet.range(OPTIMIZE, DUMP_POST_CHAITIN_IR);
 }
