@@ -62,6 +62,12 @@ public class InterferenceGraph {
     public void rename(Integer source, Integer target) {
         // Move all interferences
         var fromSet = edges.remove(source);
+        if (fromSet == null) {
+            // FIXME figure out why
+            // Test case testSSA21 / when run using Boissinot SSA Destruction without coalescing
+            // This is eq() function in mergesort test case
+            return;
+        }
         var toSet = edges.get(target);
         if (toSet == null) {
             //throw new RuntimeException("Cannot find edge " + target + " from " + source);
