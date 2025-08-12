@@ -36,7 +36,9 @@ public class TestInterpreter {
         List<Object[]> parameters = new ArrayList<>();
         parameters.add(new Object[] { Options.NONE });
         parameters.add(new Object[] { Options.OPT });
+        parameters.add(new Object[] { Options.OPT_B });
         parameters.add(new Object[] { Options.OPT_ISSA });
+        parameters.add(new Object[] { Options.OPT_ISSA_B });
         return parameters;
     }
 

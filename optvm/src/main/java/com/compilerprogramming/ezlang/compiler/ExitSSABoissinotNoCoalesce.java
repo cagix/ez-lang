@@ -41,10 +41,12 @@ public class ExitSSABoissinotNoCoalesce {
         allBlocks = function.getBlocks();
         init();
         makeConventionalSSA();
+        if (options.contains(Options.DUMP_SSA_TO_CSSA)) function.dumpIR(false, "After converting from SSA to CSSA");
         removePhis();
+        if (options.contains(Options.DUMP_CSSA_PHI_REMOVAL)) function.dumpIR(false, "After removing phis from CSSA");
         sequenceParallelCopies();
         function.isSSA = false;
-        if (options.contains(Options.DUMP_POST_SSA_IR)) function.dumpIR(false, "After exiting SSA");
+        if (options.contains(Options.DUMP_POST_SSA_IR)) function.dumpIR(false, "After exiting SSA (Boissinot method)");
     }
 
     private void init() {

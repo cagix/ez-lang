@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler;
 
-import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.EZType;
+import com.compilerprogramming.ezlang.types.Symbol;
 import com.compilerprogramming.ezlang.types.TypeDictionary;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,7 +10,9 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.EnumSet;
 
-public class TestSSATransform {
+public class TestSSADestructB {
+
+    static EnumSet<Options> ssaExitOptions = EnumSet.of(Options.SSA_DESTRUCTION_BOISSINOT_NOCOALESCE,Options.DUMP_SSA_TO_CSSA,Options.DUMP_CSSA_PHI_REMOVAL);
 
     String compileSrc(String src) {
         var compiler = new Compiler();
@@ -19,6 +21,7 @@ public class TestSSATransform {
         for (Symbol s : typeDict.bindings.values()) {
             if (s instanceof Symbol.FunctionTypeSymbol f) {
                 var functionBuilder = (CompiledFunction) f.code();
+                functionBuilder.setDumpTarget(sb);
                 sb.append("func ").append(f.name).append("\n");
                 sb.append("Before SSA\n");
                 sb.append("==========\n");
@@ -30,7 +33,7 @@ public class TestSSATransform {
                 sb.append("=========\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
                 //functionBuilder.toDot(sb,false);
-                new ExitSSA(functionBuilder, Options.NONE);
+                new ExitSSA(functionBuilder, ssaExitOptions);
                 sb.append("After exiting SSA\n");
                 sb.append("=================\n");
                 BasicBlock.toStr(sb, functionBuilder.entry, new BitSet(), false);
@@ -69,6 +72,32 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    arg d_0
+    a_0 = 42
+    b_0 = a_0
+    %t4_0 = a_0+b_0
+    c_0 = %t4_0
+    %t5_0 = c_0+23
+    a_1 = %t5_0
+    %t6_0 = a_1+d_0
+    c_1 = %t6_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    arg d_0
+    a_0 = 42
+    b_0 = a_0
+    %t4_0 = a_0+b_0
+    c_0 = %t4_0
+    %t5_0 = c_0+23
+    a_1 = %t5_0
+    %t6_0 = a_1+d_0
+    c_1 = %t6_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     arg d_0
     a_0 = 42
@@ -155,6 +184,49 @@ L3:
     %t3_0 = a_0-1
     a_1 = %t3_0
     goto  L4
+After converting from SSA to CSSA
+L0:
+    arg d_0
+    a_0 = 42
+    if d_0 goto L2 else goto L3
+L2:
+    %t2_0 = a_0+1
+    a_2 = %t2_0
+    (%t11) = (a_2)
+    goto  L4
+L4:
+    %t13 = phi(%t11, %t12)
+    (a_3) = (%t13)
+    ret a_3
+    goto  L1
+L1:
+L3:
+    %t3_0 = a_0-1
+    a_1 = %t3_0
+    (%t12) = (a_1)
+    goto  L4
+After removing phis from CSSA
+L0:
+    arg d_0
+    a_0 = 42
+    if d_0 goto L2 else goto L3
+L2:
+    %t2_0 = a_0+1
+    a_2 = %t2_0
+    (%t11) = (a_2)
+    %t13 = %t11
+    goto  L4
+L4:
+    (a_3) = (%t13)
+    ret a_3
+    goto  L1
+L1:
+L3:
+    %t3_0 = a_0-1
+    a_1 = %t3_0
+    (%t12) = (a_1)
+    %t13 = %t12
+    goto  L4
 After exiting SSA
 =================
 L0:
@@ -164,16 +236,19 @@ L0:
 L2:
     %t2_0 = a_0+1
     a_2 = %t2_0
-    a_3 = a_2
+    %t11 = a_2
+    %t13 = %t11
     goto  L4
 L4:
+    a_3 = %t13
     ret a_3
     goto  L1
 L1:
 L3:
     %t3_0 = a_0-1
     a_1 = %t3_0
-    a_3 = a_1
+    %t12 = a_1
+    %t13 = %t12
     goto  L4
 """, result);
 
@@ -235,15 +310,16 @@ L4:
     ret result_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg num_0
     result_0 = 1
-    result_1 = result_0
-    num_1 = num_0
+    (%t14,%t17) = (result_0,num_0)
     goto  L2
 L2:
+    %t16 = phi(%t14, %t15)
+    %t19 = phi(%t17, %t18)
+    (result_1,num_1) = (%t16,%t19)
     %t2_0 = num_1>1
     if %t2_0 goto L3 else goto L4
 L3:
@@ -251,8 +327,61 @@ L3:
     result_2 = %t3_0
     %t4_0 = num_1-1
     num_2 = %t4_0
-    result_1 = result_2
-    num_1 = num_2
+    (%t15,%t18) = (result_2,num_2)
+    goto  L2
+L4:
+    ret result_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg num_0
+    result_0 = 1
+    (%t14,%t17) = (result_0,num_0)
+    %t16 = %t14
+    %t19 = %t17
+    goto  L2
+L2:
+    (result_1,num_1) = (%t16,%t19)
+    %t2_0 = num_1>1
+    if %t2_0 goto L3 else goto L4
+L3:
+    %t3_0 = result_1*num_1
+    result_2 = %t3_0
+    %t4_0 = num_1-1
+    num_2 = %t4_0
+    (%t15,%t18) = (result_2,num_2)
+    %t16 = %t15
+    %t19 = %t18
+    goto  L2
+L4:
+    ret result_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg num_0
+    result_0 = 1
+    %t14 = result_0
+    %t17 = num_0
+    %t16 = %t14
+    %t19 = %t17
+    goto  L2
+L2:
+    result_1 = %t16
+    num_1 = %t19
+    %t2_0 = num_1>1
+    if %t2_0 goto L3 else goto L4
+L3:
+    %t3_0 = result_1*num_1
+    result_2 = %t3_0
+    %t4_0 = num_1-1
+    num_2 = %t4_0
+    %t15 = result_2
+    %t18 = num_2
+    %t16 = %t15
+    %t19 = %t18
     goto  L2
 L4:
     ret result_1
@@ -313,6 +442,22 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    arg a_0
+    arg b_0
+    arg c_0
+    arg d_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    arg a_0
+    arg b_0
+    arg c_0
+    arg d_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     arg a_0
     arg b_0
@@ -477,6 +622,209 @@ L6:
     %t10_0 = k_1+2
     k_2 = %t10_0
     goto  L7
+After converting from SSA to CSSA
+L0:
+    arg p_0
+    arg q_0
+    arg r_0
+    arg s_0
+    arg t_0
+    i_0 = 1
+    j_0 = 1
+    k_0 = 1
+    l_0 = 1
+    (%t77,%t80,%t83,%t86) = (l_0,k_0,j_0,i_0)
+    goto  L2
+L2:
+    %t79 = phi(%t77, %t78)
+    %t82 = phi(%t80, %t81)
+    %t85 = phi(%t83, %t84)
+    %t88 = phi(%t86, %t87)
+    (l_1,k_1,j_1,i_1) = (%t79,%t82,%t85,%t88)
+    if 1 goto L3 else goto L4
+L3:
+    if p_0 goto L5 else goto L6
+L5:
+    j_2 = i_1
+    if q_0 goto L8 else goto L9
+L8:
+    l_3 = 2
+    (%t74) = (l_3)
+    goto  L10
+L10:
+    %t76 = phi(%t74, %t75)
+    (l_4) = (%t76)
+    %t9_0 = k_1+1
+    k_3 = %t9_0
+    (%t65,%t68,%t71) = (l_4,k_3,j_2)
+    goto  L7
+L7:
+    %t67 = phi(%t65, %t66)
+    %t70 = phi(%t68, %t69)
+    %t73 = phi(%t71, %t72)
+    (l_5,k_4,j_3) = (%t67,%t70,%t73)
+    %t11_0 = i_1
+    %t12_0 = j_3
+    %t13_0 = k_4
+    %t14_0 = l_5
+    call print params %t11_0, %t12_0, %t13_0, %t14_0
+    (%t62) = (l_5)
+    goto  L11
+L11:
+    %t64 = phi(%t62, %t63)
+    (l_6) = (%t64)
+    (%t56) = (l_6)
+    if 1 goto L12 else goto L13
+L12:
+    (%t59) = (l_6)
+    if r_0 goto L14 else goto L15
+L14:
+    %t15_0 = l_6+4
+    l_7 = %t15_0
+    (%t60) = (l_7)
+    goto  L15
+L15:
+    %t61 = phi(%t59, %t60)
+    (l_8) = (%t61)
+    %t16_0 = !s_0
+    if %t16_0 goto L16 else goto L17
+L16:
+    (%t57) = (l_8)
+    goto  L13
+L13:
+    %t58 = phi(%t56, %t57)
+    (l_9) = (%t58)
+    %t17_0 = i_1+6
+    i_2 = %t17_0
+    %t18_0 = !t_0
+    if %t18_0 goto L18 else goto L19
+L18:
+    goto  L4
+L4:
+    goto  L1
+L1:
+L19:
+    (%t78,%t81,%t84,%t87) = (l_9,k_4,j_3,i_2)
+    goto  L2
+L17:
+    (%t63) = (l_8)
+    goto  L11
+L9:
+    l_2 = 3
+    (%t75) = (l_2)
+    goto  L10
+L6:
+    %t10_0 = k_1+2
+    k_2 = %t10_0
+    (%t66,%t69,%t72) = (l_1,k_2,j_1)
+    goto  L7
+After removing phis from CSSA
+L0:
+    arg p_0
+    arg q_0
+    arg r_0
+    arg s_0
+    arg t_0
+    i_0 = 1
+    j_0 = 1
+    k_0 = 1
+    l_0 = 1
+    (%t77,%t80,%t83,%t86) = (l_0,k_0,j_0,i_0)
+    %t79 = %t77
+    %t82 = %t80
+    %t85 = %t83
+    %t88 = %t86
+    goto  L2
+L2:
+    (l_1,k_1,j_1,i_1) = (%t79,%t82,%t85,%t88)
+    if 1 goto L3 else goto L4
+L3:
+    if p_0 goto L5 else goto L6
+L5:
+    j_2 = i_1
+    if q_0 goto L8 else goto L9
+L8:
+    l_3 = 2
+    (%t74) = (l_3)
+    %t76 = %t74
+    goto  L10
+L10:
+    (l_4) = (%t76)
+    %t9_0 = k_1+1
+    k_3 = %t9_0
+    (%t65,%t68,%t71) = (l_4,k_3,j_2)
+    %t67 = %t65
+    %t70 = %t68
+    %t73 = %t71
+    goto  L7
+L7:
+    (l_5,k_4,j_3) = (%t67,%t70,%t73)
+    %t11_0 = i_1
+    %t12_0 = j_3
+    %t13_0 = k_4
+    %t14_0 = l_5
+    call print params %t11_0, %t12_0, %t13_0, %t14_0
+    (%t62) = (l_5)
+    %t64 = %t62
+    goto  L11
+L11:
+    (l_6) = (%t64)
+    (%t56) = (l_6)
+    %t58 = %t56
+    if 1 goto L12 else goto L13
+L12:
+    (%t59) = (l_6)
+    %t61 = %t59
+    if r_0 goto L14 else goto L15
+L14:
+    %t15_0 = l_6+4
+    l_7 = %t15_0
+    (%t60) = (l_7)
+    %t61 = %t60
+    goto  L15
+L15:
+    (l_8) = (%t61)
+    %t16_0 = !s_0
+    if %t16_0 goto L16 else goto L17
+L16:
+    (%t57) = (l_8)
+    %t58 = %t57
+    goto  L13
+L13:
+    (l_9) = (%t58)
+    %t17_0 = i_1+6
+    i_2 = %t17_0
+    %t18_0 = !t_0
+    if %t18_0 goto L18 else goto L19
+L18:
+    goto  L4
+L4:
+    goto  L1
+L1:
+L19:
+    (%t78,%t81,%t84,%t87) = (l_9,k_4,j_3,i_2)
+    %t79 = %t78
+    %t82 = %t81
+    %t85 = %t84
+    %t88 = %t87
+    goto  L2
+L17:
+    (%t63) = (l_8)
+    %t64 = %t63
+    goto  L11
+L9:
+    l_2 = 3
+    (%t75) = (l_2)
+    %t76 = %t75
+    goto  L10
+L6:
+    %t10_0 = k_1+2
+    k_2 = %t10_0
+    (%t66,%t69,%t72) = (l_1,k_2,j_1)
+    %t67 = %t66
+    %t70 = %t69
+    %t73 = %t72
+    goto  L7
 After exiting SSA
 =================
 L0:
@@ -489,12 +837,20 @@ L0:
     j_0 = 1
     k_0 = 1
     l_0 = 1
-    l_1 = l_0
-    k_1 = k_0
-    j_1 = j_0
-    i_1 = i_0
+    %t77 = l_0
+    %t80 = k_0
+    %t83 = j_0
+    %t86 = i_0
+    %t79 = %t77
+    %t82 = %t80
+    %t85 = %t83
+    %t88 = %t86
     goto  L2
 L2:
+    l_1 = %t79
+    k_1 = %t82
+    j_1 = %t85
+    i_1 = %t88
     if 1 goto L3 else goto L4
 L3:
     if p_0 goto L5 else goto L6
@@ -503,41 +859,57 @@ L5:
     if q_0 goto L8 else goto L9
 L8:
     l_3 = 2
-    l_4 = l_3
+    %t74 = l_3
+    %t76 = %t74
     goto  L10
 L10:
+    l_4 = %t76
     %t9_0 = k_1+1
     k_3 = %t9_0
-    l_5 = l_4
-    k_4 = k_3
-    j_3 = j_2
+    %t65 = l_4
+    %t68 = k_3
+    %t71 = j_2
+    %t67 = %t65
+    %t70 = %t68
+    %t73 = %t71
     goto  L7
 L7:
+    l_5 = %t67
+    k_4 = %t70
+    j_3 = %t73
     %t11_0 = i_1
     %t12_0 = j_3
     %t13_0 = k_4
     %t14_0 = l_5
     call print params %t11_0, %t12_0, %t13_0, %t14_0
-    l_6 = l_5
+    %t62 = l_5
+    %t64 = %t62
     goto  L11
 L11:
-    l_9 = l_6
+    l_6 = %t64
+    %t56 = l_6
+    %t58 = %t56
     if 1 goto L12 else goto L13
 L12:
-    l_8 = l_6
+    %t59 = l_6
+    %t61 = %t59
     if r_0 goto L14 else goto L15
 L14:
     %t15_0 = l_6+4
     l_7 = %t15_0
-    l_8 = l_7
+    %t60 = l_7
+    %t61 = %t60
     goto  L15
 L15:
+    l_8 = %t61
     %t16_0 = !s_0
     if %t16_0 goto L16 else goto L17
 L16:
-    l_9 = l_8
+    %t57 = l_8
+    %t58 = %t57
     goto  L13
 L13:
+    l_9 = %t58
     %t17_0 = i_1+6
     i_2 = %t17_0
     %t18_0 = !t_0
@@ -548,24 +920,33 @@ L4:
     goto  L1
 L1:
 L19:
-    l_1 = l_9
-    k_1 = k_4
-    j_1 = j_3
-    i_1 = i_2
+    %t78 = l_9
+    %t81 = k_4
+    %t84 = j_3
+    %t87 = i_2
+    %t79 = %t78
+    %t82 = %t81
+    %t85 = %t84
+    %t88 = %t87
     goto  L2
 L17:
-    l_6 = l_8
+    %t63 = l_8
+    %t64 = %t63
     goto  L11
 L9:
     l_2 = 3
-    l_4 = l_2
+    %t75 = l_2
+    %t76 = %t75
     goto  L10
 L6:
     %t10_0 = k_1+2
     k_2 = %t10_0
-    l_5 = l_1
-    k_4 = k_2
-    j_3 = j_1
+    %t66 = l_1
+    %t69 = k_2
+    %t72 = j_1
+    %t67 = %t66
+    %t70 = %t69
+    %t73 = %t72
     goto  L7
 """, result);
     }
@@ -596,6 +977,28 @@ L3:
     goto  L1
 After SSA
 =========
+L0:
+    arg arg_0
+    if arg_0 goto L2 else goto L3
+L2:
+    ret 42
+    goto  L1
+L1:
+L3:
+    ret 0
+    goto  L1
+After converting from SSA to CSSA
+L0:
+    arg arg_0
+    if arg_0 goto L2 else goto L3
+L2:
+    ret 42
+    goto  L1
+L1:
+L3:
+    ret 0
+    goto  L1
+After removing phis from CSSA
 L0:
     arg arg_0
     if arg_0 goto L2 else goto L3
@@ -674,20 +1077,22 @@ L1:
     ret x2
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
-        new ExitSSA(function, EnumSet.noneOf(Options.class));
+        new ExitSSA(function, ssaExitOptions);
         expected = """
 L0:
     arg p
     x1 = 1
-    x2 = x1
+    %t4 = x1
+    %t6 = %t4
     goto  L2
 L2:
-    x2_4 = x2
+    x2 = %t6
     x3 = x2+1
-    x2 = x3
+    %t5 = x3
+    %t6 = %t5
     if p goto L2 else goto L1
 L1:
-    ret x2_4
+    ret x2
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
     }
@@ -745,19 +1150,24 @@ L2:
 L1:
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
-        new ExitSSA(function, EnumSet.noneOf(Options.class));
+        new ExitSSA(function, ssaExitOptions);
         expected = """
 L0:
     arg p
     a1 = 42
     b1 = 24
-    a2 = a1
-    b2 = b1
+    %t5 = a1
+    %t8 = b1
+    %t7 = %t5
+    %t10 = %t8
     goto  L2
 L2:
-    a2_5 = a2
-    a2 = b2
-    b2 = a2_5
+    a2 = %t7
+    b2 = %t10
+    %t6 = b2
+    %t9 = a2
+    %t7 = %t6
+    %t10 = %t9
     if p goto L2 else goto L1
 L1:
 """;
@@ -856,13 +1266,14 @@ L6:
 L4:
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg x_0
-    x_1 = x_0
+    (%t15) = (x_0)
     goto  L2
 L2:
+    %t17 = phi(%t15, %t16)
+    (x_1) = (%t17)
     %t2_0 = x_1>0
     if %t2_0 goto L3 else goto L4
 L3:
@@ -876,7 +1287,62 @@ L5:
 L6:
     %t5_0 = x_1-1
     x_2 = %t5_0
-    x_1 = x_2
+    (%t16) = (x_2)
+    goto  L2
+L4:
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg x_0
+    (%t15) = (x_0)
+    %t17 = %t15
+    goto  L2
+L2:
+    (x_1) = (%t17)
+    %t2_0 = x_1>0
+    if %t2_0 goto L3 else goto L4
+L3:
+    z_0 = 5
+    %t3_0 = x_1==1
+    if %t3_0 goto L5 else goto L6
+L5:
+    %t4_0 = z_0+1
+    z_1 = %t4_0
+    goto  L6
+L6:
+    %t5_0 = x_1-1
+    x_2 = %t5_0
+    (%t16) = (x_2)
+    %t17 = %t16
+    goto  L2
+L4:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg x_0
+    %t15 = x_0
+    %t17 = %t15
+    goto  L2
+L2:
+    x_1 = %t17
+    %t2_0 = x_1>0
+    if %t2_0 goto L3 else goto L4
+L3:
+    z_0 = 5
+    %t3_0 = x_1==1
+    if %t3_0 goto L5 else goto L6
+L5:
+    %t4_0 = z_0+1
+    z_1 = %t4_0
+    goto  L6
+L6:
+    %t5_0 = x_1-1
+    x_2 = %t5_0
+    %t16 = x_2
+    %t17 = %t16
     goto  L2
 L4:
     goto  L1
@@ -976,6 +1442,91 @@ L8:
 L6:
     ret sum_1
     goto  L1
+After converting from SSA to CSSA
+L0:
+    arg x_0
+    arg y_0
+    %t3_0 = x_0>=y_0
+    if %t3_0 goto L2 else goto L3
+L2:
+    ret 0
+    goto  L1
+L1:
+L3:
+    sum_0 = 0
+    (%t28,%t31) = (sum_0,x_0)
+    goto  L4
+L4:
+    %t30 = phi(%t28, %t29)
+    %t33 = phi(%t31, %t32)
+    (sum_1,x_1) = (%t30,%t33)
+    %t4_0 = x_1<y_0
+    if %t4_0 goto L5 else goto L6
+L5:
+    %t5_0 = x_1/2
+    %t6_0 = %t5_0*2
+    %t7_0 = %t6_0==x_1
+    (%t25) = (sum_1)
+    if %t7_0 goto L7 else goto L8
+L7:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    (%t26) = (sum_2)
+    goto  L8
+L8:
+    %t27 = phi(%t25, %t26)
+    (sum_3) = (%t27)
+    %t9_0 = x_1+1
+    x_2 = %t9_0
+    (%t29,%t32) = (sum_3,x_2)
+    goto  L4
+L6:
+    ret sum_1
+    goto  L1
+After removing phis from CSSA
+L0:
+    arg x_0
+    arg y_0
+    %t3_0 = x_0>=y_0
+    if %t3_0 goto L2 else goto L3
+L2:
+    ret 0
+    goto  L1
+L1:
+L3:
+    sum_0 = 0
+    (%t28,%t31) = (sum_0,x_0)
+    %t30 = %t28
+    %t33 = %t31
+    goto  L4
+L4:
+    (sum_1,x_1) = (%t30,%t33)
+    %t4_0 = x_1<y_0
+    if %t4_0 goto L5 else goto L6
+L5:
+    %t5_0 = x_1/2
+    %t6_0 = %t5_0*2
+    %t7_0 = %t6_0==x_1
+    (%t25) = (sum_1)
+    %t27 = %t25
+    if %t7_0 goto L7 else goto L8
+L7:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    (%t26) = (sum_2)
+    %t27 = %t26
+    goto  L8
+L8:
+    (sum_3) = (%t27)
+    %t9_0 = x_1+1
+    x_2 = %t9_0
+    (%t29,%t32) = (sum_3,x_2)
+    %t30 = %t29
+    %t33 = %t32
+    goto  L4
+L6:
+    ret sum_1
+    goto  L1
 After exiting SSA
 =================
 L0:
@@ -989,28 +1540,37 @@ L2:
 L1:
 L3:
     sum_0 = 0
-    sum_1 = sum_0
-    x_1 = x_0
+    %t28 = sum_0
+    %t31 = x_0
+    %t30 = %t28
+    %t33 = %t31
     goto  L4
 L4:
+    sum_1 = %t30
+    x_1 = %t33
     %t4_0 = x_1<y_0
     if %t4_0 goto L5 else goto L6
 L5:
     %t5_0 = x_1/2
     %t6_0 = %t5_0*2
     %t7_0 = %t6_0==x_1
-    sum_3 = sum_1
+    %t25 = sum_1
+    %t27 = %t25
     if %t7_0 goto L7 else goto L8
 L7:
     %t8_0 = sum_1+1
     sum_2 = %t8_0
-    sum_3 = sum_2
+    %t26 = sum_2
+    %t27 = %t26
     goto  L8
 L8:
+    sum_3 = %t27
     %t9_0 = x_1+1
     x_2 = %t9_0
-    sum_1 = sum_3
-    x_1 = x_2
+    %t29 = sum_3
+    %t32 = x_2
+    %t30 = %t29
+    %t33 = %t32
     goto  L4
 L6:
     ret sum_1
@@ -1104,19 +1664,17 @@ L4:
     ret sum_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg x_0
     sum_0 = 0
     i_0 = 0
-    i_1 = i_0
-    sum_1 = sum_0
+    (%t24,%t29) = (i_0,sum_0)
     goto  L2
 L2:
-    i_1_29 = i_1
-    i_1_25 = i_1
-    sum_1_27 = sum_1
+    %t28 = phi(%t24, %t25, %t26, %t27)
+    %t33 = phi(%t29, %t30, %t31, %t32)
+    (i_1,sum_1) = (%t28,%t33)
     %t3_0 = i_1<x_0
     if %t3_0 goto L3 else goto L4
 L3:
@@ -1124,31 +1682,120 @@ L3:
     %t5_0 = %t4_0==0
     if %t5_0 goto L5 else goto L6
 L5:
-    i_1_28 = i_1
-    i_1 = i_1_28
+    (%t25,%t30) = (i_1,sum_1)
     goto  L2
 L6:
     %t6_0 = i_1/3
     %t7_0 = %t6_0==1
     if %t7_0 goto L7 else goto L8
 L7:
-    i_1_24 = i_1
-    i_1 = i_1_24
-    sum_1_26 = sum_1
-    sum_1 = sum_1_26
+    (%t26,%t31) = (i_1,sum_1)
     goto  L2
 L8:
     %t8_0 = sum_1+1
     sum_2 = %t8_0
     %t9_0 = i_1+1
     i_2 = %t9_0
-    i_1 = i_2
-    sum_1 = sum_2
+    (%t27,%t32) = (i_2,sum_2)
     goto  L2
 L4:
     ret sum_1
     goto  L1
-L1:                        
+L1:
+After removing phis from CSSA
+L0:
+    arg x_0
+    sum_0 = 0
+    i_0 = 0
+    (%t24,%t29) = (i_0,sum_0)
+    %t28 = %t24
+    %t33 = %t29
+    goto  L2
+L2:
+    (i_1,sum_1) = (%t28,%t33)
+    %t3_0 = i_1<x_0
+    if %t3_0 goto L3 else goto L4
+L3:
+    %t4_0 = i_1%2
+    %t5_0 = %t4_0==0
+    if %t5_0 goto L5 else goto L6
+L5:
+    (%t25,%t30) = (i_1,sum_1)
+    %t28 = %t25
+    %t33 = %t30
+    goto  L2
+L6:
+    %t6_0 = i_1/3
+    %t7_0 = %t6_0==1
+    if %t7_0 goto L7 else goto L8
+L7:
+    (%t26,%t31) = (i_1,sum_1)
+    %t28 = %t26
+    %t33 = %t31
+    goto  L2
+L8:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    (%t27,%t32) = (i_2,sum_2)
+    %t28 = %t27
+    %t33 = %t32
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg x_0
+    sum_0 = 0
+    i_0 = 0
+    %t24 = i_0
+    %t29 = sum_0
+    %t28 = %t24
+    %t33 = %t29
+    goto  L2
+L2:
+    i_1 = %t28
+    sum_1 = %t33
+    %t3_0 = i_1<x_0
+    if %t3_0 goto L3 else goto L4
+L3:
+    %t4_0 = i_1%2
+    %t5_0 = %t4_0==0
+    if %t5_0 goto L5 else goto L6
+L5:
+    %t25 = i_1
+    %t30 = sum_1
+    %t28 = %t25
+    %t33 = %t30
+    goto  L2
+L6:
+    %t6_0 = i_1/3
+    %t7_0 = %t6_0==1
+    if %t7_0 goto L7 else goto L8
+L7:
+    %t26 = i_1
+    %t31 = sum_1
+    %t28 = %t26
+    %t33 = %t31
+    goto  L2
+L8:
+    %t8_0 = sum_1+1
+    sum_2 = %t8_0
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    %t27 = i_2
+    %t32 = sum_2
+    %t28 = %t27
+    %t33 = %t32
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:
 """,
                 result);
 
@@ -1202,6 +1849,36 @@ L6:
 L4:
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    i_0 = 0
+    goto  L2
+L2:
+    if 1 goto L3 else goto L4
+L3:
+    if 1 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    goto  L2
+L4:
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    i_0 = 0
+    goto  L2
+L2:
+    if 1 goto L3 else goto L4
+L3:
+    if 1 goto L5 else goto L6
+L5:
+    goto  L2
+L6:
+    goto  L2
+L4:
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -1217,7 +1894,7 @@ L6:
     goto  L2
 L4:
     goto  L1
-L1:                
+L1:
 """,
         result);
 
@@ -1287,17 +1964,18 @@ L4:
     ret a_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg n_0
     a_0 = 1
     b_0 = 2
-    b_1 = b_0
-    a_1 = a_0
-    n_1 = n_0
+    (%t18,%t21,%t24) = (b_0,a_0,n_0)
     goto  L2
 L2:
+    %t20 = phi(%t18, %t19)
+    %t23 = phi(%t21, %t22)
+    %t26 = phi(%t24, %t25)
+    (b_1,a_1,n_1) = (%t20,%t23,%t26)
     %t4_0 = n_1>0
     if %t4_0 goto L3 else goto L4
 L3:
@@ -1306,9 +1984,72 @@ L3:
     b_2 = t_0
     %t5_0 = n_1-1
     n_2 = %t5_0
-    b_1 = b_2
-    a_1 = a_2
-    n_1 = n_2
+    (%t19,%t22,%t25) = (b_2,a_2,n_2)
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg n_0
+    a_0 = 1
+    b_0 = 2
+    (%t18,%t21,%t24) = (b_0,a_0,n_0)
+    %t20 = %t18
+    %t23 = %t21
+    %t26 = %t24
+    goto  L2
+L2:
+    (b_1,a_1,n_1) = (%t20,%t23,%t26)
+    %t4_0 = n_1>0
+    if %t4_0 goto L3 else goto L4
+L3:
+    t_0 = a_1
+    a_2 = b_1
+    b_2 = t_0
+    %t5_0 = n_1-1
+    n_2 = %t5_0
+    (%t19,%t22,%t25) = (b_2,a_2,n_2)
+    %t20 = %t19
+    %t23 = %t22
+    %t26 = %t25
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg n_0
+    a_0 = 1
+    b_0 = 2
+    %t18 = b_0
+    %t21 = a_0
+    %t24 = n_0
+    %t20 = %t18
+    %t23 = %t21
+    %t26 = %t24
+    goto  L2
+L2:
+    b_1 = %t20
+    a_1 = %t23
+    n_1 = %t26
+    %t4_0 = n_1>0
+    if %t4_0 goto L3 else goto L4
+L3:
+    t_0 = a_1
+    a_2 = b_1
+    b_2 = t_0
+    %t5_0 = n_1-1
+    n_2 = %t5_0
+    %t19 = b_2
+    %t22 = a_2
+    %t25 = n_2
+    %t20 = %t19
+    %t23 = %t22
+    %t26 = %t25
     goto  L2
 L4:
     ret a_1
@@ -1342,6 +2083,24 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    a_0 = 5
+    b_0 = 10
+    %t3_0 = a_0+b_0
+    c_0 = %t3_0
+    ret c_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    a_0 = 5
+    b_0 = 10
+    %t3_0 = a_0+b_0
+    c_0 = %t3_0
+    ret c_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     a_0 = 5
     b_0 = 10
@@ -1386,6 +2145,22 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    a_0 = 5
+    %t1_0 = a_0+1
+    a_1 = %t1_0
+    ret a_1
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    a_0 = 5
+    %t1_0 = a_0+1
+    a_1 = %t1_0
+    ret a_1
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     a_0 = 5
     %t1_0 = a_0+1
@@ -1454,6 +2229,45 @@ L1:
 L3:
     a_1 = 20
     goto  L4
+After converting from SSA to CSSA
+L0:
+    a_0 = 5
+    %t1_0 = a_0>3
+    if %t1_0 goto L2 else goto L3
+L2:
+    a_2 = 10
+    (%t7) = (a_2)
+    goto  L4
+L4:
+    %t9 = phi(%t7, %t8)
+    (a_3) = (%t9)
+    ret a_3
+    goto  L1
+L1:
+L3:
+    a_1 = 20
+    (%t8) = (a_1)
+    goto  L4
+After removing phis from CSSA
+L0:
+    a_0 = 5
+    %t1_0 = a_0>3
+    if %t1_0 goto L2 else goto L3
+L2:
+    a_2 = 10
+    (%t7) = (a_2)
+    %t9 = %t7
+    goto  L4
+L4:
+    (a_3) = (%t9)
+    ret a_3
+    goto  L1
+L1:
+L3:
+    a_1 = 20
+    (%t8) = (a_1)
+    %t9 = %t8
+    goto  L4
 After exiting SSA
 =================
 L0:
@@ -1462,15 +2276,18 @@ L0:
     if %t1_0 goto L2 else goto L3
 L2:
     a_2 = 10
-    a_3 = a_2
+    %t7 = a_2
+    %t9 = %t7
     goto  L4
 L4:
+    a_3 = %t9
     ret a_3
     goto  L1
 L1:
 L3:
     a_1 = 20
-    a_3 = a_1
+    %t8 = a_1
+    %t9 = %t8
     goto  L4
 """, result);
     }
@@ -1522,19 +2339,61 @@ L4:
     ret a_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     a_0 = 0
-    a_1 = a_0
+    (%t8) = (a_0)
     goto  L2
 L2:
+    %t10 = phi(%t8, %t9)
+    (a_1) = (%t10)
     %t1_0 = a_1<5
     if %t1_0 goto L3 else goto L4
 L3:
     %t2_0 = a_1+1
     a_2 = %t2_0
-    a_1 = a_2
+    (%t9) = (a_2)
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    a_0 = 0
+    (%t8) = (a_0)
+    %t10 = %t8
+    goto  L2
+L2:
+    (a_1) = (%t10)
+    %t1_0 = a_1<5
+    if %t1_0 goto L3 else goto L4
+L3:
+    %t2_0 = a_1+1
+    a_2 = %t2_0
+    (%t9) = (a_2)
+    %t10 = %t9
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    a_0 = 0
+    %t8 = a_0
+    %t10 = %t8
+    goto  L2
+L2:
+    a_1 = %t10
+    %t1_0 = a_1<5
+    if %t1_0 goto L3 else goto L4
+L3:
+    %t2_0 = a_1+1
+    a_2 = %t2_0
+    %t9 = a_2
+    %t10 = %t9
     goto  L2
 L4:
     ret a_1
@@ -1616,6 +2475,72 @@ L6:
 L3:
     a_1 = 20
     goto  L4
+After converting from SSA to CSSA
+L0:
+    a_0 = 0
+    b_0 = 10
+    %t2_0 = b_0>5
+    if %t2_0 goto L2 else goto L3
+L2:
+    %t3_0 = a_0<5
+    if %t3_0 goto L5 else goto L6
+L5:
+    a_3 = 5
+    (%t16) = (a_3)
+    goto  L7
+L7:
+    %t18 = phi(%t16, %t17)
+    (a_4) = (%t18)
+    (%t13) = (a_4)
+    goto  L4
+L4:
+    %t15 = phi(%t13, %t14)
+    (a_5) = (%t15)
+    ret a_5
+    goto  L1
+L1:
+L6:
+    a_2 = 15
+    (%t17) = (a_2)
+    goto  L7
+L3:
+    a_1 = 20
+    (%t14) = (a_1)
+    goto  L4
+After removing phis from CSSA
+L0:
+    a_0 = 0
+    b_0 = 10
+    %t2_0 = b_0>5
+    if %t2_0 goto L2 else goto L3
+L2:
+    %t3_0 = a_0<5
+    if %t3_0 goto L5 else goto L6
+L5:
+    a_3 = 5
+    (%t16) = (a_3)
+    %t18 = %t16
+    goto  L7
+L7:
+    (a_4) = (%t18)
+    (%t13) = (a_4)
+    %t15 = %t13
+    goto  L4
+L4:
+    (a_5) = (%t15)
+    ret a_5
+    goto  L1
+L1:
+L6:
+    a_2 = 15
+    (%t17) = (a_2)
+    %t18 = %t17
+    goto  L7
+L3:
+    a_1 = 20
+    (%t14) = (a_1)
+    %t15 = %t14
+    goto  L4
 After exiting SSA
 =================
 L0:
@@ -1628,22 +2553,28 @@ L2:
     if %t3_0 goto L5 else goto L6
 L5:
     a_3 = 5
-    a_4 = a_3
+    %t16 = a_3
+    %t18 = %t16
     goto  L7
 L7:
-    a_5 = a_4
+    a_4 = %t18
+    %t13 = a_4
+    %t15 = %t13
     goto  L4
 L4:
+    a_5 = %t15
     ret a_5
     goto  L1
 L1:
 L6:
     a_2 = 15
-    a_4 = a_2
+    %t17 = a_2
+    %t18 = %t17
     goto  L7
 L3:
     a_1 = 20
-    a_5 = a_1
+    %t14 = a_1
+    %t15 = %t14
     goto  L4
 """, result);
     }
@@ -1676,6 +2607,30 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    %t2_0 = New([Int], len=2)
+    %t2_0[0] = 1
+    %t2_0[1] = 2
+    arr_0 = %t2_0
+    arr_0[0] = 10
+    %t3_0 = arr_0[0]
+    x_0 = %t3_0
+    ret x_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    %t2_0 = New([Int], len=2)
+    %t2_0[0] = 1
+    %t2_0[1] = 2
+    arr_0 = %t2_0
+    arr_0[0] = 10
+    %t3_0 = arr_0[0]
+    x_0 = %t3_0
+    ret x_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     %t2_0 = New([Int], len=2)
     %t2_0[0] = 1
@@ -1737,6 +2692,22 @@ L0:
     ret %t2_0
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    arg x_0
+    arg y_0
+    %t2_0 = x_0+y_0
+    ret %t2_0
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg x_0
+    arg y_0
+    %t2_0 = x_0+y_0
+    ret %t2_0
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -1761,6 +2732,28 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    a_0 = 5
+    b_0 = 10
+    %t3_0 = a_0
+    %t4_0 = b_0
+    %t5_0 = call add params %t3_0, %t4_0
+    c_0 = %t5_0
+    ret c_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    a_0 = 5
+    b_0 = 10
+    %t3_0 = a_0
+    %t4_0 = b_0
+    %t5_0 = call add params %t3_0, %t4_0
+    c_0 = %t5_0
+    ret c_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     a_0 = 5
     b_0 = 10
@@ -1860,31 +2853,107 @@ L7:
     ret %t6_0
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     a_0 = 0
     b_0 = 1
-    a_1 = a_0
+    (%t21) = (a_0)
     goto  L2
 L2:
+    %t23 = phi(%t21, %t22)
+    (a_1) = (%t23)
     %t2_0 = a_1<10
     if %t2_0 goto L3 else goto L4
 L3:
     %t3_0 = a_1+2
     a_2 = %t3_0
-    a_1 = a_2
+    (%t22) = (a_2)
     goto  L2
 L4:
-    b_1 = b_0
+    (%t18) = (b_0)
     goto  L5
 L5:
+    %t20 = phi(%t18, %t19)
+    (b_1) = (%t20)
     %t4_0 = b_1<20
     if %t4_0 goto L6 else goto L7
 L6:
     %t5_0 = b_1+3
     b_2 = %t5_0
-    b_1 = b_2
+    (%t19) = (b_2)
+    goto  L5
+L7:
+    %t6_0 = a_1+b_1
+    ret %t6_0
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    a_0 = 0
+    b_0 = 1
+    (%t21) = (a_0)
+    %t23 = %t21
+    goto  L2
+L2:
+    (a_1) = (%t23)
+    %t2_0 = a_1<10
+    if %t2_0 goto L3 else goto L4
+L3:
+    %t3_0 = a_1+2
+    a_2 = %t3_0
+    (%t22) = (a_2)
+    %t23 = %t22
+    goto  L2
+L4:
+    (%t18) = (b_0)
+    %t20 = %t18
+    goto  L5
+L5:
+    (b_1) = (%t20)
+    %t4_0 = b_1<20
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = b_1+3
+    b_2 = %t5_0
+    (%t19) = (b_2)
+    %t20 = %t19
+    goto  L5
+L7:
+    %t6_0 = a_1+b_1
+    ret %t6_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    a_0 = 0
+    b_0 = 1
+    %t21 = a_0
+    %t23 = %t21
+    goto  L2
+L2:
+    a_1 = %t23
+    %t2_0 = a_1<10
+    if %t2_0 goto L3 else goto L4
+L3:
+    %t3_0 = a_1+2
+    a_2 = %t3_0
+    %t22 = a_2
+    %t23 = %t22
+    goto  L2
+L4:
+    %t18 = b_0
+    %t20 = %t18
+    goto  L5
+L5:
+    b_1 = %t20
+    %t4_0 = b_1<20
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = b_1+3
+    b_2 = %t5_0
+    %t19 = b_2
+    %t20 = %t19
     goto  L5
 L7:
     %t6_0 = a_1+b_1
@@ -1990,26 +3059,29 @@ L4:
     ret %t10_0
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     a_0 = 0
     b_0 = 0
     i_0 = 0
     j_0 = 0
-    i_1 = i_0
-    b_1 = b_0
-    a_1 = a_0
+    (%t38,%t41,%t44) = (i_0,b_0,a_0)
     goto  L2
 L2:
+    %t40 = phi(%t38, %t39)
+    %t43 = phi(%t41, %t42)
+    %t46 = phi(%t44, %t45)
+    (i_1,b_1,a_1) = (%t40,%t43,%t46)
     %t4_0 = i_1<3
     if %t4_0 goto L3 else goto L4
 L3:
     j_1 = 0
-    i_2 = i_1
-    a_2 = a_1
+    (%t32,%t35) = (i_1,a_1)
     goto  L5
 L5:
+    %t34 = phi(%t32, %t33)
+    %t37 = phi(%t35, %t36)
+    (i_2,a_2) = (%t34,%t37)
     %t5_0 = j_1<2
     if %t5_0 goto L6 else goto L7
 L6:
@@ -2017,17 +3089,122 @@ L6:
     a_3 = %t6_0
     %t7_0 = j_1+1
     i_4 = %t7_0
-    i_2 = i_4
-    a_2 = a_3
+    (%t33,%t36) = (i_4,a_3)
     goto  L5
 L7:
     %t8_0 = b_1+1
     b_2 = %t8_0
     %t9_0 = i_2+1
     i_3 = %t9_0
-    i_1 = i_3
-    b_1 = b_2
-    a_1 = a_2
+    (%t39,%t42,%t45) = (i_3,b_2,a_2)
+    goto  L2
+L4:
+    %t10_0 = a_1+b_1
+    ret %t10_0
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    a_0 = 0
+    b_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t38,%t41,%t44) = (i_0,b_0,a_0)
+    %t40 = %t38
+    %t43 = %t41
+    %t46 = %t44
+    goto  L2
+L2:
+    (i_1,b_1,a_1) = (%t40,%t43,%t46)
+    %t4_0 = i_1<3
+    if %t4_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t32,%t35) = (i_1,a_1)
+    %t34 = %t32
+    %t37 = %t35
+    goto  L5
+L5:
+    (i_2,a_2) = (%t34,%t37)
+    %t5_0 = j_1<2
+    if %t5_0 goto L6 else goto L7
+L6:
+    %t6_0 = a_2+1
+    a_3 = %t6_0
+    %t7_0 = j_1+1
+    i_4 = %t7_0
+    (%t33,%t36) = (i_4,a_3)
+    %t34 = %t33
+    %t37 = %t36
+    goto  L5
+L7:
+    %t8_0 = b_1+1
+    b_2 = %t8_0
+    %t9_0 = i_2+1
+    i_3 = %t9_0
+    (%t39,%t42,%t45) = (i_3,b_2,a_2)
+    %t40 = %t39
+    %t43 = %t42
+    %t46 = %t45
+    goto  L2
+L4:
+    %t10_0 = a_1+b_1
+    ret %t10_0
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    a_0 = 0
+    b_0 = 0
+    i_0 = 0
+    j_0 = 0
+    %t38 = i_0
+    %t41 = b_0
+    %t44 = a_0
+    %t40 = %t38
+    %t43 = %t41
+    %t46 = %t44
+    goto  L2
+L2:
+    i_1 = %t40
+    b_1 = %t43
+    a_1 = %t46
+    %t4_0 = i_1<3
+    if %t4_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    %t32 = i_1
+    %t35 = a_1
+    %t34 = %t32
+    %t37 = %t35
+    goto  L5
+L5:
+    i_2 = %t34
+    a_2 = %t37
+    %t5_0 = j_1<2
+    if %t5_0 goto L6 else goto L7
+L6:
+    %t6_0 = a_2+1
+    a_3 = %t6_0
+    %t7_0 = j_1+1
+    i_4 = %t7_0
+    %t33 = i_4
+    %t36 = a_3
+    %t34 = %t33
+    %t37 = %t36
+    goto  L5
+L7:
+    %t8_0 = b_1+1
+    b_2 = %t8_0
+    %t9_0 = i_2+1
+    i_3 = %t9_0
+    %t39 = i_3
+    %t42 = b_2
+    %t45 = a_2
+    %t40 = %t39
+    %t43 = %t42
+    %t46 = %t45
     goto  L2
 L4:
     %t10_0 = a_1+b_1
@@ -2136,47 +3313,165 @@ L4:
     ret sum_1
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    sum_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t38,%t41) = (i_0,sum_0)
+    goto  L2
+L2:
+    %t40 = phi(%t38, %t39)
+    %t43 = phi(%t41, %t42)
+    (i_1,sum_1) = (%t40,%t43)
+    %t3_0 = i_1<5
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t32,%t35) = (j_1,sum_1)
+    goto  L5
+L5:
+    %t34 = phi(%t32, %t33)
+    %t37 = phi(%t35, %t36)
+    (j_2,sum_2) = (%t34,%t37)
+    %t4_0 = j_2<5
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = j_2%2
+    %t6_0 = %t5_0==0
+    (%t29) = (sum_2)
+    if %t6_0 goto L8 else goto L9
+L8:
+    %t7_0 = sum_2+j_2
+    sum_3 = %t7_0
+    (%t30) = (sum_3)
+    goto  L9
+L9:
+    %t31 = phi(%t29, %t30)
+    (sum_4) = (%t31)
+    %t8_0 = j_2+1
+    j_3 = %t8_0
+    (%t33,%t36) = (j_3,sum_4)
+    goto  L5
+L7:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    (%t39,%t42) = (i_2,sum_2)
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    sum_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t38,%t41) = (i_0,sum_0)
+    %t40 = %t38
+    %t43 = %t41
+    goto  L2
+L2:
+    (i_1,sum_1) = (%t40,%t43)
+    %t3_0 = i_1<5
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t32,%t35) = (j_1,sum_1)
+    %t34 = %t32
+    %t37 = %t35
+    goto  L5
+L5:
+    (j_2,sum_2) = (%t34,%t37)
+    %t4_0 = j_2<5
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = j_2%2
+    %t6_0 = %t5_0==0
+    (%t29) = (sum_2)
+    %t31 = %t29
+    if %t6_0 goto L8 else goto L9
+L8:
+    %t7_0 = sum_2+j_2
+    sum_3 = %t7_0
+    (%t30) = (sum_3)
+    %t31 = %t30
+    goto  L9
+L9:
+    (sum_4) = (%t31)
+    %t8_0 = j_2+1
+    j_3 = %t8_0
+    (%t33,%t36) = (j_3,sum_4)
+    %t34 = %t33
+    %t37 = %t36
+    goto  L5
+L7:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    (%t39,%t42) = (i_2,sum_2)
+    %t40 = %t39
+    %t43 = %t42
+    goto  L2
+L4:
+    ret sum_1
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
     sum_0 = 0
     i_0 = 0
     j_0 = 0
-    i_1 = i_0
-    sum_1 = sum_0
+    %t38 = i_0
+    %t41 = sum_0
+    %t40 = %t38
+    %t43 = %t41
     goto  L2
 L2:
+    i_1 = %t40
+    sum_1 = %t43
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
     j_1 = 0
-    j_2 = j_1
-    sum_2 = sum_1
+    %t32 = j_1
+    %t35 = sum_1
+    %t34 = %t32
+    %t37 = %t35
     goto  L5
 L5:
+    j_2 = %t34
+    sum_2 = %t37
     %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
     %t5_0 = j_2%2
     %t6_0 = %t5_0==0
-    sum_4 = sum_2
+    %t29 = sum_2
+    %t31 = %t29
     if %t6_0 goto L8 else goto L9
 L8:
     %t7_0 = sum_2+j_2
     sum_3 = %t7_0
-    sum_4 = sum_3
+    %t30 = sum_3
+    %t31 = %t30
     goto  L9
 L9:
+    sum_4 = %t31
     %t8_0 = j_2+1
     j_3 = %t8_0
-    j_2 = j_3
-    sum_2 = sum_4
+    %t33 = j_3
+    %t36 = sum_4
+    %t34 = %t33
+    %t37 = %t36
     goto  L5
 L7:
     %t9_0 = i_1+1
     i_2 = %t9_0
-    i_1 = i_2
-    sum_1 = sum_2
+    %t39 = i_2
+    %t42 = sum_2
+    %t40 = %t39
+    %t43 = %t42
     goto  L2
 L4:
     ret sum_1
@@ -2305,24 +3600,27 @@ L4:
     ret a_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     a_0 = 0
     i_0 = 0
     j_0 = 0
-    i_1 = i_0
-    a_1 = a_0
+    (%t47,%t50) = (i_0,a_0)
     goto  L2
 L2:
+    %t49 = phi(%t47, %t48)
+    %t52 = phi(%t50, %t51)
+    (i_1,a_1) = (%t49,%t52)
     %t3_0 = i_1<3
     if %t3_0 goto L3 else goto L4
 L3:
     j_1 = 0
-    j_2 = j_1
-    a_2 = a_1
+    (%t41,%t44) = (j_1,a_1)
     goto  L5
 L5:
+    %t43 = phi(%t41, %t42)
+    %t46 = phi(%t44, %t45)
+    (j_2,a_2) = (%t43,%t46)
     %t4_0 = j_2<3
     if %t4_0 goto L6 else goto L7
 L6:
@@ -2332,31 +3630,176 @@ L8:
     %t6_0 = a_2+i_1
     %t7_0 = %t6_0+j_2
     a_5 = %t7_0
-    a_6 = a_5
+    (%t35) = (a_5)
     goto  L10
 L10:
+    %t37 = phi(%t35, %t36)
+    (a_6) = (%t37)
     %t10_0 = j_2+1
     j_3 = %t10_0
-    j_2 = j_3
-    a_2 = a_6
+    (%t42,%t45) = (j_3,a_6)
     goto  L5
 L9:
     %t8_0 = i_1>j_2
-    a_4 = a_2
+    (%t38) = (a_2)
     if %t8_0 goto L11 else goto L12
 L11:
     %t9_0 = a_2-1
     a_3 = %t9_0
-    a_4 = a_3
+    (%t39) = (a_3)
     goto  L12
 L12:
-    a_6 = a_4
+    %t40 = phi(%t38, %t39)
+    (a_4) = (%t40)
+    (%t36) = (a_4)
     goto  L10
 L7:
     %t11_0 = i_1+1
     i_2 = %t11_0
-    i_1 = i_2
-    a_1 = a_2
+    (%t48,%t51) = (i_2,a_2)
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    a_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t47,%t50) = (i_0,a_0)
+    %t49 = %t47
+    %t52 = %t50
+    goto  L2
+L2:
+    (i_1,a_1) = (%t49,%t52)
+    %t3_0 = i_1<3
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t41,%t44) = (j_1,a_1)
+    %t43 = %t41
+    %t46 = %t44
+    goto  L5
+L5:
+    (j_2,a_2) = (%t43,%t46)
+    %t4_0 = j_2<3
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = i_1==j_2
+    if %t5_0 goto L8 else goto L9
+L8:
+    %t6_0 = a_2+i_1
+    %t7_0 = %t6_0+j_2
+    a_5 = %t7_0
+    (%t35) = (a_5)
+    %t37 = %t35
+    goto  L10
+L10:
+    (a_6) = (%t37)
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    (%t42,%t45) = (j_3,a_6)
+    %t43 = %t42
+    %t46 = %t45
+    goto  L5
+L9:
+    %t8_0 = i_1>j_2
+    (%t38) = (a_2)
+    %t40 = %t38
+    if %t8_0 goto L11 else goto L12
+L11:
+    %t9_0 = a_2-1
+    a_3 = %t9_0
+    (%t39) = (a_3)
+    %t40 = %t39
+    goto  L12
+L12:
+    (a_4) = (%t40)
+    (%t36) = (a_4)
+    %t37 = %t36
+    goto  L10
+L7:
+    %t11_0 = i_1+1
+    i_2 = %t11_0
+    (%t48,%t51) = (i_2,a_2)
+    %t49 = %t48
+    %t52 = %t51
+    goto  L2
+L4:
+    ret a_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    a_0 = 0
+    i_0 = 0
+    j_0 = 0
+    %t47 = i_0
+    %t50 = a_0
+    %t49 = %t47
+    %t52 = %t50
+    goto  L2
+L2:
+    i_1 = %t49
+    a_1 = %t52
+    %t3_0 = i_1<3
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    %t41 = j_1
+    %t44 = a_1
+    %t43 = %t41
+    %t46 = %t44
+    goto  L5
+L5:
+    j_2 = %t43
+    a_2 = %t46
+    %t4_0 = j_2<3
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = i_1==j_2
+    if %t5_0 goto L8 else goto L9
+L8:
+    %t6_0 = a_2+i_1
+    %t7_0 = %t6_0+j_2
+    a_5 = %t7_0
+    %t35 = a_5
+    %t37 = %t35
+    goto  L10
+L10:
+    a_6 = %t37
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    %t42 = j_3
+    %t45 = a_6
+    %t43 = %t42
+    %t46 = %t45
+    goto  L5
+L9:
+    %t8_0 = i_1>j_2
+    %t38 = a_2
+    %t40 = %t38
+    if %t8_0 goto L11 else goto L12
+L11:
+    %t9_0 = a_2-1
+    a_3 = %t9_0
+    %t39 = a_3
+    %t40 = %t39
+    goto  L12
+L12:
+    a_4 = %t40
+    %t36 = a_4
+    %t37 = %t36
+    goto  L10
+L7:
+    %t11_0 = i_1+1
+    i_2 = %t11_0
+    %t48 = i_2
+    %t51 = a_2
+    %t49 = %t48
+    %t52 = %t51
     goto  L2
 L4:
     ret a_1
@@ -2482,25 +3925,27 @@ L4:
     ret count_1
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     count_0 = 0
     i_0 = 0
     j_0 = 0
-    i_1 = i_0
-    count_1 = count_0
+    (%t41,%t44) = (i_0,count_0)
     goto  L2
 L2:
+    %t43 = phi(%t41, %t42)
+    %t46 = phi(%t44, %t45)
+    (i_1,count_1) = (%t43,%t46)
     %t3_0 = i_1<5
     if %t3_0 goto L3 else goto L4
 L3:
     j_1 = 0
-    j_2 = j_1
-    count_2 = count_1
+    (%t33,%t37) = (j_1,count_1)
     goto  L5
 L5:
-    count_2_34 = count_2
+    %t36 = phi(%t33, %t34, %t35)
+    %t40 = phi(%t37, %t38, %t39)
+    (j_2,count_2) = (%t36,%t40)
     %t4_0 = j_2<5
     if %t4_0 goto L6 else goto L7
 L6:
@@ -2512,8 +3957,7 @@ L8:
 L7:
     %t11_0 = i_1+1
     i_2 = %t11_0
-    i_1 = i_2
-    count_1 = count_2
+    (%t42,%t45) = (i_2,count_2)
     goto  L2
 L9:
     %t7_0 = i_1==j_2
@@ -2521,17 +3965,140 @@ L9:
 L10:
     %t8_0 = j_2+1
     j_4 = %t8_0
-    j_2 = j_4
-    count_2_33 = count_2
-    count_2 = count_2_33
+    (%t34,%t38) = (j_4,count_2)
     goto  L5
 L11:
     %t9_0 = count_2+1
     count_3 = %t9_0
     %t10_0 = j_2+1
     j_3 = %t10_0
-    j_2 = j_3
-    count_2 = count_3
+    (%t35,%t39) = (j_3,count_3)
+    goto  L5
+L4:
+    ret count_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    count_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t41,%t44) = (i_0,count_0)
+    %t43 = %t41
+    %t46 = %t44
+    goto  L2
+L2:
+    (i_1,count_1) = (%t43,%t46)
+    %t3_0 = i_1<5
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t33,%t37) = (j_1,count_1)
+    %t36 = %t33
+    %t40 = %t37
+    goto  L5
+L5:
+    (j_2,count_2) = (%t36,%t40)
+    %t4_0 = j_2<5
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = i_1+j_2
+    %t6_0 = %t5_0>5
+    if %t6_0 goto L8 else goto L9
+L8:
+    goto  L7
+L7:
+    %t11_0 = i_1+1
+    i_2 = %t11_0
+    (%t42,%t45) = (i_2,count_2)
+    %t43 = %t42
+    %t46 = %t45
+    goto  L2
+L9:
+    %t7_0 = i_1==j_2
+    if %t7_0 goto L10 else goto L11
+L10:
+    %t8_0 = j_2+1
+    j_4 = %t8_0
+    (%t34,%t38) = (j_4,count_2)
+    %t36 = %t34
+    %t40 = %t38
+    goto  L5
+L11:
+    %t9_0 = count_2+1
+    count_3 = %t9_0
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    (%t35,%t39) = (j_3,count_3)
+    %t36 = %t35
+    %t40 = %t39
+    goto  L5
+L4:
+    ret count_1
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    count_0 = 0
+    i_0 = 0
+    j_0 = 0
+    %t41 = i_0
+    %t44 = count_0
+    %t43 = %t41
+    %t46 = %t44
+    goto  L2
+L2:
+    i_1 = %t43
+    count_1 = %t46
+    %t3_0 = i_1<5
+    if %t3_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    %t33 = j_1
+    %t37 = count_1
+    %t36 = %t33
+    %t40 = %t37
+    goto  L5
+L5:
+    j_2 = %t36
+    count_2 = %t40
+    %t4_0 = j_2<5
+    if %t4_0 goto L6 else goto L7
+L6:
+    %t5_0 = i_1+j_2
+    %t6_0 = %t5_0>5
+    if %t6_0 goto L8 else goto L9
+L8:
+    goto  L7
+L7:
+    %t11_0 = i_1+1
+    i_2 = %t11_0
+    %t42 = i_2
+    %t45 = count_2
+    %t43 = %t42
+    %t46 = %t45
+    goto  L2
+L9:
+    %t7_0 = i_1==j_2
+    if %t7_0 goto L10 else goto L11
+L10:
+    %t8_0 = j_2+1
+    j_4 = %t8_0
+    %t34 = j_4
+    %t38 = count_2
+    %t36 = %t34
+    %t40 = %t38
+    goto  L5
+L11:
+    %t9_0 = count_2+1
+    count_3 = %t9_0
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    %t35 = j_3
+    %t39 = count_3
+    %t36 = %t35
+    %t40 = %t39
     goto  L5
 L4:
     ret count_1
@@ -2650,6 +4217,120 @@ L4:
     ret outerSum_1
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    outerSum_0 = 0
+    innerSum_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t46,%t49,%t52) = (i_0,innerSum_0,outerSum_0)
+    goto  L2
+L2:
+    %t48 = phi(%t46, %t47)
+    %t51 = phi(%t49, %t50)
+    %t54 = phi(%t52, %t53)
+    (i_1,innerSum_1,outerSum_1) = (%t48,%t51,%t54)
+    %t4_0 = i_1<4
+    if %t4_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t40,%t43) = (j_1,innerSum_1)
+    goto  L5
+L5:
+    %t42 = phi(%t40, %t41)
+    %t45 = phi(%t43, %t44)
+    (j_2,innerSum_2) = (%t42,%t45)
+    %t5_0 = j_2<4
+    if %t5_0 goto L6 else goto L7
+L6:
+    %t6_0 = i_1+j_2
+    %t7_0 = %t6_0%2
+    %t8_0 = %t7_0==0
+    (%t37) = (innerSum_2)
+    if %t8_0 goto L8 else goto L9
+L8:
+    %t9_0 = innerSum_2+j_2
+    innerSum_3 = %t9_0
+    (%t38) = (innerSum_3)
+    goto  L9
+L9:
+    %t39 = phi(%t37, %t38)
+    (innerSum_4) = (%t39)
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    (%t41,%t44) = (j_3,innerSum_4)
+    goto  L5
+L7:
+    %t11_0 = outerSum_1+innerSum_2
+    outerSum_2 = %t11_0
+    %t12_0 = i_1+1
+    i_2 = %t12_0
+    (%t47,%t50,%t53) = (i_2,innerSum_2,outerSum_2)
+    goto  L2
+L4:
+    ret outerSum_1
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    outerSum_0 = 0
+    innerSum_0 = 0
+    i_0 = 0
+    j_0 = 0
+    (%t46,%t49,%t52) = (i_0,innerSum_0,outerSum_0)
+    %t48 = %t46
+    %t51 = %t49
+    %t54 = %t52
+    goto  L2
+L2:
+    (i_1,innerSum_1,outerSum_1) = (%t48,%t51,%t54)
+    %t4_0 = i_1<4
+    if %t4_0 goto L3 else goto L4
+L3:
+    j_1 = 0
+    (%t40,%t43) = (j_1,innerSum_1)
+    %t42 = %t40
+    %t45 = %t43
+    goto  L5
+L5:
+    (j_2,innerSum_2) = (%t42,%t45)
+    %t5_0 = j_2<4
+    if %t5_0 goto L6 else goto L7
+L6:
+    %t6_0 = i_1+j_2
+    %t7_0 = %t6_0%2
+    %t8_0 = %t7_0==0
+    (%t37) = (innerSum_2)
+    %t39 = %t37
+    if %t8_0 goto L8 else goto L9
+L8:
+    %t9_0 = innerSum_2+j_2
+    innerSum_3 = %t9_0
+    (%t38) = (innerSum_3)
+    %t39 = %t38
+    goto  L9
+L9:
+    (innerSum_4) = (%t39)
+    %t10_0 = j_2+1
+    j_3 = %t10_0
+    (%t41,%t44) = (j_3,innerSum_4)
+    %t42 = %t41
+    %t45 = %t44
+    goto  L5
+L7:
+    %t11_0 = outerSum_1+innerSum_2
+    outerSum_2 = %t11_0
+    %t12_0 = i_1+1
+    i_2 = %t12_0
+    (%t47,%t50,%t53) = (i_2,innerSum_2,outerSum_2)
+    %t48 = %t47
+    %t51 = %t50
+    %t54 = %t53
+    goto  L2
+L4:
+    ret outerSum_1
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -2657,46 +4338,64 @@ L0:
     innerSum_0 = 0
     i_0 = 0
     j_0 = 0
-    i_1 = i_0
-    innerSum_1 = innerSum_0
-    outerSum_1 = outerSum_0
+    %t46 = i_0
+    %t49 = innerSum_0
+    %t52 = outerSum_0
+    %t48 = %t46
+    %t51 = %t49
+    %t54 = %t52
     goto  L2
 L2:
+    i_1 = %t48
+    innerSum_1 = %t51
+    outerSum_1 = %t54
     %t4_0 = i_1<4
     if %t4_0 goto L3 else goto L4
 L3:
     j_1 = 0
-    j_2 = j_1
-    innerSum_2 = innerSum_1
+    %t40 = j_1
+    %t43 = innerSum_1
+    %t42 = %t40
+    %t45 = %t43
     goto  L5
 L5:
+    j_2 = %t42
+    innerSum_2 = %t45
     %t5_0 = j_2<4
     if %t5_0 goto L6 else goto L7
 L6:
     %t6_0 = i_1+j_2
     %t7_0 = %t6_0%2
     %t8_0 = %t7_0==0
-    innerSum_4 = innerSum_2
+    %t37 = innerSum_2
+    %t39 = %t37
     if %t8_0 goto L8 else goto L9
 L8:
     %t9_0 = innerSum_2+j_2
     innerSum_3 = %t9_0
-    innerSum_4 = innerSum_3
+    %t38 = innerSum_3
+    %t39 = %t38
     goto  L9
 L9:
+    innerSum_4 = %t39
     %t10_0 = j_2+1
     j_3 = %t10_0
-    j_2 = j_3
-    innerSum_2 = innerSum_4
+    %t41 = j_3
+    %t44 = innerSum_4
+    %t42 = %t41
+    %t45 = %t44
     goto  L5
 L7:
     %t11_0 = outerSum_1+innerSum_2
     outerSum_2 = %t11_0
     %t12_0 = i_1+1
     i_2 = %t12_0
-    i_1 = i_2
-    innerSum_1 = innerSum_2
-    outerSum_1 = outerSum_2
+    %t47 = i_2
+    %t50 = innerSum_2
+    %t53 = outerSum_2
+    %t48 = %t47
+    %t51 = %t50
+    %t54 = %t53
     goto  L2
 L4:
     ret outerSum_1
@@ -2745,21 +4444,59 @@ L1:
 L3:
     %t0_0 = 0
     goto  L4
+After converting from SSA to CSSA
+L0:
+    if 1 goto L2 else goto L3
+L2:
+    %t0_1 = 2
+    (%t4) = (%t0_1)
+    goto  L4
+L4:
+    %t6 = phi(%t4, %t5)
+    (%t0_2) = (%t6)
+    ret %t0_2
+    goto  L1
+L1:
+L3:
+    %t0_0 = 0
+    (%t5) = (%t0_0)
+    goto  L4
+After removing phis from CSSA
+L0:
+    if 1 goto L2 else goto L3
+L2:
+    %t0_1 = 2
+    (%t4) = (%t0_1)
+    %t6 = %t4
+    goto  L4
+L4:
+    (%t0_2) = (%t6)
+    ret %t0_2
+    goto  L1
+L1:
+L3:
+    %t0_0 = 0
+    (%t5) = (%t0_0)
+    %t6 = %t5
+    goto  L4
 After exiting SSA
 =================
 L0:
     if 1 goto L2 else goto L3
 L2:
     %t0_1 = 2
-    %t0_2 = %t0_1
+    %t4 = %t0_1
+    %t6 = %t4
     goto  L4
 L4:
+    %t0_2 = %t6
     ret %t0_2
     goto  L1
 L1:
 L3:
     %t0_0 = 0
-    %t0_2 = %t0_0
+    %t5 = %t0_0
+    %t6 = %t5
     goto  L4
 """, result);
     }
@@ -2829,6 +4566,61 @@ L1:
 L3:
     %t7_0 = 0
     goto  L4
+After converting from SSA to CSSA
+L0:
+    %t1_0 = New([Foo?], len=2)
+    %t2_0 = New(Foo)
+    %t2_0.i = 1
+    %t1_0[0] = %t2_0
+    %t1_0[1] = null
+    f_0 = %t1_0
+    %t3_0 = f_0[1]
+    %t4_0 = null==%t3_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = f_0[0]
+    %t6_0 = %t5_0.i
+    %t7_1 = 1==%t6_0
+    (%t18) = (%t7_1)
+    goto  L4
+L4:
+    %t20 = phi(%t18, %t19)
+    (%t7_2) = (%t20)
+    ret %t7_2
+    goto  L1
+L1:
+L3:
+    %t7_0 = 0
+    (%t19) = (%t7_0)
+    goto  L4
+After removing phis from CSSA
+L0:
+    %t1_0 = New([Foo?], len=2)
+    %t2_0 = New(Foo)
+    %t2_0.i = 1
+    %t1_0[0] = %t2_0
+    %t1_0[1] = null
+    f_0 = %t1_0
+    %t3_0 = f_0[1]
+    %t4_0 = null==%t3_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = f_0[0]
+    %t6_0 = %t5_0.i
+    %t7_1 = 1==%t6_0
+    (%t18) = (%t7_1)
+    %t20 = %t18
+    goto  L4
+L4:
+    (%t7_2) = (%t20)
+    ret %t7_2
+    goto  L1
+L1:
+L3:
+    %t7_0 = 0
+    (%t19) = (%t7_0)
+    %t20 = %t19
+    goto  L4
 After exiting SSA
 =================
 L0:
@@ -2845,15 +4637,18 @@ L2:
     %t5_0 = f_0[0]
     %t6_0 = %t5_0.i
     %t7_1 = 1==%t6_0
-    %t7_2 = %t7_1
+    %t18 = %t7_1
+    %t20 = %t18
     goto  L4
 L4:
+    %t7_2 = %t20
     ret %t7_2
     goto  L1
 L1:
 L3:
     %t7_0 = 0
-    %t7_2 = %t7_0
+    %t19 = %t7_0
+    %t20 = %t19
     goto  L4
 """, result);
     }
@@ -2941,6 +4736,82 @@ L9:
 L3:
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    arg begin_0
+    arg middle_0
+    arg end_0
+    %t4_0 = begin_0<end_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    cond_0 = 0
+    %t5_0 = begin_0<middle_0
+    (%t18) = (cond_0)
+    if %t5_0 goto L4 else goto L5
+L4:
+    %t6_0 = begin_0>=end_0
+    (%t21) = (cond_0)
+    if %t6_0 goto L6 else goto L7
+L6:
+    cond_1 = 1
+    (%t22) = (cond_1)
+    goto  L7
+L7:
+    %t23 = phi(%t21, %t22)
+    (cond_2) = (%t23)
+    (%t19) = (cond_2)
+    goto  L5
+L5:
+    %t20 = phi(%t18, %t19)
+    (cond_3) = (%t20)
+    if cond_3 goto L8 else goto L9
+L8:
+    cond_4 = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg begin_0
+    arg middle_0
+    arg end_0
+    %t4_0 = begin_0<end_0
+    if %t4_0 goto L2 else goto L3
+L2:
+    cond_0 = 0
+    %t5_0 = begin_0<middle_0
+    (%t18) = (cond_0)
+    %t20 = %t18
+    if %t5_0 goto L4 else goto L5
+L4:
+    %t6_0 = begin_0>=end_0
+    (%t21) = (cond_0)
+    %t23 = %t21
+    if %t6_0 goto L6 else goto L7
+L6:
+    cond_1 = 1
+    (%t22) = (cond_1)
+    %t23 = %t22
+    goto  L7
+L7:
+    (cond_2) = (%t23)
+    (%t19) = (cond_2)
+    %t20 = %t19
+    goto  L5
+L5:
+    (cond_3) = (%t20)
+    if cond_3 goto L8 else goto L9
+L8:
+    cond_4 = 0
+    goto  L9
+L9:
+    goto  L3
+L3:
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -2952,20 +4823,26 @@ L0:
 L2:
     cond_0 = 0
     %t5_0 = begin_0<middle_0
-    cond_3 = cond_0
+    %t18 = cond_0
+    %t20 = %t18
     if %t5_0 goto L4 else goto L5
 L4:
     %t6_0 = begin_0>=end_0
-    cond_2 = cond_0
+    %t21 = cond_0
+    %t23 = %t21
     if %t6_0 goto L6 else goto L7
 L6:
     cond_1 = 1
-    cond_2 = cond_1
+    %t22 = cond_1
+    %t23 = %t22
     goto  L7
 L7:
-    cond_3 = cond_2
+    cond_2 = %t23
+    %t19 = cond_2
+    %t20 = %t19
     goto  L5
 L5:
+    cond_3 = %t20
     if cond_3 goto L8 else goto L9
 L8:
     cond_4 = 0
@@ -3035,6 +4912,56 @@ L3:
     ret %t7_0
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    (%t20,%t23) = (val_0,len_0)
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    (%t21,%t24) = (val_1,len_1)
+    goto  L3
+L3:
+    %t22 = phi(%t20, %t21)
+    %t25 = phi(%t23, %t24)
+    (val_2,len_2) = (%t22,%t25)
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg len_0
+    arg val_0
+    arg x_0
+    arg y_0
+    %t4_0 = x_0>y_0
+    (%t20,%t23) = (val_0,len_0)
+    %t22 = %t20
+    %t25 = %t23
+    if %t4_0 goto L2 else goto L3
+L2:
+    %t5_0 = len_0+x_0
+    len_1 = %t5_0
+    %t6_0 = val_0+x_0
+    val_1 = %t6_0
+    (%t21,%t24) = (val_1,len_1)
+    %t22 = %t21
+    %t25 = %t24
+    goto  L3
+L3:
+    (val_2,len_2) = (%t22,%t25)
+    %t7_0 = New([Int], len=len_2, initValue=val_2)
+    ret %t7_0
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -3043,18 +4970,24 @@ L0:
     arg x_0
     arg y_0
     %t4_0 = x_0>y_0
-    val_2 = val_0
-    len_2 = len_0
+    %t20 = val_0
+    %t23 = len_0
+    %t22 = %t20
+    %t25 = %t23
     if %t4_0 goto L2 else goto L3
 L2:
     %t5_0 = len_0+x_0
     len_1 = %t5_0
     %t6_0 = val_0+x_0
     val_1 = %t6_0
-    val_2 = val_1
-    len_2 = len_1
+    %t21 = val_1
+    %t24 = len_1
+    %t22 = %t21
+    %t25 = %t24
     goto  L3
 L3:
+    val_2 = %t22
+    len_2 = %t25
     %t7_0 = New([Int], len=len_2, initValue=val_2)
     ret %t7_0
     goto  L1
@@ -3143,37 +5076,129 @@ L8:
 L9:
     goto  L1
 L1:
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg N_0
     p_0 = 2
-    p_1 = p_0
+    (%t23) = (p_0)
     goto  L2
 L2:
+    %t25 = phi(%t23, %t24)
+    (p_1) = (%t25)
     %t2_0 = p_1<N_0
     if %t2_0 goto L3 else goto L4
 L3:
-    p_5 = p_1
-    if p_5 goto L5 else goto L6
+    (%t17) = (p_1)
+    if p_1 goto L5 else goto L6
 L5:
     %t3_0 = p_1+1
     p_4 = %t3_0
-    p_5 = p_4
+    (%t18) = (p_4)
     goto  L6
 L6:
-    p_1 = p_5
+    %t19 = phi(%t17, %t18)
+    (p_5) = (%t19)
+    (%t24) = (p_5)
     goto  L2
 L4:
-    p_2 = p_1
+    (%t20) = (p_1)
     goto  L7
 L7:
+    %t22 = phi(%t20, %t21)
+    (p_2) = (%t22)
     %t4_0 = p_2<N_0
     if %t4_0 goto L8 else goto L9
 L8:
     %t5_0 = p_2+1
     p_3 = %t5_0
-    p_2 = p_3
+    (%t21) = (p_3)
+    goto  L7
+L9:
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg N_0
+    p_0 = 2
+    (%t23) = (p_0)
+    %t25 = %t23
+    goto  L2
+L2:
+    (p_1) = (%t25)
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    (%t17) = (p_1)
+    %t19 = %t17
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    (%t18) = (p_4)
+    %t19 = %t18
+    goto  L6
+L6:
+    (p_5) = (%t19)
+    (%t24) = (p_5)
+    %t25 = %t24
+    goto  L2
+L4:
+    (%t20) = (p_1)
+    %t22 = %t20
+    goto  L7
+L7:
+    (p_2) = (%t22)
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    (%t21) = (p_3)
+    %t22 = %t21
+    goto  L7
+L9:
+    goto  L1
+L1:
+After exiting SSA
+=================
+L0:
+    arg N_0
+    p_0 = 2
+    %t23 = p_0
+    %t25 = %t23
+    goto  L2
+L2:
+    p_1 = %t25
+    %t2_0 = p_1<N_0
+    if %t2_0 goto L3 else goto L4
+L3:
+    %t17 = p_1
+    %t19 = %t17
+    if p_1 goto L5 else goto L6
+L5:
+    %t3_0 = p_1+1
+    p_4 = %t3_0
+    %t18 = p_4
+    %t19 = %t18
+    goto  L6
+L6:
+    p_5 = %t19
+    %t24 = p_5
+    %t25 = %t24
+    goto  L2
+L4:
+    %t20 = p_1
+    %t22 = %t20
+    goto  L7
+L7:
+    p_2 = %t22
+    %t4_0 = p_2<N_0
+    if %t4_0 goto L8 else goto L9
+L8:
+    %t5_0 = p_2+1
+    p_3 = %t5_0
+    %t21 = p_3
+    %t22 = %t21
     goto  L7
 L9:
     goto  L1
@@ -3424,6 +5449,224 @@ L18:
     ret rez_0
     goto  L1
 L1:
+After converting from SSA to CSSA
+L0:
+    arg N_0
+    %t8_0 = New([Int], len=N_0, initValue=0)
+    ary_0 = %t8_0
+    %t10_0 = N_0/2
+    %t9_0 = New([Int], len=%t10_0, initValue=0)
+    primes_0 = %t9_0
+    nprimes_0 = 0
+    p_0 = 2
+    (%t91,%t94) = (p_0,nprimes_0)
+    goto  L2
+L2:
+    %t93 = phi(%t91, %t92)
+    %t96 = phi(%t94, %t95)
+    (p_1,nprimes_1) = (%t93,%t96)
+    %t11_0 = p_1*p_1
+    %t12_0 = %t11_0<N_0
+    if %t12_0 goto L3 else goto L4
+L3:
+    (%t76) = (p_1)
+    goto  L5
+L5:
+    %t78 = phi(%t76, %t77)
+    (p_4) = (%t78)
+    %t13_0 = ary_0[p_4]
+    if %t13_0 goto L6 else goto L7
+L6:
+    %t14_0 = p_4+1
+    p_6 = %t14_0
+    (%t77) = (p_6)
+    goto  L5
+L7:
+    primes_0[nprimes_1] = p_4
+    %t15_0 = nprimes_1+1
+    nprimes_5 = %t15_0
+    %t16_0 = p_4+p_4
+    i_0 = %t16_0
+    (%t73) = (i_0)
+    goto  L8
+L8:
+    %t75 = phi(%t73, %t74)
+    (i_1) = (%t75)
+    %t17_0 = i_1<N_0
+    if %t17_0 goto L9 else goto L10
+L9:
+    ary_0[i_1] = 1
+    %t18_0 = i_1+p_4
+    i_2 = %t18_0
+    (%t74) = (i_2)
+    goto  L8
+L10:
+    %t19_0 = p_4+1
+    p_5 = %t19_0
+    (%t92,%t95) = (p_5,nprimes_5)
+    goto  L2
+L4:
+    (%t85,%t88) = (p_1,nprimes_1)
+    goto  L11
+L11:
+    %t87 = phi(%t85, %t86)
+    %t90 = phi(%t88, %t89)
+    (p_2,nprimes_2) = (%t87,%t90)
+    %t20_0 = p_2<N_0
+    if %t20_0 goto L12 else goto L13
+L12:
+    %t21_0 = ary_0[p_2]
+    %t22_0 = !%t21_0
+    (%t79) = (nprimes_2)
+    if %t22_0 goto L14 else goto L15
+L14:
+    primes_0[nprimes_2] = p_2
+    %t23_0 = nprimes_2+1
+    nprimes_3 = %t23_0
+    (%t80) = (nprimes_3)
+    goto  L15
+L15:
+    %t81 = phi(%t79, %t80)
+    (nprimes_4) = (%t81)
+    %t24_0 = p_2+1
+    p_3 = %t24_0
+    (%t86,%t89) = (p_3,nprimes_4)
+    goto  L11
+L13:
+    %t25_0 = New([Int], len=nprimes_2, initValue=0)
+    rez_0 = %t25_0
+    j_0 = 0
+    (%t82) = (j_0)
+    goto  L16
+L16:
+    %t84 = phi(%t82, %t83)
+    (j_1) = (%t84)
+    %t26_0 = j_1<nprimes_2
+    if %t26_0 goto L17 else goto L18
+L17:
+    %t27_0 = primes_0[j_1]
+    rez_0[j_1] = %t27_0
+    %t28_0 = j_1+1
+    j_2 = %t28_0
+    (%t83) = (j_2)
+    goto  L16
+L18:
+    ret rez_0
+    goto  L1
+L1:
+After removing phis from CSSA
+L0:
+    arg N_0
+    %t8_0 = New([Int], len=N_0, initValue=0)
+    ary_0 = %t8_0
+    %t10_0 = N_0/2
+    %t9_0 = New([Int], len=%t10_0, initValue=0)
+    primes_0 = %t9_0
+    nprimes_0 = 0
+    p_0 = 2
+    (%t91,%t94) = (p_0,nprimes_0)
+    %t93 = %t91
+    %t96 = %t94
+    goto  L2
+L2:
+    (p_1,nprimes_1) = (%t93,%t96)
+    %t11_0 = p_1*p_1
+    %t12_0 = %t11_0<N_0
+    if %t12_0 goto L3 else goto L4
+L3:
+    (%t76) = (p_1)
+    %t78 = %t76
+    goto  L5
+L5:
+    (p_4) = (%t78)
+    %t13_0 = ary_0[p_4]
+    if %t13_0 goto L6 else goto L7
+L6:
+    %t14_0 = p_4+1
+    p_6 = %t14_0
+    (%t77) = (p_6)
+    %t78 = %t77
+    goto  L5
+L7:
+    primes_0[nprimes_1] = p_4
+    %t15_0 = nprimes_1+1
+    nprimes_5 = %t15_0
+    %t16_0 = p_4+p_4
+    i_0 = %t16_0
+    (%t73) = (i_0)
+    %t75 = %t73
+    goto  L8
+L8:
+    (i_1) = (%t75)
+    %t17_0 = i_1<N_0
+    if %t17_0 goto L9 else goto L10
+L9:
+    ary_0[i_1] = 1
+    %t18_0 = i_1+p_4
+    i_2 = %t18_0
+    (%t74) = (i_2)
+    %t75 = %t74
+    goto  L8
+L10:
+    %t19_0 = p_4+1
+    p_5 = %t19_0
+    (%t92,%t95) = (p_5,nprimes_5)
+    %t93 = %t92
+    %t96 = %t95
+    goto  L2
+L4:
+    (%t85,%t88) = (p_1,nprimes_1)
+    %t87 = %t85
+    %t90 = %t88
+    goto  L11
+L11:
+    (p_2,nprimes_2) = (%t87,%t90)
+    %t20_0 = p_2<N_0
+    if %t20_0 goto L12 else goto L13
+L12:
+    %t21_0 = ary_0[p_2]
+    %t22_0 = !%t21_0
+    (%t79) = (nprimes_2)
+    %t81 = %t79
+    if %t22_0 goto L14 else goto L15
+L14:
+    primes_0[nprimes_2] = p_2
+    %t23_0 = nprimes_2+1
+    nprimes_3 = %t23_0
+    (%t80) = (nprimes_3)
+    %t81 = %t80
+    goto  L15
+L15:
+    (nprimes_4) = (%t81)
+    %t24_0 = p_2+1
+    p_3 = %t24_0
+    (%t86,%t89) = (p_3,nprimes_4)
+    %t87 = %t86
+    %t90 = %t89
+    goto  L11
+L13:
+    %t25_0 = New([Int], len=nprimes_2, initValue=0)
+    rez_0 = %t25_0
+    j_0 = 0
+    (%t82) = (j_0)
+    %t84 = %t82
+    goto  L16
+L16:
+    (j_1) = (%t84)
+    %t26_0 = j_1<nprimes_2
+    if %t26_0 goto L17 else goto L18
+L17:
+    %t27_0 = primes_0[j_1]
+    rez_0[j_1] = %t27_0
+    %t28_0 = j_1+1
+    j_2 = %t28_0
+    (%t83) = (j_2)
+    %t84 = %t83
+    goto  L16
+L18:
+    ret rez_0
+    goto  L1
+L1:
 After exiting SSA
 =================
 L0:
@@ -3435,23 +5678,30 @@ L0:
     primes_0 = %t9_0
     nprimes_0 = 0
     p_0 = 2
-    p_1 = p_0
-    nprimes_1 = nprimes_0
+    %t91 = p_0
+    %t94 = nprimes_0
+    %t93 = %t91
+    %t96 = %t94
     goto  L2
 L2:
+    p_1 = %t93
+    nprimes_1 = %t96
     %t11_0 = p_1*p_1
     %t12_0 = %t11_0<N_0
     if %t12_0 goto L3 else goto L4
 L3:
-    p_4 = p_1
+    %t76 = p_1
+    %t78 = %t76
     goto  L5
 L5:
+    p_4 = %t78
     %t13_0 = ary_0[p_4]
     if %t13_0 goto L6 else goto L7
 L6:
     %t14_0 = p_4+1
     p_6 = %t14_0
-    p_4 = p_6
+    %t77 = p_6
+    %t78 = %t77
     goto  L5
 L7:
     primes_0[nprimes_1] = p_4
@@ -3459,54 +5709,70 @@ L7:
     nprimes_5 = %t15_0
     %t16_0 = p_4+p_4
     i_0 = %t16_0
-    i_1 = i_0
+    %t73 = i_0
+    %t75 = %t73
     goto  L8
 L8:
+    i_1 = %t75
     %t17_0 = i_1<N_0
     if %t17_0 goto L9 else goto L10
 L9:
     ary_0[i_1] = 1
     %t18_0 = i_1+p_4
     i_2 = %t18_0
-    i_1 = i_2
+    %t74 = i_2
+    %t75 = %t74
     goto  L8
 L10:
     %t19_0 = p_4+1
     p_5 = %t19_0
-    p_1 = p_5
-    nprimes_1 = nprimes_5
+    %t92 = p_5
+    %t95 = nprimes_5
+    %t93 = %t92
+    %t96 = %t95
     goto  L2
 L4:
-    p_2 = p_1
-    nprimes_2 = nprimes_1
+    %t85 = p_1
+    %t88 = nprimes_1
+    %t87 = %t85
+    %t90 = %t88
     goto  L11
 L11:
+    p_2 = %t87
+    nprimes_2 = %t90
     %t20_0 = p_2<N_0
     if %t20_0 goto L12 else goto L13
 L12:
     %t21_0 = ary_0[p_2]
     %t22_0 = !%t21_0
-    nprimes_4 = nprimes_2
+    %t79 = nprimes_2
+    %t81 = %t79
     if %t22_0 goto L14 else goto L15
 L14:
     primes_0[nprimes_2] = p_2
     %t23_0 = nprimes_2+1
     nprimes_3 = %t23_0
-    nprimes_4 = nprimes_3
+    %t80 = nprimes_3
+    %t81 = %t80
     goto  L15
 L15:
+    nprimes_4 = %t81
     %t24_0 = p_2+1
     p_3 = %t24_0
-    p_2 = p_3
-    nprimes_2 = nprimes_4
+    %t86 = p_3
+    %t89 = nprimes_4
+    %t87 = %t86
+    %t90 = %t89
     goto  L11
 L13:
     %t25_0 = New([Int], len=nprimes_2, initValue=0)
     rez_0 = %t25_0
     j_0 = 0
-    j_1 = j_0
+    %t82 = j_0
+    %t84 = %t82
     goto  L16
 L16:
+    j_1 = %t84
     %t26_0 = j_1<nprimes_2
     if %t26_0 goto L17 else goto L18
 L17:
@@ -3514,7 +5780,8 @@ L17:
     rez_0[j_1] = %t27_0
     %t28_0 = j_1+1
     j_2 = %t28_0
-    j_1 = j_2
+    %t83 = j_2
+    %t84 = %t83
     goto  L16
 L18:
     ret rez_0
@@ -3579,19 +5846,20 @@ L6:
     %t9_0 = i_1+1
     i_2 = %t9_0
     goto  L2
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg a_0
     arg b_0
     arg n_0
     result_0 = 1
     i_0 = 0
-    i_1 = i_0
+    (%t27) = (i_0)
     goto  L2
 L2:
+    %t29 = phi(%t27, %t28)
+    (i_1) = (%t29)
     %t5_0 = i_1<n_0
-    result_2 = result_0
+    (%t24) = (result_0)
     if %t5_0 goto L3 else goto L4
 L3:
     %t6_0 = a_0[i_1]
@@ -3600,16 +5868,93 @@ L3:
     if %t8_0 goto L5 else goto L6
 L5:
     result_1 = 0
-    result_2 = result_1
+    (%t25) = (result_1)
     goto  L4
 L4:
+    %t26 = phi(%t24, %t25)
+    (result_2) = (%t26)
     ret result_2
     goto  L1
 L1:
 L6:
     %t9_0 = i_1+1
     i_2 = %t9_0
-    i_1 = i_2
+    (%t28) = (i_2)
+    goto  L2
+After removing phis from CSSA
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    (%t27) = (i_0)
+    %t29 = %t27
+    goto  L2
+L2:
+    (i_1) = (%t29)
+    %t5_0 = i_1<n_0
+    (%t24) = (result_0)
+    %t26 = %t24
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    (%t25) = (result_1)
+    %t26 = %t25
+    goto  L4
+L4:
+    (result_2) = (%t26)
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    (%t28) = (i_2)
+    %t29 = %t28
+    goto  L2
+After exiting SSA
+=================
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    %t27 = i_0
+    %t29 = %t27
+    goto  L2
+L2:
+    i_1 = %t29
+    %t5_0 = i_1<n_0
+    %t24 = result_0
+    %t26 = %t24
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    %t25 = result_1
+    %t26 = %t25
+    goto  L4
+L4:
+    result_2 = %t26
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    %t28 = i_2
+    %t29 = %t28
     goto  L2
 func main
 Before SSA
@@ -3637,6 +5982,50 @@ L0:
 L1:
 After SSA
 =========
+L0:
+    %t2_0 = 20
+    %t3_0 = call sieve params %t2_0
+    rez_0 = %t3_0
+    %t4_0 = New([Int], len=8)
+    %t4_0[0] = 2
+    %t4_0[1] = 3
+    %t4_0[2] = 5
+    %t4_0[3] = 7
+    %t4_0[4] = 11
+    %t4_0[5] = 13
+    %t4_0[6] = 17
+    %t4_0[7] = 19
+    expected_0 = %t4_0
+    %t5_0 = rez_0
+    %t6_0 = expected_0
+    %t7_0 = 8
+    %t8_0 = call eq params %t5_0, %t6_0, %t7_0
+    ret %t8_0
+    goto  L1
+L1:
+After converting from SSA to CSSA
+L0:
+    %t2_0 = 20
+    %t3_0 = call sieve params %t2_0
+    rez_0 = %t3_0
+    %t4_0 = New([Int], len=8)
+    %t4_0[0] = 2
+    %t4_0[1] = 3
+    %t4_0[2] = 5
+    %t4_0[3] = 7
+    %t4_0[4] = 11
+    %t4_0[5] = 13
+    %t4_0[6] = 17
+    %t4_0[7] = 19
+    expected_0 = %t4_0
+    %t5_0 = rez_0
+    %t6_0 = expected_0
+    %t7_0 = 8
+    %t8_0 = call eq params %t5_0, %t6_0, %t7_0
+    ret %t8_0
+    goto  L1
+L1:
+After removing phis from CSSA
 L0:
     %t2_0 = 20
     %t3_0 = call sieve params %t2_0
@@ -3765,19 +6154,20 @@ L6:
     %t9_0 = i_1+1
     i_2 = %t9_0
     goto  L2
-After exiting SSA
-=================
+After converting from SSA to CSSA
 L0:
     arg a_0
     arg b_0
     arg n_0
     result_0 = 1
     i_0 = 0
-    i_1 = i_0
+    (%t27) = (i_0)
     goto  L2
 L2:
+    %t29 = phi(%t27, %t28)
+    (i_1) = (%t29)
     %t5_0 = i_1<n_0
-    result_2 = result_0
+    (%t24) = (result_0)
     if %t5_0 goto L3 else goto L4
 L3:
     %t6_0 = a_0[i_1]
@@ -3786,16 +6176,93 @@ L3:
     if %t8_0 goto L5 else goto L6
 L5:
     result_1 = 0
-    result_2 = result_1
+    (%t25) = (result_1)
     goto  L4
 L4:
+    %t26 = phi(%t24, %t25)
+    (result_2) = (%t26)
     ret result_2
     goto  L1
 L1:
 L6:
     %t9_0 = i_1+1
     i_2 = %t9_0
-    i_1 = i_2
+    (%t28) = (i_2)
+    goto  L2
+After removing phis from CSSA
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    (%t27) = (i_0)
+    %t29 = %t27
+    goto  L2
+L2:
+    (i_1) = (%t29)
+    %t5_0 = i_1<n_0
+    (%t24) = (result_0)
+    %t26 = %t24
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    (%t25) = (result_1)
+    %t26 = %t25
+    goto  L4
+L4:
+    (result_2) = (%t26)
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    (%t28) = (i_2)
+    %t29 = %t28
+    goto  L2
+After exiting SSA
+=================
+L0:
+    arg a_0
+    arg b_0
+    arg n_0
+    result_0 = 1
+    i_0 = 0
+    %t27 = i_0
+    %t29 = %t27
+    goto  L2
+L2:
+    i_1 = %t29
+    %t5_0 = i_1<n_0
+    %t24 = result_0
+    %t26 = %t24
+    if %t5_0 goto L3 else goto L4
+L3:
+    %t6_0 = a_0[i_1]
+    %t7_0 = b_0[i_1]
+    %t8_0 = %t6_0!=%t7_0
+    if %t8_0 goto L5 else goto L6
+L5:
+    result_1 = 0
+    %t25 = result_1
+    %t26 = %t25
+    goto  L4
+L4:
+    result_2 = %t26
+    ret result_2
+    goto  L1
+L1:
+L6:
+    %t9_0 = i_1+1
+    i_2 = %t9_0
+    %t28 = i_2
+    %t29 = %t28
     goto  L2
 """, result);
     }
