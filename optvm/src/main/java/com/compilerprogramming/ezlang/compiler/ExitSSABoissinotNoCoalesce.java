@@ -4,9 +4,11 @@ import java.util.*;
 
 /**
  * Implement method to exit SSA by converting to conventional SSA,
- * without coalescing. This is the basic form.
+ * without coalescing. This is the basic form - it creates extra copies but
+ * the transformation is simple and correct, and does not suffer from the lost copy or
+ * swap problem.
  *
- * This is essentially Method 1 described by
+ * The simple conversion is essentially Method 1 described by
  * Translating Out of Static Single Assignment Form
  * Vugranam C. Sreedhar, Roy Dz-Ching Ju, David M. Gillies, and Vatsa Santhanam
  *
@@ -17,11 +19,11 @@ import java.util.*;
  * Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon
  *
  * The Boissinot paper gives a more correct description, discussing the need for parallel copy
- * and sequencing the parallel copy, but the paper describes a
- * more complex approach that performs coalescing.
+ * and sequencing the parallel copy. Much of the Boissinot paper is about optimizing away any extra copies, but
+ * it seems to me that the Briggs algorithm achieves that anyway while being simpler
+ * to implement.
  *
  * Engineering a Compiler, 3rd edition, describes the simpler form - omitting the coalescing part.
- *
  * Our implementation is similar to EaC.
  *
  * We do not use the sequencing algo described in Boissinot paper. Instead, we use:
@@ -115,12 +117,14 @@ public class ExitSSABoissinotNoCoalesce {
                     BasicBlock pred = block.predecessor(j);
                     var pCopyBEnd = getParallelCopyAtEnd(pred);
                     var oldInput = phi.input(j);
-                    var newInput = function.registerPool.newTempReg(oldInput.type);
+                    var newInput = oldInput instanceof Operand.RegisterOperand regInput ?
+                            function.registerPool.newTempReg(regInput.reg.name(), oldInput.type) :
+                            function.registerPool.newTempReg(oldInput.type);
                     pCopyBEnd.addCopy(oldInput,new Operand.RegisterOperand(newInput));
                     phi.replaceInput(j,newInput);
                 }
                 var oldPhiVar = phi.value();
-                var newPhiVar = function.registerPool.newTempReg(oldPhiVar.type);
+                var newPhiVar = function.registerPool.newTempReg(oldPhiVar.name(), oldPhiVar.type);
                 phi.replaceValue(newPhiVar);
                 var pCopyBBegin = getParallelCopyAtBegin(block);
                 pCopyBBegin.addCopy(new Operand.RegisterOperand(newPhiVar),new Operand.RegisterOperand(oldPhiVar));
