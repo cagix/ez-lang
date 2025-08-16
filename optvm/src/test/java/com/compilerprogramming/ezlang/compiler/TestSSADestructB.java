@@ -1077,8 +1077,40 @@ L1:
     ret x2
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
+        var sb = new StringBuilder();
+        function.setDumpTarget(sb);
         new ExitSSA(function, ssaExitOptions);
         expected = """
+After converting from SSA to CSSA
+L0:
+    arg p
+    x1 = 1
+    (%t4) = (x1)
+    goto  L2
+L2:
+    %t6 = phi(%t4, %t5)
+    (x2) = (%t6)
+    x3 = x2+1
+    (%t5) = (x3)
+    if p goto L2 else goto L1
+L1:
+    ret x2
+After removing phis from CSSA
+L0:
+    arg p
+    x1 = 1
+    (%t4) = (x1)
+    %t6 = %t4
+    goto  L2
+L2:
+    (x2) = (%t6)
+    x3 = x2+1
+    (%t5) = (x3)
+    %t6 = %t5
+    if p goto L2 else goto L1
+L1:
+    ret x2
+After sequencing parallel copies
 L0:
     arg p
     x1 = 1
@@ -1094,7 +1126,8 @@ L2:
 L1:
     ret x2
 """;
-        Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
+        sb.append("After sequencing parallel copies\n");
+        Assert.assertEquals(expected, function.toStr(sb, false).toString());
     }
 
     /**
@@ -1150,8 +1183,41 @@ L2:
 L1:
 """;
         Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
+        var sb = new StringBuilder();
+        function.setDumpTarget(sb);
         new ExitSSA(function, ssaExitOptions);
         expected = """
+After converting from SSA to CSSA
+L0:
+    arg p
+    a1 = 42
+    b1 = 24
+    (%t5,%t8) = (a1,b1)
+    goto  L2
+L2:
+    %t7 = phi(%t5, %t6)
+    %t10 = phi(%t8, %t9)
+    (a2,b2) = (%t7,%t10)
+    (%t6,%t9) = (b2,a2)
+    if p goto L2 else goto L1
+L1:
+After removing phis from CSSA
+L0:
+    arg p
+    a1 = 42
+    b1 = 24
+    (%t5,%t8) = (a1,b1)
+    %t7 = %t5
+    %t10 = %t8
+    goto  L2
+L2:
+    (a2,b2) = (%t7,%t10)
+    (%t6,%t9) = (b2,a2)
+    %t7 = %t6
+    %t10 = %t9
+    if p goto L2 else goto L1
+L1:
+After sequencing parallel copies
 L0:
     arg p
     a1 = 42
@@ -1171,7 +1237,8 @@ L2:
     if p goto L2 else goto L1
 L1:
 """;
-        Assert.assertEquals(expected, function.toStr(new StringBuilder(), false).toString());
+        sb.append("After sequencing parallel copies\n");
+        Assert.assertEquals(expected, function.toStr(sb, false).toString());
     }
 
     @Test
