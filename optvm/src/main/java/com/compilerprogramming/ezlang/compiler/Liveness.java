@@ -22,7 +22,7 @@ import java.util.List;
  * Computing Liveness Sets for SSA-Form Programs
  * Florian Brandner, Benoit Boissinot, Alain Darte, Benoît Dupont de Dinechin, Fabrice Rastello
  *
- * The implementation is the unoptimized simple one.
+ * The implementation is the unoptimized simple data analysis form.
  * However, we have a modification to ensure that if we see a block
  * which loops to itself and has Phi cycles, then the Phi is only added to
  * PhiDefs.
@@ -30,7 +30,13 @@ import java.util.List;
 public class Liveness {
 
     public Liveness(CompiledFunction function) {
-        List<BasicBlock> blocks = BBHelper.findAllBlocks(function.entry);
+        // EaC states that it is most efficient to do RPO on reverse CFG.
+        // The problem is that if there are infinite loops, we will not visit all basic blocks
+        // if we started at the exit block (this could be solved by adding artificial edges from infinite loop
+        // to exit block, but we do not do that yet).
+        // For a forward CFG traversal, we cannot do RPO as this is a backward dataflow
+        // problem, i.e. successors must be processed first.
+        List<BasicBlock> blocks = BBHelper.findAllBlocksPostOrderForwardCFG(function);
         RegisterPool regPool = function.registerPool;
         initBlocks(regPool, blocks);
         init(blocks);
@@ -110,7 +116,6 @@ public class Liveness {
         boolean changed = true;
         while (changed) {
             changed = false;
-            // TODO we should process in RPO order
             for (BasicBlock block : blocks) {
                 if (recomputeLiveOut(block))
                     changed = true;
