@@ -34,8 +34,6 @@ public class Liveness {
         // The problem is that if there are infinite loops, we will not visit all basic blocks
         // if we started at the exit block (this could be solved by adding artificial edges from infinite loop
         // to exit block, but we do not do that yet).
-        // For a forward CFG traversal, we cannot do RPO as this is a backward dataflow
-        // problem, i.e. successors must be processed first.
         List<BasicBlock> blocks = BBHelper.findAllBlocksPostOrderForwardCFG(function);
         RegisterPool regPool = function.registerPool;
         initBlocks(regPool, blocks);
@@ -136,15 +134,19 @@ public class Liveness {
     // This corresponds to placing a copy of a_i to a_0 on each edge from B_i to B_0.
     //
     private boolean recomputeLiveOut(BasicBlock block) {
-        LiveSet oldLiveOut = block.liveOut.dup();
-        LiveSet t = block.liveOut.dup().subtract(block.varKill);
-        block.liveIn.union(block.phiDefs).union(block.UEVar).union(t);
+        LiveSet oldLiveIn = block.liveIn.dup();
+        // LiveOut(B) = U all S  (LiveIn(S) \ PhiDefs(S)) U PhiUses
         block.liveOut.clear();
         for (BasicBlock s: block.successors) {
-            t = s.liveIn.dup().subtract(s.phiDefs);
+            LiveSet t = s.liveIn.dup().subtract(s.phiDefs);
             block.liveOut.union(t);
         }
         block.liveOut.union(block.phiUses);
-        return !oldLiveOut.equals(block.liveOut);
+        // LiveIn(B) = PhiDefs(B) U UpwardExposed(B) U (LiveOut(B) \ Defs(B))
+        LiveSet t = block.liveOut.dup().subtract(block.varKill);
+        block.liveIn = t.union(block.phiDefs).union(block.UEVar);
+        // we check changes to both live in and out sets to
+        // make the code robust against order of traversal
+        return  !oldLiveIn.equals(block.liveIn);
     }
 }
