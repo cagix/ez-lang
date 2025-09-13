@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.Ary;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.nodes.*;
+import com.compilerprogramming.ezlang.compiler.node.*;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;

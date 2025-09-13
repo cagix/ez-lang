@@ -1,10 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.Ary;
-import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.nodes.*;
-import java.util.BitSet;
-import java.util.IdentityHashMap;
+import com.compilerprogramming.ezlang.compiler.node.*;
 
 // Coalesce copies
 abstract public class Coalesce {

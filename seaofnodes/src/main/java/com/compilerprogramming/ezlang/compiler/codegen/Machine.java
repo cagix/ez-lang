@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
-import com.compilerprogramming.ezlang.compiler.nodes.*;
+import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 abstract public class Machine {

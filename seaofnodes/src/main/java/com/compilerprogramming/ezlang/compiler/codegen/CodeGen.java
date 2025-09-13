@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.*;
-import com.compilerprogramming.ezlang.compiler.nodes.*;
+import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.print.*;
 import com.compilerprogramming.ezlang.compiler.type.*;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
@@ -13,7 +13,7 @@ import java.util.IdentityHashMap;
 
 @SuppressWarnings("unchecked")
 public class CodeGen {
-    public static final String PORTS = "com.compilerprogramming.ezlang.compiler.nodes.cpus";
+    public static final String PORTS = "com.compilerprogramming.ezlang.compiler.node.cpus";
     // Last created CodeGen as a global; used all over to avoid passing about a
     // "context".
     public static CodeGen CODE;
