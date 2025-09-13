@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.SB;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 import java.util.BitSet;
 
 /**

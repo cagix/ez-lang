@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 abstract public class Machine {
     // Human readable machine name.  Something like "x86-64" or "arm" or "risc5"

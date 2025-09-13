@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 public class TFPRISC extends ConstantNode implements MachNode, RIPRelSize {
     TFPRISC(ConstantNode con) { super(con); }

@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeMem;
+import com.compilerprogramming.ezlang.compiler.type.TypeMem;
 
 abstract public class BuildLRG {
     // Compute live ranges in a single forwards pass.  Every def is a new live

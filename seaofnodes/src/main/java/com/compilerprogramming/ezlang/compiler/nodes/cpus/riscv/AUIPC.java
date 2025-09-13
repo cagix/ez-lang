@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.type.Type;
 
 // Add upper 20bits to PC.  Immediate comes from the relocation info.
 public class AUIPC extends ConstantNode implements MachNode, RIPRelSize {

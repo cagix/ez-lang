@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeMemPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeMemPtr;
 
 public class TMPARM extends ConstantNode implements MachNode, RIPRelSize {
     TMPARM( ConstantNode con ) { super(con); }

@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.type.Type;
 
 public class CalleeSaveNode extends ProjNode implements MachNode {
     final RegMask _mask;

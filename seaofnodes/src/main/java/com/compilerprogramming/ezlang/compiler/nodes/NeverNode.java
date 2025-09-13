@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeTuple;
+import com.compilerprogramming.ezlang.compiler.type.Type;
+import com.compilerprogramming.ezlang.compiler.type.TypeTuple;
 
 import java.util.BitSet;
 

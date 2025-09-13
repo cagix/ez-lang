@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 
 public class riscv extends Machine {
 

@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 import java.util.BitSet;
 
 public abstract class MemOpRISC extends MemOpNode implements MachNode {

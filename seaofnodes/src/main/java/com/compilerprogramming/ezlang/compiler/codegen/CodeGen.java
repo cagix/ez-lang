@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.codegen;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
 import com.compilerprogramming.ezlang.compiler.print.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 
 import java.io.IOException;

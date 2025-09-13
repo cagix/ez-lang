@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMaskRW;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 
 import java.util.BitSet;
 

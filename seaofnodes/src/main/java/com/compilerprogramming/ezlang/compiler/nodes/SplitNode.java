@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.type.Type;
 import java.util.BitSet;
 
 public abstract class SplitNode extends MachConcreteNode {

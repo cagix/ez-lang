@@ -1,8 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
-
-import java.util.BitSet;
+import com.compilerprogramming.ezlang.compiler.type.*;
 
 import static com.compilerprogramming.ezlang.compiler.Compiler.con;
 

@@ -6,7 +6,7 @@ import com.compilerprogramming.ezlang.compiler.nodes.CallNode;
 import com.compilerprogramming.ezlang.compiler.nodes.ExternNode;
 import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 public class CallX86 extends CallNode implements MachNode, RIPRelSize {
     final TypeFunPtr _tfp;

@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.LoadNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.type.TypeFloat;
 
 // Load memory addressing on ARM
 // Support imm, reg(direct), or reg+off(indirect) addressing

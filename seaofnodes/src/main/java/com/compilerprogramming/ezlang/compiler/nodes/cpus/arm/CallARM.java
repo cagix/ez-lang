@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.arm;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 public class CallARM extends CallNode implements MachNode, RIPRelSize {
     final TypeFunPtr _tfp;

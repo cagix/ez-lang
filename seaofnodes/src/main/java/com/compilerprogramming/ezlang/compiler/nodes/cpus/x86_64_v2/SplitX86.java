@@ -5,8 +5,8 @@ import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.FunNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.SplitNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.type.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 public class SplitX86 extends SplitNode {
     SplitX86( String kind, byte round ) { super(kind,round, new Node[2]); }

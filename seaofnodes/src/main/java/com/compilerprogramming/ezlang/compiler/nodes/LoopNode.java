@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeMem;
+import com.compilerprogramming.ezlang.compiler.type.Type;
+import com.compilerprogramming.ezlang.compiler.type.TypeMem;
 
 public class LoopNode extends RegionNode {
     public LoopNode( Node entry ) { super(null,entry,null); }

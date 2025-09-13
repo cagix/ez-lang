@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.riscv;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 
 public class CallRISC extends CallNode implements MachNode, RIPRelSize {
     final TypeFunPtr _tfp;

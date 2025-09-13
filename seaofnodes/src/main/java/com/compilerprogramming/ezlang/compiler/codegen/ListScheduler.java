@@ -1,10 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
 import com.compilerprogramming.ezlang.compiler.Ary;
-import com.compilerprogramming.ezlang.compiler.IterPeeps.WorkList;
-import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+
 import java.util.*;
 
 public abstract class ListScheduler {

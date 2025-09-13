@@ -3,8 +3,8 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.type.Type;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 // Integer constants
 public class IntX86 extends ConstantNode implements MachNode {

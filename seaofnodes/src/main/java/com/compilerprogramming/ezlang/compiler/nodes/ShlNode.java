@@ -1,8 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 public class ShlNode extends ArithNode {
     public ShlNode(Node lhs, Node rhs) { super(lhs, rhs); }

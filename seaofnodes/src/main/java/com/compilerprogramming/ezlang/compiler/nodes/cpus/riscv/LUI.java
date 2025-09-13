@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.nodes.MachNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 // Load upper 20bits.
 public class LUI extends ConstantNode implements MachNode {

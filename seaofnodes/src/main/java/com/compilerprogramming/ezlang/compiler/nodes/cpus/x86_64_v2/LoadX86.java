@@ -5,9 +5,9 @@ import com.compilerprogramming.ezlang.compiler.Utils;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.LoadNode;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeFloat;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.type.Type;
+import com.compilerprogramming.ezlang.compiler.type.TypeFloat;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 public class LoadX86 extends MemOpX86 {
     LoadX86( LoadNode ld, Node base, Node idx, int off, int scale ) {

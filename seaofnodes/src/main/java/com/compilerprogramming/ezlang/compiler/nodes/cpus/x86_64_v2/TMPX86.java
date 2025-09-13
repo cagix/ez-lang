@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.nodes.cpus.x86_64_v2;
 import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.*;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeMemPtr;
+import com.compilerprogramming.ezlang.compiler.type.TypeMemPtr;
 
 public class TMPX86 extends ConstantNode implements MachNode, RIPRelSize{
     TMPX86(ConstantNode con ) { super(con); }

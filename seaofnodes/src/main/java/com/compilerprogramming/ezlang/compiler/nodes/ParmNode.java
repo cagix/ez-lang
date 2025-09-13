@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.type.Type;
 import java.util.BitSet;
 
 public class ParmNode extends PhiNode {

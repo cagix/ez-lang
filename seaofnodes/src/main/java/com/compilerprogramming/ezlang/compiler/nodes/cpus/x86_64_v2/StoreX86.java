@@ -4,7 +4,7 @@ import com.compilerprogramming.ezlang.compiler.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.nodes.Node;
 import com.compilerprogramming.ezlang.compiler.nodes.StoreNode;
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
+import com.compilerprogramming.ezlang.compiler.type.Type;
 
 import java.util.BitSet;
 

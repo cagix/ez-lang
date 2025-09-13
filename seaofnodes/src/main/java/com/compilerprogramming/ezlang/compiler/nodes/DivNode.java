@@ -1,8 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.nodes;
 
-import com.compilerprogramming.ezlang.compiler.sontypes.Type;
-import com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger;
-import java.util.BitSet;
+import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 
 public class DivNode extends ArithNode {
     public DivNode(Node lhs, Node rhs) { super(lhs, rhs); }

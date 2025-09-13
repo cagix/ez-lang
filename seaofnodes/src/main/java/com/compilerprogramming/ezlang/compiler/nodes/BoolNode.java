@@ -2,9 +2,9 @@ package com.compilerprogramming.ezlang.compiler.nodes;
 
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.sontypes.*;
+import com.compilerprogramming.ezlang.compiler.type.*;
 import java.util.BitSet;
-import static com.compilerprogramming.ezlang.compiler.sontypes.TypeInteger.*;
+import static com.compilerprogramming.ezlang.compiler.type.TypeInteger.*;
 
 abstract public class BoolNode extends Node {
 

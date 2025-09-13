@@ -1,4 +1,4 @@
-package com.compilerprogramming.ezlang.compiler.sontypes;
+package com.compilerprogramming.ezlang.compiler.type;
 
 import java.util.ArrayList;
 
