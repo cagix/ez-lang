@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.x86_64_v2;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public abstract class RegX86 extends MachConcreteNode {
     RegX86( Node add ) { super(add); }

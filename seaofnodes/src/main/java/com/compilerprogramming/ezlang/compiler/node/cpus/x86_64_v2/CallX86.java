@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.x86_64_v2;
 
-import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.CallNode;
 import com.compilerprogramming.ezlang.compiler.node.ExternNode;

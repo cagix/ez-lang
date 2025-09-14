@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.arm;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public class DivARM extends MachConcreteNode implements MachNode {
     DivARM( Node div ) { super(div); }

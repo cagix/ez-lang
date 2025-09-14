@@ -1,8 +1,9 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.x86_64_v2;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 // Jump on flags, uses flags
 public class JmpX86 extends IfNode implements MachNode, RIPRelSize {

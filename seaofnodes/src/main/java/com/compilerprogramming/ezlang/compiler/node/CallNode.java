@@ -2,7 +2,7 @@ package com.compilerprogramming.ezlang.compiler.node;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.Compiler;
-import com.compilerprogramming.ezlang.compiler.Utils;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 import com.compilerprogramming.ezlang.compiler.type.Type;
 import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;

@@ -1,7 +1,7 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
-import com.compilerprogramming.ezlang.compiler.Ary;
-import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.util.Ary;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 import com.compilerprogramming.ezlang.compiler.node.*;
 
 import java.util.IdentityHashMap;

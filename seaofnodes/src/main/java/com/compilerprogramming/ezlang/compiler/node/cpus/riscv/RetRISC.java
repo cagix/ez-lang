@@ -1,10 +1,10 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.node.FunNode;
 import com.compilerprogramming.ezlang.compiler.node.ReturnNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 public class RetRISC extends ReturnNode implements MachNode {
     public RetRISC(ReturnNode ret, FunNode fun) { super(ret, fun); fun.setRet(this); }

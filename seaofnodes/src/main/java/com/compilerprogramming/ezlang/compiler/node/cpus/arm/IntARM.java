@@ -1,11 +1,11 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.arm;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 import com.compilerprogramming.ezlang.compiler.type.Type;
 import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 // Integer constants
 public class IntARM extends ConstantNode implements MachNode {

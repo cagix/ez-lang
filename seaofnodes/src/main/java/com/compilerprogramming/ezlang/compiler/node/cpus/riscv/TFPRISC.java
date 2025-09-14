@@ -1,11 +1,12 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 import com.compilerprogramming.ezlang.compiler.node.Node;
 import com.compilerprogramming.ezlang.compiler.type.TypeFunPtr;
+import com.compilerprogramming.ezlang.compiler.util.SB;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 public class TFPRISC extends ConstantNode implements MachNode, RIPRelSize {
     TFPRISC(ConstantNode con) { super(con); }

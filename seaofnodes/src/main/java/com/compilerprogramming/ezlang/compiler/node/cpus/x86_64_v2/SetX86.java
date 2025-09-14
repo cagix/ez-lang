@@ -1,8 +1,9 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.x86_64_v2;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 // Corresponds to the x86 instruction "sete && setne".
 // Use result of comparison without jump.

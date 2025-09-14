@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;

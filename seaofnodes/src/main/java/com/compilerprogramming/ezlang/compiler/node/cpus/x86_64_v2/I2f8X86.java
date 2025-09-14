@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.x86_64_v2;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public class I2f8X86 extends MachConcreteNode implements MachNode {
     I2f8X86(Node i2f8 ) { super(i2f8); }

@@ -3,9 +3,9 @@ package com.compilerprogramming.ezlang.compiler.node.cpus.arm;
 import com.compilerprogramming.ezlang.compiler.node.MachConcreteNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public class XorIARM extends MachConcreteNode implements MachNode {
     final int _imm;

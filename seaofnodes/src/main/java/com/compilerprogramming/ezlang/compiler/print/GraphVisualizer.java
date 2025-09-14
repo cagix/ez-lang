@@ -3,7 +3,7 @@ package com.compilerprogramming.ezlang.compiler.print;
 import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.node.*;
 import java.util.*;
-import static com.compilerprogramming.ezlang.compiler.Utils.TODO;
+import static com.compilerprogramming.ezlang.compiler.util.Utils.TODO;
 
 /**
  * Simple visualizer that outputs GraphViz dot format.

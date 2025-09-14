@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node;
 
-import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMask;
 import com.compilerprogramming.ezlang.compiler.codegen.RegMaskRW;

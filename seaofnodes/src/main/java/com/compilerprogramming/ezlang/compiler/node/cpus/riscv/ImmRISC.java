@@ -1,9 +1,10 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.util.SB;
+
 import java.util.BitSet;
 
 abstract public class ImmRISC extends MachConcreteNode implements MachNode {

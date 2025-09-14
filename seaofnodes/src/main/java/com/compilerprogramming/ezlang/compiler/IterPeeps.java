@@ -2,6 +2,7 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.Ary;
 //import com.seaofnodes.simple.print.JSViewer;
 import java.util.Arrays;
 import java.util.BitSet;

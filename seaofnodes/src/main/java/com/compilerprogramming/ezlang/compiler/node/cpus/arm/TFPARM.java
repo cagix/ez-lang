@@ -1,10 +1,11 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.arm;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 import com.compilerprogramming.ezlang.compiler.node.Node;
+import com.compilerprogramming.ezlang.compiler.util.SB;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 public class TFPARM extends ConstantNode implements MachNode, RIPRelSize {
     TFPARM( ConstantNode con ) { super(con); }

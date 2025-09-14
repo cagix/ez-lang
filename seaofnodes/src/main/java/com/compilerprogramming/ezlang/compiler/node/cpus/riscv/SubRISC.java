@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public class SubRISC extends MachConcreteNode implements MachNode {
     public SubRISC( Node sub ) { super(sub); }

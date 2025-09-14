@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node;
 
-import com.compilerprogramming.ezlang.compiler.Utils;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 import com.compilerprogramming.ezlang.compiler.type.Type;
 import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
 import com.compilerprogramming.ezlang.compiler.type.TypeMemPtr;

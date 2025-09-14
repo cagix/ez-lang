@@ -5,7 +5,7 @@ import com.compilerprogramming.ezlang.compiler.type.*;
 
 import java.util.BitSet;
 
-import static com.compilerprogramming.ezlang.compiler.Utils.TODO;
+import static com.compilerprogramming.ezlang.compiler.util.Utils.TODO;
 
 /**
  * The Start node represents the start of the function.

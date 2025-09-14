@@ -1,11 +1,11 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 import com.compilerprogramming.ezlang.compiler.type.Type;
 import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 // 12-bit integer constant.  Larger constants are made up in the instruction
 // selection by adding with a LUI.

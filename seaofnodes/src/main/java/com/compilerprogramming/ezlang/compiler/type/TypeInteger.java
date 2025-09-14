@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.type;
 
-import com.compilerprogramming.ezlang.compiler.Utils;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 import java.util.ArrayList;
 
 /**

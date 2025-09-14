@@ -4,6 +4,7 @@ import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.print.GraphVisualizer;
 import com.compilerprogramming.ezlang.compiler.type.*;
+import com.compilerprogramming.ezlang.compiler.util.Ary;
 import com.compilerprogramming.ezlang.exceptions.CompilerException;
 import com.compilerprogramming.ezlang.lexer.Lexer;
 import com.compilerprogramming.ezlang.parser.AST;

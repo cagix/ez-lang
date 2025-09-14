@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
-import com.compilerprogramming.ezlang.compiler.Ary;
+import com.compilerprogramming.ezlang.compiler.util.Ary;
 import com.compilerprogramming.ezlang.compiler.node.*;
 
 // Coalesce copies

@@ -1,4 +1,4 @@
-package com.compilerprogramming.ezlang.compiler;
+package com.compilerprogramming.ezlang.compiler.util;
 
 /** Tight/tiny StringBuilder wrapper.
  *  Short short names on purpose; so they don't obscure the printing.

@@ -1,8 +1,8 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.*;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 // fcvt.d.w
 // Converts a 32-bit signed integer, in integer register rs1 into a double-precision floating-point number in floating-point register rd.

@@ -1,11 +1,11 @@
 package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
 import com.compilerprogramming.ezlang.compiler.node.Node;
 import com.compilerprogramming.ezlang.compiler.type.TypeMemPtr;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 public class TMPRISC extends ConstantNode implements MachNode, RIPRelSize {
     TMPRISC(ConstantNode con) { super(con); }

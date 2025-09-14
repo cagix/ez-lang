@@ -2,6 +2,7 @@ package com.compilerprogramming.ezlang.compiler;
 
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.print.*;
+import com.compilerprogramming.ezlang.compiler.util.Utils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

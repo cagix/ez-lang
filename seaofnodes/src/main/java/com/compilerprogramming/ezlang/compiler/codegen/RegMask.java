@@ -1,7 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
-import com.compilerprogramming.ezlang.compiler.Utils;
-import com.compilerprogramming.ezlang.compiler.SB;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 /** RegMask
  *  A "register mask" - 1 bit set for each allowed register.  In addition,

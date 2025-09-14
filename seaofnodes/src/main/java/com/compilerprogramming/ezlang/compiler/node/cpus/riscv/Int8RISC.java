@@ -2,9 +2,9 @@ package com.compilerprogramming.ezlang.compiler.node.cpus.riscv;
 
 import com.compilerprogramming.ezlang.compiler.node.ConstantNode;
 
-import com.compilerprogramming.ezlang.compiler.*;
 import com.compilerprogramming.ezlang.compiler.codegen.*;
 import com.compilerprogramming.ezlang.compiler.node.MachNode;
+import com.compilerprogramming.ezlang.compiler.util.SB;
 
 // Special instruction for loading 8 byte constants from the constant pool.
 

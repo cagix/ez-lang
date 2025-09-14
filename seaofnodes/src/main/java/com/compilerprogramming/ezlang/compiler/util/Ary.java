@@ -1,4 +1,4 @@
-package com.compilerprogramming.ezlang.compiler;
+package com.compilerprogramming.ezlang.compiler.util;
 
 import java.lang.StringBuilder;
 import java.lang.reflect.Array;

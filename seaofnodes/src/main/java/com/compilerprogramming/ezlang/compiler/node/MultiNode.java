@@ -1,6 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node;
 
-import com.compilerprogramming.ezlang.compiler.Ary;
+import com.compilerprogramming.ezlang.compiler.util.Ary;
 
 
 public interface MultiNode {
