@@ -9,7 +9,6 @@ import com.compilerprogramming.ezlang.compiler.util.Utils;
 import java.lang.StringBuilder;
 import java.util.BitSet;
 
-
 public abstract class MemOpARM extends MemOpNode implements MachNode {
     final int _off;             // Limit 9 bits sized, or (13 bits<<logsize) unsigned
     final int _imm;             // Limit ? bits

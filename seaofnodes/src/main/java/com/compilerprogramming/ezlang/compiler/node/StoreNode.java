@@ -42,14 +42,16 @@ public class StoreNode extends MemOpNode {
     @Override
     public Type compute() {
         Type val = val()._type;
-        TypeMem mem = (TypeMem)mem()._type; // Invariant
+        Type mem0 = mem()._type;
+        if( mem0 == Type.TOP ) return TypeMem.TOP;
+        TypeMem mem = (TypeMem)mem0; // Invariant
         if( mem == TypeMem.TOP ) return TypeMem.TOP;
         Type t = Type.BOTTOM;               // No idea on field contents
         // Same alias, lift val to the declared type and then meet into other fields
         if( mem._alias == _alias ) {
-            // Update declared forward ref to the actual
-            if( _declaredType.isFRef() && val instanceof TypeMemPtr tmp && !tmp.isFRef() )
-                _declaredType = tmp;
+            assert !_declaredType.isFRef();
+            // Sharpen memory value; required for narrowing stores where the parser inserts
+            // zero/sign masking and somebody reads the TypeMem type.
             val = val.join(_declaredType);
             t = val.meet(mem._t);
         }
@@ -58,6 +60,11 @@ public class StoreNode extends MemOpNode {
 
     @Override
     public Node idealize() {
+
+        if( mem() instanceof CastNode cast ) {
+            setDef(1,cast.in(1));
+            return this;
+        }
 
         // Simple store-after-store on same address.  Should pick up the
         // required init-store being stomped by a first user store.
@@ -130,8 +137,6 @@ public class StoreNode extends MemOpNode {
         TypeMemPtr tmp = (TypeMemPtr)ptr()._type;
         if( tmp._obj.field(_name)._final && !_init )
             return Compiler.error("Cannot modify final field '"+_name+"'");
-        Type t = val()._type;
-        //return _init || t.isa(_declaredType) ? null : Parser.error("Cannot store "+t+" into field "+_declaredType+" "+_name,_loc);
         return null;
     }
 }

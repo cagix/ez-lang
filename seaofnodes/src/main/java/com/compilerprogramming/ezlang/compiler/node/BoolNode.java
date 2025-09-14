@@ -33,7 +33,7 @@ abstract public class BoolNode extends Node {
         Type t2 = in(2)._type;
         // Exactly equals?
         if( t1.isHigh() || t2.isHigh() )
-            return BOOL.dual();
+            return (TypeInteger)BOOL.dual();
         if( in(1)==in(2) )
             // LT fails, both EQ and LE succeed
             return this instanceof LT ? FALSE : TRUE;

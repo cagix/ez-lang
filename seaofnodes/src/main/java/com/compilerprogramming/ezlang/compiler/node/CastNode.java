@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node;
 
+import com.compilerprogramming.ezlang.compiler.Compiler;
 import com.compilerprogramming.ezlang.compiler.util.Utils;
 import com.compilerprogramming.ezlang.compiler.type.Type;
 import com.compilerprogramming.ezlang.compiler.type.TypeInteger;
@@ -40,9 +41,15 @@ public class CastNode extends Node {
     @Override
     public Type compute() {
         // Cast array to int
-        if( _t == TypeInteger.BOT && in(1)._type instanceof TypeMemPtr tmp && tmp._obj.isAry() )
+        Type t1 = in(1)._type;
+        if( _t == TypeInteger.BOT && t1 instanceof TypeMemPtr tmp && tmp._obj.isAry() )
             return _t;
-        return in(1)._type.join(_t);
+        // Freeze if the join is high but both inputs are low
+        Type tj = t1.join(_t);
+        if( tj.isHigh() && !t1.isHigh() )
+            return _type==null ? _t : _type;
+
+        return tj;
     }
 
     @Override
@@ -64,6 +71,6 @@ public class CastNode extends Node {
         // Has a condition to test, so OK
         if( in(0) != null ) return null;
         // No condition to test, so this must optimize away
-        throw Utils.TODO();
+        return Compiler.error( "Type " + in(1)._type.str() + " is not of declared type " + _type.str());
     }
 }

@@ -43,15 +43,18 @@ public class Encoding {
     public int [] _opStart;     // Start  of opcodes, by _nid
     public byte[] _opLen;       // Length of opcodes, by _nid
 
+    // Function headers now padded when printing
+    public boolean _padFunHeads;
+
     // Big Constant relocation info.
     public static class Relo {
         public final Node _op;
         public final Type _t;          // Constant type
         public final byte _off;        // Offset from start of opcode
         public final byte _elf;        // ELF relocation type, e.g. 2/PC32
-        public int _target;      // Where constant is finally placede
+        public int _target;      // Where constant is finally placed
         public int _opStart;     // Opcode start
-        Relo(Node op, Type t, byte off, byte elf ) {
+        Relo( Node op, Type t, byte off, byte elf ) {
             _op=op;  _t=t;  _off=off; _elf=elf;
         }
     }
@@ -288,6 +291,9 @@ public class Encoding {
         // Fall/false into a full block, Jump/true to an empty block.
         if( f.nOuts()>1 && t.nOuts()==1 ) return false;
         if( t.nOuts()>1 && f.nOuts()==1 ) return true ;
+        // Jump to a merge point, assuming other things are jumping there as well
+        if( f.out(0) instanceof RegionNode ) return true ;
+        if( t.out(0) instanceof RegionNode ) return false;
         // Everything else equal, use pre-order
         return t._pre > f._pre;
     }
@@ -357,11 +363,6 @@ public class Encoding {
             slide = 0;
             for( int i=0; i<len; i++ ) {
                 CFGNode bb = _code._cfg.at(i);
-                // Functions pad to align 16
-                if( bb instanceof FunNode ) {
-                    int newStart = _opStart[bb._nid]+slide;
-                    slide += (newStart+15 & -16)-newStart;
-                }
                 _opStart[bb._nid] += slide;
                 // Slide down all other (non-CFG) ops in the block
                 for( Node n : bb._outputs )
@@ -400,7 +401,7 @@ public class Encoding {
                 if( n instanceof MachNode && !(n instanceof CFGNode) )
                     _opStart[n._nid] += slide;
         }
-
+        _padFunHeads = true;
 
         // Copy/slide the bits to make space for all the longer branches
         int grow = _opStart[_code._cfg.at(len-1)._nid] - oldStarts[len-1];
@@ -417,6 +418,7 @@ public class Encoding {
             }
             _bits.set(bits,bits.length);
         }
+
     }
 
 
@@ -494,16 +496,19 @@ public class Encoding {
             // Pad up to field
             while( off < foff ) { bits.write(0); off++; };
             // Constant array fields are special
-            // FIXME Dibyendu
+			int log = f._type.log_size();
+            addN(log,f._type,bits);
+            off += 1<<log;
+// 			Dibyendu we do not have constant arrays in EeZee
 //            if( f._fname=="[]" ) {   // Must be a constant array
-//                ts._con.write(bits); // Write the constant array bits
-//                off += ts._con.len();
+//                ((TypeConAry)f._t).write(bits);
+//                off += ((TypeConAry)f._t).len();
 //            } else {
-//                int log = f._type.log_size();
-//                if( f._fname=="#" )  addN(log,ts._con.len(),bits); // Must be a constant array
-//                else                 addN(log,f._type      ,bits);
+//                int log = f._t.log_size();
+//                addN(log,f._t,bits);
 //                off += 1<<log;
 //            }
+
         }
     }
 

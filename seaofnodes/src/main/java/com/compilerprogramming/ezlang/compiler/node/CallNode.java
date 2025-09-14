@@ -160,8 +160,10 @@ public class CallNode extends CFGNode {
 
         // Check for args
         for( int i=0; i<tfp.nargs(); i++ )
-            if( !arg(i+2)._type.isa(tfp.arg(i)) )
+            if( !arg(i+2)._type.isa(tfp.arg(i)) ) {
+                cend().addDep(arg(i+2)); // Upgrading arg type may allow inlining
                 return Compiler.error( "Argument #"+i+" isa "+arg(i+2)._type+", but must be a "+tfp.arg(i));
+            }
 
         if( tfp.fidxs() < 0 )
             throw Utils.TODO(); // Infinite unknown TFPs?  Should be fairly precise CG

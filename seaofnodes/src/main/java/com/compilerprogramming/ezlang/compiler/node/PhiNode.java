@@ -13,10 +13,17 @@ public class PhiNode extends Node {
     // Example Int stays Int, Ptr stays Ptr, Control stays Control, Mem stays Mem.
     final Type _declaredType;
 
-    public PhiNode(String label, Type declaredType, Node... inputs) { super(inputs); _label = label;  assert declaredType!=null; _declaredType = declaredType; }
+    public PhiNode(String label, Type declaredType, Node... inputs) { 
+		super(inputs); 
+		_label = label;  
+		assert declaredType!=null; 
+		_declaredType = declaredType; 
+	}
+	// Used by ParmNode
     public PhiNode(PhiNode phi, String label, Type declaredType) { super(phi); _label = label; _type = _declaredType = declaredType; }
-    public PhiNode(PhiNode phi) { super(phi); _label = phi._label; _declaredType = phi._declaredType;  }
-
+	// Used by instruction Selection
+    public PhiNode(PhiNode phi) { this(phi,phi._label,phi._declaredType ); }
+	// Used by the infinite-loop exit breaker
     public PhiNode(RegionNode r, Node sample) {
         super(new Node[]{r});
         _label = "";
@@ -55,12 +62,17 @@ public class PhiNode extends Node {
         // During parsing Phis have to be computed type pessimistically.
         if( r.inProgress() ) return _declaredType;
         // Set type to local top of the starting type
-        Type t = _declaredType.glb(false).dual();//Type.TOP;
+        //Type t = _minType.dual();
+        Type t = Type.TOP;
         for (int i = 1; i < nIns(); i++)
             // If the region's control input is live, add this as a dependency
             // to the control because we can be peeped should it become dead.
-            if( addDep(r.in(i))._type != Type.XCONTROL )
+            if( addDep(r.in(i))._type != Type.XCONTROL ) {
+                if( in(i)._type==Type.BOTTOM )
+                    return Type.BOTTOM;
                 t = t.meet(in(i)._type);
+            }
+        t = t.join( _declaredType );
         return t;
     }
 
@@ -73,13 +85,26 @@ public class PhiNode extends Node {
 
         // If we have only a single unique input, become it.
         Node live = singleUniqueInput();
-        if (live != null)
-            return live;
+        if( live != null ) {
+            if( live._type.isa(_type) )
+                return live;
+            // Keep the Phi upcast
+            return new CastNode(_type,null,live);
+        }
 
         // No bother if region is going to fold dead paths soon
         for( int i=1; i<nIns(); i++ )
             if( r.in(i)._type == Type.XCONTROL )
                 return null;
+
+        // Simple Phi-after-MemMerge to a known alias can bypass.  Happens when inlining.
+        if( _type instanceof TypeMem tmem && tmem._alias!=1 ) {
+            for( int i=1; i<nIns(); i++ )
+                if( in(i) instanceof MemMergeNode mem ) {
+                    setDef(i,mem.alias(tmem._alias));
+                    return this;
+                }
+        }
 
         // Generic "pull down op"
         Node progress;
@@ -198,9 +223,19 @@ public class PhiNode extends Node {
         return in(nIns()-1) == null;
     }
 
-    // Never equal if inProgress
+    // Never equal if inProgress.
+    // Also, joins
     @Override public boolean eq( Node n ) {
-        return !inProgress();
+        if( inProgress() ) return false;
+        Type min = ((PhiNode)n)._declaredType;
+        if( _declaredType==min ) return true;
+        Type mt = min.meet(_declaredType);
+        if( min!=mt && _declaredType!=mt ) return false;
+        //// Theory says these 2 Phis CAN be merged/GVNd, but I need to pick the
+        //// most general minType.
+        //_minType = ((PhiNode)n)._minType = mt;
+        //return true;
+        return false;
     }
 
     @Override
@@ -218,9 +253,9 @@ public class PhiNode extends Node {
         for( int i=1; i<nIns(); i++ ) {
             Type t = in(i)._type;
             ti |= t instanceof TypeInteger x;
-            tf |= t instanceof TypeFloat x;
-            tp |= t instanceof TypeMemPtr x;
-            tn |= t== Type.NIL;
+            tf |= t instanceof TypeFloat   x;
+            tp |= t instanceof TypeMemPtr  x;
+            tn |= t==Type.NIL;
         }
         return ReturnNode.mixerr(ti,tf,tp,tn);
     }

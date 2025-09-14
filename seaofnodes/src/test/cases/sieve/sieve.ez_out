@@ -169,7 +169,7 @@ L102:
 01C4 488B3C24    mov   rdi = [rsp+0]                  // use/empty1 #0
 01C8 488BF0      mov   rsi = rax                      // use/empty1 #0
 01CB BA08000000  ldi   rdx = #8
-01D0 E85BFFFFFF  call  eq  rdi  rsi  rdx
+01D0 E85BFFFFFF  call  eq  rdi, rsi, rdx
 01D5 4883C408C3  addi  rsp += #8
 01DA             ret
 ---{ -> int #0}---------------------------

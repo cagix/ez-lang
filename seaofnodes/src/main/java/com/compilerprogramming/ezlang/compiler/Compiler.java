@@ -304,7 +304,7 @@ public class Compiler {
         ScopeNode breakScope = _breakScope; _breakScope = null;
         ScopeNode continueScope = _continueScope; _continueScope = null;
 
-        FunNode fun = _fun = (FunNode)peep(new FunNode(sig,null,_code._start));
+        FunNode fun = _fun = (FunNode)peep(new FunNode(sig, functionTypeSymbol.name,null,_code._start));
         // Once the function header is available, install in linker table -
         // allowing recursive functions.  Linker matches on declared args and
         // exact fidx, and ignores the return (because the fidx will only match

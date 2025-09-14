@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.codegen;
 
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding.BAOS;
 import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.type.*;
 import com.compilerprogramming.ezlang.compiler.util.Ary;
@@ -246,7 +247,7 @@ public class ElfFile {
         pushSection(text);
 
         // Build and write constant pool
-        Encoding.BAOS cpool = new Encoding.BAOS();
+        BAOS cpool = new BAOS();
         Encoding enc = _code._encoding;
         enc.writeConstantPool(cpool,false);
         DataSection rdata = new DataSection(".rodata", 1 /* SHT_PROGBITS */, cpool);

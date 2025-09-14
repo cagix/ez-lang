@@ -9,6 +9,8 @@ import com.compilerprogramming.ezlang.compiler.type.*;
 public class Var {
 
     public final String _name;   // Declared name
+    // These fields are not final for forward reference late updates or
+    // promotions.
     public int _idx;             // index in containing scope
     private Type _type;          // Declared type
     public boolean _final;       // Final field

@@ -8,8 +8,8 @@
 00D8 4C8B542428  mov   r10 = [rsp+40]                 // use/loop/use #1
 00DD 4D2BC2      sub   r8 -= r10
 00E0 4983F801    cmp   r8, #1
-00E4 7E6F        j<=   L25                            // L43
-L43:
+00E4 7E6F        j<=   L24                            // L42
+L42:
 00E6 488B442448  mov   rax = [rsp+72]                 // use/loop/use #0
 00EB 488B542428  mov   rdx = [rsp+40]                 // use/loop/use #1
 00F0 4803C2      add   rax += rdx
@@ -20,21 +20,21 @@ L43:
 0107 4C8B4C2458  mov   r9 = [rsp+88]                  // use/loop/use #0
 010C 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #0
 0111 488B542428  mov   rdx = [rsp+40]                 // use/loop/use #1
-0116 E8A5FFFFFF  call  split_merge  rcx  rdx  r8  r9
+0116 E8A5FFFFFF  call  split_merge  rcx, rdx, r8, r9
 011B 4C8B442448  mov   r8 = [rsp+72]                  // use/loop/use #0
 0120 488B4C2450  mov   rcx = [rsp+80]                 // use/loop/use #0
 0125 4C8B4C2458  mov   r9 = [rsp+88]                  // use/loop/use #0
 012A 488B542440  mov   rdx = [rsp+64]                 // use/loop/use #0
-012F E88CFFFFFF  call  split_merge  rcx  rdx  r8  r9
+012F E88CFFFFFF  call  split_merge  rcx, rdx, r8, r9
 0134 4C8B4C2448  mov   r9 = [rsp+72]                  // use/loop/use #0
 0139 FF7424508F  mov   [rsp+32] = [rsp+80]            // use/loop/use #0
 013E 442420
 0141 488B4C2458  mov   rcx = [rsp+88]                 // use/loop/use #0
 0146 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #0
 014B 488B542428  mov   rdx = [rsp+40]                 // use/loop/use #1
-0150 E8CBFEFFFF  call  merge  rcx  rdx  r8  r9  [stk#42]
-L26:
+0150 E8CBFEFFFF  call  merge  rcx, rdx, r8, r9, [stk#42]
 L25:
+L24:
 0155 33C0        xor   rax,rax
 0157 4883C438C3  addi  rsp += #56
 015C             ret
@@ -42,76 +42,76 @@ L25:
 
 ---copy_array { *![int] int int *![int] -> int #1}---------------------------
                  begin:rdx,end:r8,b:r9,a:rcx
-LOOP114:
+LOOP113:
                  k:rdx
 0000 493BD0      cmp   rdx, r8
-0003 7D0F        j>=   L112                           // L116
-L116:
+0003 7D0F        j>=   L111                           // L115
+L115:
 0005 488B44D108  ld8   rax,[rcx+rdx*8+8]
 000A 498944D108  st8   [r9+rdx*8+8],rax
 000F 48FFC2      inc   rdx += #1
-0012 EBEC        jmp   LOOP114
-L423:
-L112:
+0012 EBEC        jmp   LOOP113
+L425:
+L111:
 0014 33C0        xor   rax,rax
 0016 C3          ret
 ---{ *![int] int int *![int] -> int #1}---------------------------
 
 ---merge { *![int] int int int *![int] -> int #0}---------------------------
                  begin:rdx,middle:r8,end:r9,b:rcx,a:[rsp+40]
-0020 66480F6EC3  mov   xmm0 = rbx                     // def/loop #2
+0020 66480F6EC3  mov   xmm0 = rbx                     // def/loop #3
 0025 488B5C2428  mov   rbx = [rsp+40]                 // def/empty1 #0
 002A 4C8BDA      mov   r11 = rdx                      // use/self/phi #1
 002D 4D8BD0      mov   r10 = r8                       // use/self/use #1
-LOOP58:
+LOOP57:
                  i:r11,j:r10,k:rdx
 0030 493BD1      cmp   rdx, r9
-0033 7D4F        j>=   L56                            // L72
-L72:
+0033 7D4F        j>=   L55                            // L71
+L71:
 0035 4D3BD8      cmp   r11, r8
-0038 7C04        j<    L70                            // L100
-L100:
+0038 7C04        j<    L69                            // L99
+L99:
 003A 33C0        xor   rax,rax
-003C EB24        jmp   L65
-L422:
-L70:
+003C EB24        jmp   L64
+L424:
+L69:
 003E 4D3BCA      cmp   r9, r10
-0041 7E1A        j<=   L101                           // L68
-L68:
+0041 7E1A        j<=   L100                           // L67
+L67:
 0043 488BC3      mov   rax = rbx                      // use/empty1 #0
 0046 4A8B44D008  ld8   rax,[rax+r10*8+8]
 004B 4A3944DB08  cmp8  rax, [rbx+r11*8+8]
-0050 7E04        j<=   L66                            // L102
-L102:
-0052 33C0        xor   rax,rax
-0054 EB0C        jmp   L65
-L421:
-L66:
-0056 B801000000  ldi   rax = #1
-005B EB05        jmp   L65
-L420:
+0050 7E04        j<=   L65                            // L101
 L101:
-005D B801000000  ldi   rax = #1
+0052 33C0        xor   rax,rax
+0054 EB0C        jmp   L64
+L423:
 L65:
+0056 B801000000  ldi   rax = #1
+005B EB05        jmp   L64
+L422:
+L100:
+005D B801000000  ldi   rax = #1
+L64:
                  cond:rax
 0062 4883F800    test  rax
-0066 750A        j!=   L61                            // L98
-L98:
+0066 750A        j!=   L60                            // L97
+L97:
 0068 4A8B44D308  ld8   rax,[rbx+r10*8+8]
 006D 49FFC2      inc   r10 += #1
-0070 EB08        jmp   L60
-L419:
-L61:
+0070 EB08        jmp   L59
+L421:
+L60:
 0072 4A8B44DB08  ld8   rax,[rbx+r11*8+8]
 0077 49FFC3      inc   r11 += #1
-L60:
+L59:
                  i:r11,j:r10,$3:rax
 007A 488944D108  st8   [rcx+rdx*8+8],rax
 007F 48FFC2      inc   rdx += #1
-0082 EBAC        jmp   LOOP58
-L418:
-L56:
-0084 66480F7EC3  mov   rbx = xmm0                     // use/loop/use #2
+0082 EBAC        jmp   LOOP57
+L420:
+L55:
+0084 66480F7EC3  mov   rbx = xmm0                     // use/loop/use #3
 0089 33C0        xor   rax,rax
 008B C3          ret
 ---{ *![int] int int int *![int] -> int #0}---------------------------
@@ -120,65 +120,65 @@ L56:
 ---eq { *![int] *![int] int -> int #1}---------------------------
                  a:rcx,b:rdx,n:r8
 0090 33C0        xor   rax,rax
-LOOP135:
+LOOP134:
                  i:rax
 0092 493BC0      cmp   rax, r8
-0095 7D15        j>=   L133                           // L139
-L139:
+0095 7D15        j>=   L132                           // L138
+L138:
 0097 4C8B4CC208  ld8   r9,[rdx+rax*8+8]
 009C 4C394CC108  cmp8  r9, [rcx+rax*8+8]
-00A1 7505        j!=   L151                           // L137
-L137:
+00A1 7505        j!=   L150                           // L136
+L136:
 00A3 48FFC0      inc   rax += #1
-00A6 EBEA        jmp   LOOP135
-L417:
-L151:
+00A6 EBEA        jmp   LOOP134
+L419:
+L150:
 00A8 33C0        xor   rax,rax
-00AA EB05        jmp   L132
-L416:
-L133:
-00AC B801000000  ldi   rax = #1
+00AA EB05        jmp   L131
+L418:
 L132:
+00AC B801000000  ldi   rax = #1
+L131:
                  result:rax
 00B1 C3          ret
 ---{ *![int] *![int] int -> int #1}---------------------------
 
 ---main { -> int #0}---------------------------
 0160 4883EC28    subi  rsp -= #40
-0164 48895C2420  mov   [rsp+32] = rbx                 // def/loop #2
+0164 48895C2420  mov   [rsp+32] = rbx                 // def/loop #3
 0169 BA58000000  ldi   rdx = #88
 016E B901000000  alloc ldi   rcx = #1
 0173 E800000000  call  #calloc
 0178 4889442418  mov   [rsp+24] = rax                 // def/loop #0
-017D 488B542418  mov   rdx = [rsp+24]                 // use/loop/use #0
-0182 48C742080A  st8   [rdx+8],#10
+017D 4C8B442418  mov   r8 = [rsp+24]                  // use/loop/use #0
+0182 49C740080A  st8   [r8+8],#10
 0187 000000
-018A 4C8B4C2418  mov   r9 = [rsp+24]                  // use/loop/use #0
-018F 49C7411009  st8   [r9+16],#9
+018A 488B542418  mov   rdx = [rsp+24]                 // use/loop/use #0
+018F 48C7421009  st8   [rdx+16],#9
 0194 000000
-0197 488B4C2418  mov   rcx = [rsp+24]                 // use/loop/use #0
-019C 48C7411808  st8   [rcx+24],#8
+0197 488B442418  mov   rax = [rsp+24]                 // use/loop/use #0
+019C 48C7401808  st8   [rax+24],#8
 01A1 000000
-01A4 4C8B442418  mov   r8 = [rsp+24]                  // use/loop/use #0
-01A9 49C7402007  st8   [r8+32],#7
+01A4 4C8B542418  mov   r10 = [rsp+24]                 // use/loop/use #0
+01A9 49C7422007  st8   [r10+32],#7
 01AE 000000
-01B1 488B442418  mov   rax = [rsp+24]                 // use/loop/use #0
-01B6 48C7402806  st8   [rax+40],#6
+01B1 4C8B4C2418  mov   r9 = [rsp+24]                  // use/loop/use #0
+01B6 49C7412806  st8   [r9+40],#6
 01BB 000000
-01BE 4C8B5C2418  mov   r11 = [rsp+24]                 // use/loop/use #0
-01C3 49C7433005  st8   [r11+48],#5
+01BE 488B4C2418  mov   rcx = [rsp+24]                 // use/loop/use #0
+01C3 48C7413005  st8   [rcx+48],#5
 01C8 000000
-01CB 4C8B542418  mov   r10 = [rsp+24]                 // use/loop/use #0
-01D0 49C7423804  st8   [r10+56],#4
+01CB 4C8B5C2418  mov   r11 = [rsp+24]                 // use/loop/use #0
+01D0 49C7433804  st8   [r11+56],#4
 01D5 000000
-01D8 4C8B4C2418  mov   r9 = [rsp+24]                  // use/loop/use #0
-01DD 49C7414003  st8   [r9+64],#3
+01D8 4C8B542418  mov   r10 = [rsp+24]                 // use/loop/use #0
+01DD 49C7424003  st8   [r10+64],#3
 01E2 000000
-01E5 488B4C2418  mov   rcx = [rsp+24]                 // use/loop/use #0
-01EA 48C7414802  st8   [rcx+72],#2
+01E5 4C8B4C2418  mov   r9 = [rsp+24]                  // use/loop/use #0
+01EA 49C7414802  st8   [r9+72],#2
 01EF 000000
-01F2 488B442418  mov   rax = [rsp+24]                 // use/loop/use #0
-01F7 48C7405001  st8   [rax+80],#1
+01F2 488B4C2418  mov   rcx = [rsp+24]                 // use/loop/use #0
+01F7 48C7415001  st8   [rcx+80],#1
 01FC 000000
 01FF BA58000000  ldi   rdx = #88
 0204 B901000000  alloc ldi   rcx = #1
@@ -232,13 +232,13 @@ L132:
 02CA 488B542410  mov   rdx = [rsp+16]                 // use/empty1 #0
 02CF 41B80A0000  ldi   r8 = #10
 02D4 00
-02D5 E826000000  call  merge_sort  rcx  rdx  r8
+02D5 E826000000  call  merge_sort  rcx, rdx, r8
 02DA 488B4C2418  mov   rcx = [rsp+24]                 // use/loop/use #0
 02DF 488BD3      mov   rdx = rbx                      // use/empty1 #0
 02E2 41B80A0000  ldi   r8 = #10
 02E7 00
-02E8 E8A3FDFFFF  call  eq  rcx  rdx  r8
-02ED 488B5C2420  mov   rbx = [rsp+32]                 // use/loop/use #2
+02E8 E8A3FDFFFF  call  eq  rcx, rdx, r8
+02ED 488B5C2420  mov   rbx = [rsp+32]                 // use/loop/use #3
 02F2 4883C428C3  addi  rsp += #40
 02F7             ret
 ---{ -> int #0}---------------------------
@@ -250,17 +250,18 @@ L132:
 0309 48894C2438  mov   [rsp+56] = rcx                 // def/loop #1
 030E 4889542430  mov   [rsp+48] = rdx                 // def/loop #0
 0313 4C8B4C2430  mov   r9 = [rsp+48]                  // use/loop/use #0
-0318 488B4C2438  mov   rcx = [rsp+56]                 // use/loop/use #1
-031D 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #1
-0322 33D2        xor   rdx,rdx
-0324 E8D7FCFFFF  call  copy_array  rcx  rdx  r8  r9
+0318 33D2        xor   rdx,rdx
+031A 488B4C2438  mov   rcx = [rsp+56]                 // use/loop/use #1
+031F 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #1
+0324 E8D7FCFFFF  call  copy_array  rcx, rdx, r8, r9
 0329 4C8B4C2430  mov   r9 = [rsp+48]                  // use/loop/use #0
-032E 488B4C2438  mov   rcx = [rsp+56]                 // use/loop/use #1
-0333 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #1
-0338 33D2        xor   rdx,rdx
-033A E881FDFFFF  call  split_merge  rcx  rdx  r8  r9
-033F 4883C428C3  addi  rsp += #40
-0344             ret
+032E 33D2        xor   rdx,rdx
+0330 488B4C2438  mov   rcx = [rsp+56]                 // use/loop/use #1
+0335 4C8B442440  mov   r8 = [rsp+64]                  // use/loop/use #1
+033A E881FDFFFF  call  split_merge  rcx, rdx, r8, r9
+033F 33C0        xor   rax,rax
+0341 4883C428C3  addi  rsp += #40
+0346             ret
 ---{ *![int] *![int] int -> int #0}---------------------------
 
 

@@ -17,7 +17,11 @@ public class TMPX86 extends ConstantNode implements MachNode, RIPRelSize{
         short dst = enc.reg(this);
         x86_64_v2.rexF(dst, 0, 0, true, enc);
         enc.add1(0x8D).add1(x86_64_v2.modrm(x86_64_v2.MOD.INDIRECT, dst, 0b101)).add4(0);
-        enc.largeConstant(this,((TypeMemPtr)_con)._obj,7-4,2/*ELF encoding PC32*/);
+        int opLen = 1/*rexF*/+1/*opcode 0x8D*/+1/*modrm*/+4/*pc rel offset*/;
+        // Base of constant array
+        TypeMemPtr tmp = (TypeMemPtr)_con;
+        int baseOff = tmp._obj.aryBase();
+        enc.largeConstant(this,tmp._obj,opLen-baseOff,2/*ELF encoding PC32*/);
     }
 
     // Delta is from opcode start

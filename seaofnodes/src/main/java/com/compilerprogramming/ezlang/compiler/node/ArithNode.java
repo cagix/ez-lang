@@ -56,7 +56,10 @@ public abstract class ArithNode extends Node {
         if( in(1) instanceof PhiNode lhs &&
             in(2) instanceof PhiNode rhs &&
             lhs.nIns() >= 2 && !lhs.inProgress() &&
-            lhs.region()==rhs.region() ) {
+            lhs.region()==rhs.region() &&
+            lhs.nIns()>2 && // A 1-input Phi will collapse already
+            // Disallow with self-looping phi; these will collapse
+            (lhs.in(2)!=lhs && rhs.in(2)!=rhs) ) {
             // Profit check: only 1 instance of `this` will remain, all the
             // others will fold to constants.
             int cnt=0;

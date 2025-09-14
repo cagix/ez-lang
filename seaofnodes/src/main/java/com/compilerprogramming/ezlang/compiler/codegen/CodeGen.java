@@ -171,6 +171,7 @@ public class CodeGen {
 
         P.parse();
         _tParse = (int)(System.currentTimeMillis() - t0);
+        //JSViewer.show();
         return this;
     }
 
@@ -203,7 +204,7 @@ public class CodeGen {
         // loop unroll, peel, RCE, etc
         return this;
     }
-    public <N extends Node> N add( N n ) { return (N)_iter.add(n); }
+    public <N extends Node> N add( N n ) { return _iter.add(n); }
     public void addAll( Ary<Node> ary ) { _iter.addAll(ary); }
 
 

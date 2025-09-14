@@ -1,5 +1,6 @@
 package com.compilerprogramming.ezlang.compiler.node;
 
+import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.util.Utils;
 import com.compilerprogramming.ezlang.compiler.type.*;
 import java.util.BitSet;
@@ -48,6 +49,11 @@ public class LoadNode extends MemOpNode {
         Node ptr = ptr();
         Node mem = mem();
 
+        if( mem instanceof CastNode cast ) {
+            setDef(1,cast.in(1));
+            return this;
+        }
+
         // Simple Load-after-Store on same address.
         if( mem instanceof StoreNode st &&
             ptr == st.ptr() && off() == st.off() ) { // Must check same object
@@ -57,7 +63,11 @@ public class LoadNode extends MemOpNode {
 
         // Simple load-after-MemMerge to a known alias can bypass.  Happens when inlining.
         if( mem instanceof MemMergeNode mem2 ) {
-            setDef(1,mem2.alias(_alias));
+            Node memA = mem2.alias(_alias);
+            for( Node ld : memA._outputs )
+                if( ld instanceof LoadNode )
+                    CodeGen.CODE.add(ld);
+            setDef(1,memA);
             return this;
         }
 
@@ -110,6 +120,7 @@ public class LoadNode extends MemOpNode {
                 default: throw Utils.TODO();
                 }
                 break;
+            case CastNode cast: mem = cast.in(1); break;
             case MemMergeNode merge:  mem = merge.alias(_alias);  break;
 
             default:
@@ -186,7 +197,7 @@ public class LoadNode extends MemOpNode {
         Node px = phi.in(idx);
         if( px==null ) return false;
         if( px._type instanceof TypeMem mem && mem._t.isHighOrConst() ) return true;
-        if( px instanceof StoreNode st1 && ptr()==st1.ptr() && off()==st1.off() ) return true;
+        if( px instanceof StoreNode st1 && ptr()==addDep(st1.ptr() )&& off()==st1.off() ) return true;
         addDep(px);
         return false;
     }

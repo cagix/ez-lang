@@ -28,13 +28,12 @@ public class StartNode extends LoopNode implements MultiNode {
       return sb.append(label());
     }
 
-    @Override public boolean blockHead() { return true; }
-    @Override public CFGNode cfg0() { return null; }
+  @Override public CFGNode cfg0() { return null; }
 
     // Get the one control following; error to call with more than one e.g. an
     // IfNode or other multi-way branch.  For Start, its "main"
     @Override public CFGNode uctrl() {
-        // Find "main", its the start.
+        // Find "main", it's the start.
         CFGNode C = null;
         for( Node use : _outputs )
             if( use instanceof FunNode fun && fun.sig().isa(CodeGen.CODE._main) )

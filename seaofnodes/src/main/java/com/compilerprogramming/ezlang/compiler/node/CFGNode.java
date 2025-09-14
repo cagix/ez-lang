@@ -55,7 +55,7 @@ public abstract class CFGNode extends Node {
     // Used by the encoding / final BB layout
     public CFGNode uctrlSkipEmpty() {
         CFGNode x = this, y;
-        while( x.nOuts() == 1 && (y=x.uctrl())!=null ) // Skip empty blocks
+        while( x.nOuts() == 1 && (y=x.uctrl())!=null && !(y instanceof CallNode) ) // Skip empty blocks
             x = y;
         return x;
     }
@@ -85,6 +85,7 @@ public abstract class CFGNode extends Node {
             var comp = lhs.idepth() - rhs.idepth();
             if( comp >= 0 ) lhs = (dep==null ? lhs : dep.addDep(lhs)).idom();
             if( comp <= 0 ) rhs = (dep==null ? rhs : dep.addDep(rhs)).idom();
+            if( lhs==null || rhs==null ) return null;
         }
         return lhs;
     }

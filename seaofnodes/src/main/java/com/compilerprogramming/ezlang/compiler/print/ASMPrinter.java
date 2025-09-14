@@ -3,6 +3,7 @@ package com.compilerprogramming.ezlang.compiler.print;
 import com.compilerprogramming.ezlang.compiler.util.Ary;
 import com.compilerprogramming.ezlang.compiler.codegen.CodeGen;
 import com.compilerprogramming.ezlang.compiler.util.SB;
+import com.compilerprogramming.ezlang.compiler.codegen.Encoding.Relo;
 import com.compilerprogramming.ezlang.compiler.codegen.Encoding;
 import com.compilerprogramming.ezlang.compiler.node.*;
 import com.compilerprogramming.ezlang.compiler.type.*;
@@ -26,11 +27,11 @@ public abstract class ASMPrinter {
         Encoding enc = code._encoding;
         if(  enc!=null && !enc._bigCons.isEmpty() && iadr < enc._bits.size() ) {
             // radix sort the big constants by alignment
-            Ary<Encoding.Relo>[] raligns = new Ary[5];
+            Ary<Relo>[] raligns = new Ary[5];
             for( Node op : enc._bigCons.keySet() ) {
-                Encoding.Relo relo = enc._bigCons.get(op);
+                Relo relo = enc._bigCons.get(op);
                 int align = relo._t.alignment();
-                Ary<Encoding.Relo> relos = raligns[align]==null ? (raligns[align]=new Ary<>( Encoding.Relo.class)) : raligns[align];
+                Ary<Relo> relos = raligns[align]==null ? (raligns[align]=new Ary<>( Relo.class)) : raligns[align];
                 relos.add(relo);
             }
 
@@ -39,9 +40,9 @@ public abstract class ASMPrinter {
 
             // By alignment
             for( int align = 4; align >= 0; align-- ) {
-                Ary<Encoding.Relo> relos = raligns[align];
+                Ary<Relo> relos = raligns[align];
                 if( relos == null ) continue;
-                for( Encoding.Relo relo : relos ) {
+                for( Relo relo : relos ) {
                     if( targets.contains(relo._t) ) continue;
                     targets.add(relo._t);
                     sb.hex2(iadr).p("  ");
@@ -97,7 +98,8 @@ public abstract class ASMPrinter {
         if( fun._name != null ) sb.p(fun._name).p(" ");
         fun.sig().print(sb);
         sb.p("---------------------------").nl();
-        iadr = (iadr + 15)&-16; // All function entries padded to 16 align
+        if( code._encoding!=null && code._encoding._padFunHeads )
+            iadr = (iadr + 15)&-16; // All function entries padded to 16 align
 
         if( fun._frameAdjust != 0 )
             iadr = doInst(iadr,sb,code,fun,cfgidx,fun,true,true);

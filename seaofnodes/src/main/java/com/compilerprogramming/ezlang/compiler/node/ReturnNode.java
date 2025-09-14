@@ -60,16 +60,16 @@ public class ReturnNode extends CFGNode {
         if( inProgress () ) return null;
         if( _fun.isDead() ) return null;
 
-          // Upgrade signature based on return type
-          // FIXME Dibyendu - EZ lang does not support modifying function signature
-          // but we should probably do the checking?
-//        SONType ret = expr()._type;
-//        SONTypeFunPtr fcn = _fun.sig();
-//        assert ret.isa(fcn.ret());
-//        if( ret != fcn.ret() )
-//            _fun.setSig(fcn.makeFrom(ret));
+        // Upgrade signature based on return type
+        // FIXME Dibyendu - EZ lang does not support modifying function signature
+        // but we should probably do the checking?
+        //Type ret = expr()._type;
+        //TypeFunPtr fcn = _fun.sig();
+        //if( ret != fcn.ret() && ret.isa(fcn.ret()) )
+        //    _fun.setSig(fcn.makeFrom(ret));
 
-        // If dead (cant be reached; infinite loop), kill the exit values
+
+        // If dead (cannot be reached; infinite loop), kill the exit values
         if( ctrl()._type== Type.XCONTROL &&
             !(mem() instanceof ConstantNode && expr() instanceof ConstantNode) ) {
             Node top = new ConstantNode(Type.TOP).peephole();

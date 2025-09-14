@@ -60,7 +60,7 @@ public abstract class IRPrinter {
             if( n instanceof CFGNode || n instanceof MultiNode ) {
                 if( !gap ) sb.p("\n"); // Blank before multihead
                 if( n instanceof FunNode fun )
-                    fun.sig().print(sb.p("--- ").p(fun._name==null ? "" : fun._name).p(" "),false).p("----------------------\n");
+                    fun.sig().print(sb.p("--- ").p(fun._name==null ? "" : fun._name).p(" ")).p("----------------------\n");
                 printLine( n, sb );         // Print head
                 while( --i >= 0 ) {
                     Node t = rpos.get(i);
@@ -71,7 +71,7 @@ public abstract class IRPrinter {
                     FunNode fun = ret.fun();
                     sb.p("--- ");
                     if( fun != null )
-                        fun.sig().print(sb.p(fun._name==null ? "" : fun._name).p(" "),false);
+                        fun.sig().print(sb.p(fun._name==null ? "" : fun._name).p(" "));
                     sb.p("----------------------\n");
                 }
                 if( !(n instanceof CallNode) ) {
